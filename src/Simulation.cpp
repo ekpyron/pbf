@@ -64,7 +64,7 @@ Simulation::Simulation (void) : width (0), height (0), font ("textures/font.png"
         {
             for (int y = 0; y < 8; y++)
             {
-                positions.push_back (0.25f * glm::vec3 (x, y + 1, z));
+                positions.push_back (0.2f * glm::vec3 (x, y + 1, z));
             }
         }
     }
