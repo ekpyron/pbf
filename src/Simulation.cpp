@@ -9,15 +9,15 @@ Simulation::Simulation (void) : width (0), height (0), font ("textures/font.png"
     surroundingprogram.CompileShader (GL_FRAGMENT_SHADER, "shaders/surrounding/fragment.glsl");
     surroundingprogram.Link ();
 
-    sphereprogram.CompileShader (GL_VERTEX_SHADER, "shaders/sphere/vertex.glsl");
-    sphereprogram.CompileShader (GL_FRAGMENT_SHADER, "shaders/sphere/fragment.glsl");
-    sphereprogram.Link ();
+    particleprogram.CompileShader (GL_VERTEX_SHADER, "shaders/particles/vertex.glsl");
+    particleprogram.CompileShader (GL_FRAGMENT_SHADER, "shaders/particles/fragment.glsl");
+    particleprogram.Link ();
 
     // create buffer objects
     glGenBuffers (3, buffers);
 
     // initialize the camera position and rotation and the transformation matrix buffer.
-    camera.SetPosition (glm::vec3 (15, 10, 10));
+    camera.SetPosition (glm::vec3 (20, 10, 10));
     camera.Rotate (30.0f, 240.0f);
     glBindBufferBase (GL_UNIFORM_BUFFER, 0, transformationbuffer);
     glBufferData (GL_UNIFORM_BUFFER, sizeof (glm::mat4), glm::value_ptr (projmat * camera.GetViewMatrix()),
@@ -34,7 +34,7 @@ Simulation::Simulation (void) : width (0), height (0), font ("textures/font.png"
             float spotexponent;
             float lightintensity;
         } lightparams;
-        lightparams.lightpos = glm::vec3 (-20, 80, -20);
+        lightparams.lightpos = glm::vec3 (-20, 80, -2);
         lightparams.spotdir = glm::normalize (glm::vec3 (0.25, -1, 0.25));
         lightparams.spotexponent = 8.0f;
         lightparams.lightintensity = 10000.0f;
@@ -58,9 +58,9 @@ Simulation::Simulation (void) : width (0), height (0), font ("textures/font.png"
 
     // populate the position buffer
     std::vector<glm::vec3> positions;
-    for (int x = -32; x < 32; x++)
+    for (int x = -64; x < 64; x++)
     {
-        for (int z = -16; z < 16; z++)
+        for (int z = -32; z < 32; z++)
         {
             for (int y = 0; y < 8; y++)
             {
@@ -71,8 +71,8 @@ Simulation::Simulation (void) : width (0), height (0), font ("textures/font.png"
     glBindBuffer (GL_ARRAY_BUFFER, positionbuffer);
     glBufferData (GL_ARRAY_BUFFER, sizeof (glm::vec3) * positions.size (), &positions[0], GL_DYNAMIC_DRAW);
 
-    // pass the position buffer to the sphere renderer
-    sphere.SetPositionBuffer (positionbuffer);
+    // pass the position buffer to the sphere and icosahedron class
+    icosahedron.SetPositionBuffer (positionbuffer);
 }
 
 Simulation::~Simulation (void)
@@ -132,8 +132,8 @@ void Simulation::Frame (void)
     framing.Render ();
 
     // render spheres
-    sphereprogram.Use ();
-    sphere.Render (64 * 32 * 8);
+    particleprogram.Use ();
+    icosahedron.Render (128 * 64 * 8);
 
     // determine the framerate every second
     framecount++;

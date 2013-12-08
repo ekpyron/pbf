@@ -6,7 +6,7 @@
 #include "ShaderProgram.h"
 #include "Framing.h"
 #include "Font.h"
-#include "Sphere.h"
+#include "Icosahedron.h"
 
 /** Simulation class.
  * This is the main class which takes care of the whole simulation.
@@ -50,20 +50,20 @@ private:
     */
     ShaderProgram surroundingprogram;
 
-    /** Sphere shader program.
-     * Shader program for displaying sphere particles.
+    /** Particle shader program.
+     * Shader program for displaying the particles.
     */
-    ShaderProgram sphereprogram;
+    ShaderProgram particleprogram;
 
     /** Framing.
      * Takes care of rendering a framing for the scene.
      */
     Framing framing;
 
-    /** Sphere.
-     * Model data of a regular sphere.
+    /** Icosahedron.
+     * Model data of a regular icosahedron.
      */
-    Sphere sphere;
+    Icosahedron icosahedron;
 
     union {
         struct {
