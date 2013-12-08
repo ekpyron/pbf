@@ -28,6 +28,12 @@ public:
      */
     void OnMouseMove (const double &x, const double &y);
 
+    /** Key up event.
+     * Handles key release events.
+     * \param key key that was released
+     */
+    void OnKeyUp (int key);
+
     /** Resize event.
      * Handles window resize event.
      * \param width new framebuffer width
@@ -55,6 +61,10 @@ private:
     */
     ShaderProgram particleprogram;
 
+    /** Simulation step 1 shader program.
+     * Shader program for the first simulation step.
+     */
+    ShaderProgram simulationstep1;
     /** Framing.
      * Takes care of rendering a framing for the scene.
      */
@@ -67,10 +77,10 @@ private:
 
     union {
         struct {
-            /** Position buffer.
-             * Buffer in which the particle positions are stored.
+            /** Particle buffer.
+             * Buffer in which the particles are stored.
              */
-            GLuint positionbuffer;
+            GLuint particlebuffer;
 
             /** Transformation uniform buffer.
              * Buffer object to store the projection and view matrix.
@@ -81,12 +91,24 @@ private:
              * Buffer object to store the lighting parameters.
              */
             GLuint lightingbuffer;
+
+            /** Grid counter buffer.
+             * Buffer in which the grid counters are stored, in which the number
+             * of particles in each grid cell of the grid cell buffer are stored.
+             */
+            GLuint gridcounterbuffer;
+
+            /** Grid cell buffer.
+             * Buffer in which the particle ids of the particles in each grid cell are
+             * stored.
+             */
+            GLuint gridcellbuffer;
         };
         /** Buffer objects.
          * The buffer objects are stored in a union, so that it is possible
          * to create/delete all buffer objects with a single OpenGL call.
          */
-        GLuint buffers[3];
+        GLuint buffers[5];
     };
 
     /** Font subsystem.
@@ -108,10 +130,16 @@ private:
      */
     unsigned int height;
 
+    /** Last frame time.
+     * Stores the time when the rendering of the last frame took place.
+     */
+    float last_time;
+
     /** Last FPS time.
      * Stores the last time the fps count was updated.
      */
     float last_fps_time;
+
     /** Frame counter.
      * Frame counter used to determine the frames per second.
      */

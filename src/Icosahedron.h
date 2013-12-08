@@ -21,7 +21,7 @@ public:
      * Specifies a buffer containing the positions for the icosahedra.
      * \param buffer the buffer object containing the position data
      */
-    void SetPositionBuffer (GLuint buffer);
+    void SetPositionBuffer (GLuint buffer, GLsizei stride = 0, GLintptr offset = 0);
 
     /** Render the icosahedra.
      * \param instances number of instances to render.

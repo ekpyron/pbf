@@ -43,6 +43,21 @@ void OnMouseMove (GLFWwindow *window, double x, double y)
     cursor.x = x; cursor.y = y;
 }
 
+/** Key event callback.
+ * GLFW callback for key events. Passes the event to the Simulation class.
+ * \param window GLFW window that produced the event
+ * \param key the key that was pressed or released
+ * \param scancode system-specific scancode of the key
+ * \param action GLFW_PRESS, GLFW_RELEASE or GLFW_REPEAT
+ * \param mods Bit-field describing the modifier keys that were held down when the event ocurred
+ */
+void OnKeyEvent (GLFWwindow *window, int key, int scancode, int action, int mods)
+{
+    Simulation *simulation = reinterpret_cast<Simulation*> (glfwGetWindowUserPointer (window));
+    if (action == GLFW_RELEASE)
+        simulation->OnKeyUp (key);
+}
+
 /** Window resize callback.
  * GLFW callback for window resize events. Passes the event to the Simulation class.
  * \param window GLFW window that was resized
@@ -66,7 +81,6 @@ void initialize (void)
     // specify parameters for the opengl context
     glfwWindowHint (GLFW_CONTEXT_VERSION_MAJOR, 4);
     glfwWindowHint (GLFW_CONTEXT_VERSION_MINOR, 3);
-    glfwWindowHint (GLFW_SAMPLES, 4);
     glfwWindowHint (GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
     glfwWindowHint (GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 
@@ -86,6 +100,7 @@ void initialize (void)
     glfwSetWindowUserPointer (window, simulation);
     glfwGetCursorPos (window, &cursor.x, &cursor.y);
     glfwSetCursorPosCallback (window, OnMouseMove);
+    glfwSetKeyCallback (window, OnKeyEvent);
     glfwSetFramebufferSizeCallback (window, OnResize);
 
     // notify the Simulation class of the initial window dimensions

@@ -57,13 +57,13 @@ Icosahedron::Icosahedron (void)
     glBufferData (GL_ELEMENT_ARRAY_BUFFER, sizeof (indices), &indices[0], GL_STATIC_DRAW);
 }
 
-void Icosahedron::SetPositionBuffer (GLuint buffer)
+void Icosahedron::SetPositionBuffer (GLuint buffer, GLsizei stride, GLintptr offset)
 {
     // bind the vertex array and the position buffer
     glBindVertexArray (vertexarray);
     glBindBuffer (GL_ARRAY_BUFFER, buffer);
     // define the per-instance vertex attribute
-    glVertexAttribPointer (1, 3, GL_FLOAT, GL_FALSE, 0, 0);
+    glVertexAttribPointer (1, 3, GL_FLOAT, GL_FALSE, stride, (const GLvoid*) offset);
     glEnableVertexAttribArray (1);
     glVertexAttribDivisor (1, 1);
 }
