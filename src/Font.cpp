@@ -25,8 +25,8 @@ Font::Font (const std::string &filename)
     // store the indices to the index buffer
     glBindBuffer (GL_ELEMENT_ARRAY_BUFFER, indexbuffer);
     const GLubyte indices[] = {
-            0, 1, 2,
-            0, 2, 3
+            1, 0, 2,
+            2, 0, 3
     };
     glBufferData (GL_ELEMENT_ARRAY_BUFFER, sizeof (indices), indices, GL_STATIC_DRAW);
 
@@ -72,6 +72,8 @@ void Font::PrintStr (const float &x, const float &y, const std::string &text)
     glEnable (GL_BLEND);
     glBlendFunc (GL_SRC_ALPHA, GL_ONE);
     glBlendEquation (GL_FUNC_ADD);
+    // disable depth testing
+    glDisable (GL_DEPTH_TEST);
 
     // display the string
     for (size_t i = 0; i < text.length (); i++)
@@ -89,4 +91,6 @@ void Font::PrintStr (const float &x, const float &y, const std::string &text)
     }
     // disable blending
     glDisable (GL_BLEND);
+    // enable depth test
+    glEnable (GL_DEPTH_TEST);
 }

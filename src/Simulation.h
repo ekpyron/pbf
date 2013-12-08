@@ -6,6 +6,7 @@
 #include "ShaderProgram.h"
 #include "Framing.h"
 #include "Font.h"
+#include "Sphere.h"
 
 /** Simulation class.
  * This is the main class which takes care of the whole simulation.
@@ -43,29 +44,60 @@ private:
      * Used to handle input events and create a view matrix.
      */
     Camera camera;
-    /** Shader program.
-     * Shader program for displaying the scene.
+
+    /** Surrounding shader program.
+     * Shader program for displaying the surrounding scene.
     */
-    ShaderProgram renderprogram;
+    ShaderProgram surroundingprogram;
+
+    /** Sphere shader program.
+     * Shader program for displaying sphere particles.
+    */
+    ShaderProgram sphereprogram;
 
     /** Framing.
      * Takes care of rendering a framing for the scene.
      */
     Framing framing;
 
-    /** View matrix uniform location.
-     * Uniform location of the view matrix in the render program.
+    /** Sphere.
+     * Model data of a regular sphere.
      */
-    GLint viewmat_location;
-    /** Projection matrix uniform location.
-     * Uniform location of the projection matrix in the render program.
-     */
-    GLint projmat_location;
+    Sphere sphere;
+
+    union {
+        struct {
+            /** Position buffer.
+             * Buffer in which the particle positions are stored.
+             */
+            GLuint positionbuffer;
+
+            /** Transformation uniform buffer.
+             * Buffer object to store the projection and view matrix.
+             */
+            GLuint transformationbuffer;
+
+            /** Lighting uniform buffer.
+             * Buffer object to store the lighting parameters.
+             */
+            GLuint lightingbuffer;
+        };
+        /** Buffer objects.
+         * The buffer objects are stored in a union, so that it is possible
+         * to create/delete all buffer objects with a single OpenGL call.
+         */
+        GLuint buffers[3];
+    };
 
     /** Font subsystem.
      * Takes care of displaying text.
      */
     Font font;
+
+    /** Projection matrix.
+     * Matrix describing the perspective projection.
+     */
+    glm::mat4 projmat;
 
     /** Framebuffer width.
      * Width of the current framebuffer.

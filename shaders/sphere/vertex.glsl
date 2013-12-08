@@ -2,25 +2,24 @@
 
 // input vertex attributes
 layout (location = 0) in vec3 vPosition;
-layout (location = 1) in vec2 vTexcoord;
-layout (location = 2) in vec3 vNormal;
+layout (location = 1) in vec3 particlePosition;
 
 // projection and view matrix
-uniform mat4 projmat;
-uniform mat4 viewmat;
+layout (binding = 0, std140) uniform TransformationBlock {
+	mat4 mvpmat;
+};
 
 // output to the fragment shader
-out vec2 fTexcoord;
 out vec3 fNormal;
 out vec3 fPosition;
 
 void main (void)
 {
 	// pass data to the fragment shader
-	fTexcoord = vTexcoord;
-	fNormal = vNormal;
-	fPosition = vPosition;
+	fNormal = vPosition;
+	vec3 pos = particlePosition + vPosition * 0.1;
+	fPosition = pos;
 	// compute and output the vertex position
 	// after view transformation and projection
-	gl_Position = projmat * viewmat * vec4 (vPosition, 1.0);
+	gl_Position = mvpmat * vec4 (pos, 1.0);
 }

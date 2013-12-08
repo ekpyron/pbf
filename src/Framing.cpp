@@ -12,10 +12,10 @@ Framing::Framing (void)
     // store vertices to a buffer object
     glBindBuffer (GL_ARRAY_BUFFER, vertexbuffer);
     const GLfloat vertices[] = {
-            -100, -5, 100,
-            100, -5, 100,
-            100, -5, -100,
-            -100, -5, -100
+            -100, 0, 100,
+            100, 0, 100,
+            100, 0, -100,
+            -100, 0, -100
     };
     glBufferData (GL_ARRAY_BUFFER, sizeof (vertices), vertices, GL_STATIC_DRAW);
     // define the vertices as vertex attribute 0

@@ -5,33 +5,80 @@ Simulation::Simulation (void) : width (0), height (0), font ("textures/font.png"
     last_fps_time (glfwGetTime ()), framecount (0), fps (0)
 {
     // load shaders
-    renderprogram.CompileShader (GL_VERTEX_SHADER, "shaders/vertex.glsl");
-    renderprogram.CompileShader (GL_FRAGMENT_SHADER, "shaders/fragment.glsl");
-    renderprogram.Link ();
+    surroundingprogram.CompileShader (GL_VERTEX_SHADER, "shaders/surrounding/vertex.glsl");
+    surroundingprogram.CompileShader (GL_FRAGMENT_SHADER, "shaders/surrounding/fragment.glsl");
+    surroundingprogram.Link ();
 
-    // get uniform locations
-    projmat_location = renderprogram.GetUniformLocation ("projmat");
-    viewmat_location = renderprogram.GetUniformLocation ("viewmat");
+    sphereprogram.CompileShader (GL_VERTEX_SHADER, "shaders/sphere/vertex.glsl");
+    sphereprogram.CompileShader (GL_FRAGMENT_SHADER, "shaders/sphere/fragment.glsl");
+    sphereprogram.Link ();
 
-    // initialize the view matrix as the identity matrix
-    glProgramUniformMatrix4fv (renderprogram.get (), viewmat_location, 1, GL_FALSE, glm::value_ptr (glm::mat4 (1)));
+    // create buffer objects
+    glGenBuffers (3, buffers);
+
+    // initialize the camera position and rotation and the transformation matrix buffer.
+    camera.SetPosition (glm::vec3 (15, 10, 10));
+    camera.Rotate (30.0f, 240.0f);
+    glBindBufferBase (GL_UNIFORM_BUFFER, 0, transformationbuffer);
+    glBufferData (GL_UNIFORM_BUFFER, sizeof (glm::mat4), glm::value_ptr (projmat * camera.GetViewMatrix()),
+            GL_DYNAMIC_DRAW);
+
 
     // specify lighting parameters
-    glProgramUniform3f (renderprogram.get (), renderprogram.GetUniformLocation ("lightpos"), 0, 80, 0);
-    glProgramUniform3f (renderprogram.get (), renderprogram.GetUniformLocation ("spotdir"), 0, -1, 0);
-    glProgramUniform1f (renderprogram.get (), renderprogram.GetUniformLocation ("spotexponent"), 8.0f);
-    glProgramUniform1f (renderprogram.get (), renderprogram.GetUniformLocation ("lightintensity"), 10000.0f);
+    // and bind the uniform buffer object to binding point 1
+    {
+        struct lightparams {
+            glm::vec3 lightpos;
+            float padding;
+            glm::vec3 spotdir;
+            float spotexponent;
+            float lightintensity;
+        } lightparams;
+        lightparams.lightpos = glm::vec3 (-20, 80, -20);
+        lightparams.spotdir = glm::normalize (glm::vec3 (0.25, -1, 0.25));
+        lightparams.spotexponent = 8.0f;
+        lightparams.lightintensity = 10000.0f;
+        glBindBufferBase (GL_UNIFORM_BUFFER, 1, lightingbuffer);
+        glBufferData (GL_UNIFORM_BUFFER, sizeof (lightparams), &lightparams, GL_STATIC_DRAW);
+    }
 
     // enable multisampling
     glEnable (GL_MULTISAMPLE);
 
+    // enable depth testing
+    glEnable (GL_DEPTH_TEST);
+
+    // enable back face culling
+    glEnable (GL_CULL_FACE);
+    glFrontFace (GL_CCW);
+
     // set color and depth for the glClear call
     glClearColor (0.25f, 0.25f, 0.25f, 1.0f);
     glClearDepth (1.0f);
+
+    // populate the position buffer
+    std::vector<glm::vec3> positions;
+    for (int x = -32; x < 32; x++)
+    {
+        for (int z = -16; z < 16; z++)
+        {
+            for (int y = 0; y < 8; y++)
+            {
+                positions.push_back (0.25f * glm::vec3 (x, y + 1, z));
+            }
+        }
+    }
+    glBindBuffer (GL_ARRAY_BUFFER, positionbuffer);
+    glBufferData (GL_ARRAY_BUFFER, sizeof (glm::vec3) * positions.size (), &positions[0], GL_DYNAMIC_DRAW);
+
+    // pass the position buffer to the sphere renderer
+    sphere.SetPositionBuffer (positionbuffer);
 }
 
 Simulation::~Simulation (void)
 {
+    // cleanup
+    glDeleteBuffers (3, buffers);
 }
 
 void Simulation::Resize (const unsigned int &_width, const unsigned int &_height)
@@ -41,9 +88,9 @@ void Simulation::Resize (const unsigned int &_width, const unsigned int &_height
     height = _height;
 
     // update the stored projection matrix and pass it to the render program
-    glm::mat4 projmat = glm::perspective (45.0f, float (width) / float (height), 0.1f, 1000.0f);
-    glProgramUniformMatrix4fv (renderprogram.get (), projmat_location, 1, GL_FALSE, glm::value_ptr (projmat));
-
+    projmat = glm::perspective (45.0f, float (width) / float (height), 0.1f, 1000.0f);
+    glBindBuffer (GL_UNIFORM_BUFFER, transformationbuffer);
+    glBufferSubData (GL_UNIFORM_BUFFER, 0, sizeof (glm::mat4), glm::value_ptr (projmat * camera.GetViewMatrix ()));
 }
 
 void Simulation::OnMouseMove (const double &x, const double &y)
@@ -66,8 +113,9 @@ void Simulation::OnMouseMove (const double &x, const double &y)
         }
 
         // update the view matrix
-        glProgramUniformMatrix4fv (renderprogram.get (), viewmat_location, 1, GL_FALSE,
-                glm::value_ptr (camera.GetViewMatrix ()));
+        glBindBuffer (GL_UNIFORM_BUFFER, transformationbuffer);
+        glBufferSubData (GL_UNIFORM_BUFFER, 0, sizeof (glm::mat4),
+                glm::value_ptr (projmat * camera.GetViewMatrix ()));
     }
 }
 
@@ -80,8 +128,12 @@ void Simulation::Frame (void)
     glClear (GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
 
     // render the framing
-    renderprogram.Use ();
+    surroundingprogram.Use ();
     framing.Render ();
+
+    // render spheres
+    sphereprogram.Use ();
+    sphere.Render (64 * 32 * 8);
 
     // determine the framerate every second
     framecount++;
