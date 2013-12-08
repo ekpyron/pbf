@@ -71,7 +71,7 @@ Simulation::Simulation (void) : width (0), height (0), font ("textures/font.png"
     glBindBuffer (GL_ARRAY_BUFFER, positionbuffer);
     glBufferData (GL_ARRAY_BUFFER, sizeof (glm::vec3) * positions.size (), &positions[0], GL_DYNAMIC_DRAW);
 
-    // pass the position buffer to the sphere and icosahedron class
+    // pass the position buffer to the icosahedron class
     icosahedron.SetPositionBuffer (positionbuffer);
 }
 
