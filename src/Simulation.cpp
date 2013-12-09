@@ -61,24 +61,37 @@ Simulation::Simulation (void) : width (0), height (0), font ("textures/font.png"
         glm::vec3 position;
         float padding0;
         glm::vec3 oldposition;
-        float padding1;
-        glm::vec3 velocity;
         float padding2;
     } particleinfo_t;
     std::vector<particleinfo_t> particles;
     particles.reserve (64 * 64 * 16);
     srand (time (NULL));
-    for (int x = 0; x < 64; x++)
+    for (int x = 0; x < 32; x++)
     {
-        for (int z = 0; z < 64; z++)
+        for (int z = 0; z < 32; z++)
         {
-            for (int y = 0; y < 16; y++)
+            for (int y = 0; y < 32; y++)
             {
                 particleinfo_t particle;
-                particle.position = glm::vec3 (x + 96, y + 16, z + 96);
-                particle.oldposition = glm::vec3 (x + 96, y + 16, z + 96);
-                particle.velocity = glm::vec3 (float (rand ()) / float (RAND_MAX) - 0.5f,
+                particle.position = glm::vec3 (x, y + 16, z);
+                glm::vec3 velocity = glm::vec3 (float (rand ()) / float (RAND_MAX) - 0.5f,
                         float (rand ()) / float (RAND_MAX) - 0.5f, float (rand ()) / float (RAND_MAX) - 0.5f);
+                particle.oldposition = particle.position - 0.01f * velocity;
+                particles.push_back (particle);
+            }
+        }
+    }
+    for (int x = 0; x < 32; x++)
+    {
+        for (int z = 0; z < 32; z++)
+        {
+            for (int y = 0; y < 32; y++)
+            {
+                particleinfo_t particle;
+                particle.position = glm::vec3 (63 - x, y + 16, 63 - z);
+                glm::vec3 velocity = glm::vec3 (float (rand ()) / float (RAND_MAX) - 0.5f,
+                        float (rand ()) / float (RAND_MAX) - 0.5f, float (rand ()) / float (RAND_MAX) - 0.5f);
+                particle.oldposition = particle.position - 0.01f * velocity;
                 particles.push_back (particle);
             }
         }
@@ -90,11 +103,11 @@ Simulation::Simulation (void) : width (0), height (0), font ("textures/font.png"
 
     // allocate the grid counter buffer and bind it to shader storage buffer binding point 1
     glBindBufferBase (GL_SHADER_STORAGE_BUFFER, 1, gridcounterbuffer);
-    glBufferData (GL_SHADER_STORAGE_BUFFER, sizeof (GLuint) * 256 * 256 * 64, NULL, GL_DYNAMIC_DRAW);
+    glBufferData (GL_SHADER_STORAGE_BUFFER, sizeof (GLuint) * 64 * 64 * 64, NULL, GL_DYNAMIC_DRAW);
 
     // allocate grid cell buffer and bind it to shader storage buffer binding point 2
     glBindBufferBase (GL_SHADER_STORAGE_BUFFER, 2, gridcellbuffer);
-    glBufferData (GL_SHADER_STORAGE_BUFFER, sizeof (GLuint) * 256 * 256 * 64 * 8, NULL, GL_DYNAMIC_DRAW);
+    glBufferData (GL_SHADER_STORAGE_BUFFER, sizeof (particleinfo_t) * 64 * 64 * 64 * 8, NULL, GL_DYNAMIC_DRAW);
 
     // pass the position buffer to the icosahedron class1
     icosahedron.SetPositionBuffer (particlebuffer, sizeof (particleinfo_t), 0);
@@ -158,24 +171,37 @@ void Simulation::OnKeyUp (int key)
             glm::vec3 position;
             float padding0;
             glm::vec3 oldposition;
-            float padding1;
-            glm::vec3 velocity;
             float padding2;
         } particleinfo_t;
         std::vector<particleinfo_t> particles;
         particles.reserve (64 * 64 * 16);
         srand (time (NULL));
-        for (int x = 0; x < 64; x++)
+        for (int x = 0; x < 32; x++)
         {
-            for (int z = 0; z < 64; z++)
+            for (int z = 0; z < 32; z++)
             {
-                for (int y = 0; y < 16; y++)
+                for (int y = 0; y < 32; y++)
                 {
                     particleinfo_t particle;
-                    particle.position = glm::vec3 (x + 96, y + 16, z + 96);
-                    particle.oldposition = glm::vec3 (x + 96, y + 16, z + 96);
-                    particle.velocity = glm::vec3 (float (rand ()) / float (RAND_MAX) - 0.5f,
+                    particle.position = glm::vec3 (x, y + 16, z);
+                    glm::vec3 velocity = glm::vec3 (float (rand ()) / float (RAND_MAX) - 0.5f,
                             float (rand ()) / float (RAND_MAX) - 0.5f, float (rand ()) / float (RAND_MAX) - 0.5f);
+                    particle.oldposition = particle.position - 0.01f * velocity;
+                    particles.push_back (particle);
+                }
+            }
+        }
+        for (int x = 0; x < 32; x++)
+        {
+            for (int z = 0; z < 32; z++)
+            {
+                for (int y = 0; y < 32; y++)
+                {
+                    particleinfo_t particle;
+                    particle.position = glm::vec3 (63 - x, y + 16, 63 - z);
+                    glm::vec3 velocity = glm::vec3 (float (rand ()) / float (RAND_MAX) - 0.5f,
+                            float (rand ()) / float (RAND_MAX) - 0.5f, float (rand ()) / float (RAND_MAX) - 0.5f);
+                    particle.oldposition = particle.position - 0.01f * velocity;
                     particles.push_back (particle);
                 }
             }
@@ -213,12 +239,12 @@ void Simulation::Frame (void)
     {
         simulationstep1.Use ();
         glMemoryBarrier (GL_BUFFER_UPDATE_BARRIER_BIT);
-        glDispatchCompute (4, 4, 16);
+        glDispatchCompute (16, 16, 1);
     }
 
     // render spheres
     particleprogram.Use ();
-    icosahedron.Render (64 * 64 * 16);
+    icosahedron.Render (32 * 32 * 32 * 2);
 
     // determine the framerate every second
     framecount++;

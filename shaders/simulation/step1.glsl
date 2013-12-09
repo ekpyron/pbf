@@ -2,19 +2,14 @@
 
 layout (local_size_x = 16, local_size_y = 16) in;
 
-#define GRID_SIZE	1.0f
-
-#define GRID_WIDTH	256
+#define GRID_WIDTH	64
 #define GRID_HEIGHT	64
-#define GRID_DEPTH 256
-
-#define PARTICLECOUNT 128 * 64 * 8
+#define GRID_DEPTH 64
 
 struct ParticleInfo
 {
 	vec3 position;
 	vec3 oldposition;
-	vec3 velocity;
 };
 
 layout (std430, binding = 0) buffer ParticleBuffer
@@ -24,6 +19,7 @@ layout (std430, binding = 0) buffer ParticleBuffer
 
 //uniform float timestep;
 const float timestep = 0.01;
+const float lasttimestep = 0.01;
 
 layout (std430, binding = 1) buffer GridCounters
 {
@@ -32,7 +28,7 @@ layout (std430, binding = 1) buffer GridCounters
 
 struct GridCell
 {
-	uint particleids[8];
+	ParticleInfo particleids[8];
 };
 
 layout (std430, binding = 2) buffer GridCells
@@ -49,14 +45,12 @@ void main (void)
 	ParticleInfo particle = particles[particleid];
 	
 	// gravity
-	particle.velocity += 200 * vec3 (0, -1, 0) * timestep;
+	vec3 velocity = 0.95 * (particle.position - particle.oldposition) / lasttimestep;
+	velocity += 1000 * vec3 (0, -1, 0) * timestep;
 	
 	// save old position and predict new position
 	particle.oldposition = particle.position;
-	particle.position += timestep * particle.velocity;
-
-	// update particle
-	particles[particleid] = particle;
+	particle.position += timestep * velocity;
 
 	// compute grid id as hash value
 	ivec3 grid;
@@ -68,48 +62,13 @@ void main (void)
 
 	uint pos = atomicAdd (gridcounters[gridid], 1);
 	if (pos < 8)
-		gridcells[gridid].particleids[pos] = particleid;
+		gridcells[gridid].particleids[pos] = particle;
 		
 	barrier ();
 	memoryBarrierBuffer ();
 	
-	
-	if (particle.position.x < 0)
-	{
-		particle.position.x = 0;
-		particle.velocity = 0.75 * reflect (particle.velocity, vec3 (1, 0, 0));
-	}	
+	particle.position = clamp (particle.position, vec3 (0, 0, 0), vec3 (GRID_WIDTH, GRID_HEIGHT, GRID_DEPTH));
 
-	if (particle.position.x > GRID_WIDTH)
-	{
-		particle.position.x = GRID_WIDTH;
-		particle.velocity = 0.75 * reflect (particle.velocity, vec3 (-1, 0, 0));
-	}	
-
-	if (particle.position.y < 0)
-	{
-		particle.position.y = 0;
-		particle.velocity = 0.75 * reflect (particle.velocity, vec3 (0, 1, 0));
-	}	
-
-	if (particle.position.y > GRID_HEIGHT)
-	{
-		particle.position.y = GRID_HEIGHT;
-		particle.velocity = 0.75 * reflect (particle.velocity, vec3 (0, -1, 0));
-	}
-
-	if (particle.position.z < 0)
-	{
-		particle.position.z = 0;
-		particle.velocity = 0.75 * reflect (particle.velocity, vec3 (0, 0, 1));
-	}	
-
-	if (particle.position.z > GRID_DEPTH)
-	{
-		particle.position.z = GRID_DEPTH;
-		particle.velocity = 0.75 * reflect (particle.velocity, vec3 (0, 0, -1));
-	}
-	
 	ivec3 gridoffset;
 	for (gridoffset.x = -1; gridoffset.x <= 1; gridoffset.x++)
 	for (gridoffset.y = -1; gridoffset.y <= 1; gridoffset.y++)
@@ -124,7 +83,7 @@ void main (void)
 			if (gridoffset == ivec3 (0, 0, 0) && i == pos)
 				continue;
 			
-			ParticleInfo neighbour = particles[gridcells[ngridid].particleids[i]];
+			ParticleInfo neighbour = gridcells[ngridid].particleids[i];
 			
 			vec3 impactdir = neighbour.position - particle.position;
 			float impactlen = length (impactdir);
@@ -133,13 +92,10 @@ void main (void)
 				// collisiion
 				impactdir /= impactlen;
 				particle.position = 0.5 * (particle.position + neighbour.position - impactdir);
-				
-				// project
-				particle.velocity -= dot (particle.velocity - 0.75 * neighbour.velocity, impactdir) * impactdir;
 			}
 		}
 	}
-	
+		
 	barrier ();
 	
 	particles[particleid] = particle;

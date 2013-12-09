@@ -17,7 +17,7 @@ void main (void)
 {
 	// pass data to the fragment shader
 	fNormal = vPosition;
-	vec3 pos = 0.2 * particlePosition + 0.2 * vec3 (-128, 1, -128) + vPosition * 0.1;
+	vec3 pos = 0.2 * particlePosition + 0.2 * vec3 (-32, 1, -32) + vPosition * 0.1;
 	fPosition = pos;
 	// compute and output the vertex position
 	// after view transformation and projection
