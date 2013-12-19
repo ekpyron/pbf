@@ -2379,17 +2379,16 @@ void _glcorewInit (glcorewGetProcAddressCallback getprocaddress)
  * directly from OpenGL32.dll, as wglGetProcAddress
  * may return NULL for legacy opengl entry points. */
 static HMODULE __glcorewOpengl32DllHandle = NULL;
-static glcorewGetProcAddressCallback _glcorewUserGetProcAddressCallback = NULL;
+static glcorewGetProcAddressCallback __glcorewUserGetProcAddressCallback = NULL;
 inline void *__glcorewGetProcAddress (const char *name)
 {
     void *ptr = NULL;
-    if (_usergetprocaddress)
-         ptr = _usergetprocaddress (name);
-    if (!ptr && _opengl32dllhandle)
-         ptr = (void*) GetProcAddress (_opengl32dllhandle, name);
+    if (__glcorewUserGetProcAddressCallback)
+         ptr = __glcorewUserGetProcAddressCallback (name);
+    if (!ptr && __glcorewOpengl32DllHandle)
+         ptr = (void*) GetProcAddress (__glcorewOpengl32DllHandle, name);
     return ptr;
 }
-} /* namespace internal */
 #endif
 
 void glcorewInit (glcorewGetProcAddressCallback callback) {
@@ -2398,8 +2397,8 @@ void glcorewInit (glcorewGetProcAddressCallback callback) {
 
 #ifdef _WIN32
     __glcorewOpengl32DllHandle = LoadLibrary ("OPENGL32.DLL");
-    _glcorewUserGetProcAddressCallback = callback;
-    glcorewInitPrototypes (__glcorewGetProcAddress);
+    __glcorewUserGetProcAddressCallback = callback;
+    _glcorewInit (__glcorewGetProcAddress);
 #else
     _glcorewInit (callback);
 #endif

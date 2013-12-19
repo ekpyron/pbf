@@ -16,8 +16,14 @@
 #include <vector>
 #include <string>
 #include <sstream>
-#define _USE_MATH_DEFINES
 #include <cmath>
+
+#ifndef M_PI
+#define M_PI       3.14159265358979323846
+#endif
+#ifndef M_PI_2
+#define M_PI_2     1.57079632679489661923
+#endif
 
 extern GLFWwindow *window;
 
