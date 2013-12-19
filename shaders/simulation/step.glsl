@@ -2,9 +2,9 @@
 
 layout (local_size_x = 16, local_size_y = 16) in;
 
-#define GRID_WIDTH	64
-#define GRID_HEIGHT	64
-#define GRID_DEPTH 64
+#define GRID_WIDTH	128
+#define GRID_HEIGHT	16
+#define GRID_DEPTH 128
 
 struct ParticleInfo
 {
@@ -14,7 +14,12 @@ struct ParticleInfo
 
 layout (std430, binding = 0) buffer ParticleBuffer
 {
-	ParticleInfo particles[];
+	coherent ParticleInfo particles[];
+};
+
+layout (std430, binding = 3) buffer LambdaBuffer
+{
+	coherent float lambdas[];
 };
 
 //uniform float timestep;
@@ -23,17 +28,17 @@ const float lasttimestep = 0.01;
 
 layout (std430, binding = 1) buffer GridCounters
 {
-	uint gridcounters[];
+	coherent uint gridcounters[];
 };
 
 struct GridCell
 {
-	ParticleInfo particleids[8];
+	uint particleids[8];
 };
 
 layout (std430, binding = 2) buffer GridCells
 {
-	GridCell gridcells[];
+	coherent GridCell gridcells[];
 };
 
 float Wpoly6 (float r)
@@ -52,12 +57,13 @@ float Wspiky (float r)
 	return 4.774648292756860 * tmp * tmp * tmp;
 }
 
-float gradWspiky (float r)
+vec3 gradWspiky (vec3 r)
 {
-	if (r > 1)
-		return 0;
-	float tmp = 1 - r;
-	return -3 * 4.774648292756860 * tmp * tmp;
+	float l = length (r);
+	if (l > 1)
+		return vec3 (0, 0, 0);
+	float tmp = 1 - l;
+	return (-3 * 4.774648292756860 * tmp * tmp) * (r/l);
 }
 
 void main (void)
@@ -69,7 +75,7 @@ void main (void)
 	ParticleInfo particle = particles[particleid];
 	
 	// gravity
-	vec3 velocity = (particle.position - particle.oldposition) / lasttimestep;
+	vec3 velocity = 0.5 * (particle.position - particle.oldposition) / lasttimestep;
 	velocity += 1000 * vec3 (0, -1, 0) * timestep;
 	
 	// save old position and predict new position
@@ -86,19 +92,18 @@ void main (void)
 
 	uint pos = atomicAdd (gridcounters[gridid], 1);
 	if (pos < 8)
-		gridcells[gridid].particleids[pos] = particle;
-		
+		gridcells[gridid].particleids[pos] = particleid;
+
 	barrier ();
 	memoryBarrierBuffer ();
 	
-	vec3 neighbours[8*27 + 1];
-	float sum_k_grad_Ci = 0;
-	float lambda_i[8*27 + 1];
-	uint num_neighbours = 1;
+	uint neighbours[8*27];
+	float sum_k_grad_Ci;
+	float lambda;
+	uint num_neighbours = 0;
 	
-	neighbours[0] = particle.position;
-	lambda_i[0] = 0;
-	const float rho_0 = 1;
+	const float rho_0 = 2.0;
+	uint i;
 	
 	ivec3 gridoffset;
 	for (gridoffset.x = -1; gridoffset.x <= 1; gridoffset.x++)
@@ -107,71 +112,69 @@ void main (void)
 	{
 		ivec3 ngrid = grid + gridoffset;
 		int ngridid = ngrid.z * GRID_WIDTH * GRID_HEIGHT + ngrid.y * GRID_WIDTH + ngrid.x;
-		for (uint i = 0; i < gridcounters[ngridid]; i++)
+		for (uint j = 0; j < gridcounters[ngridid]; j++)
 		{
-			if (gridoffset == ivec3 (0, 0, 0) && i == pos)
-				continue;
-			
-			vec3 pos = gridcells[ngridid].particleids[i].position;
-			
-			neighbours[num_neighbours] = pos;
-			lambda_i[num_neighbours] = 0;
+			uint id = gridcells[ngridid].particleids[j];
+			neighbours[num_neighbours] = id;
 			num_neighbours++;
 		}
 	}
 	
-	for (uint i = 0; i < num_neighbours; i++)
+	for (uint solver = 0; solver < 1; solver++) {
+	
+	sum_k_grad_Ci = 0;
+	lambda = 0;
+	
+	float rho = 0;
+	
+	for (uint j = 0; j < num_neighbours; j++)
 	{
-		for (uint j = 0; j < num_neighbours; j++)
-		{
-			float len = length (neighbours[i] - neighbours[j]);
-			lambda_i[i] += Wpoly6 (len);
-		}
+		float len = length (particle.position - particles[neighbours[j]].position);
+		rho += Wpoly6 (len);
 	}
 	
-	for (uint i = 0; i < num_neighbours; i++)
+	for (uint k = 0; k < num_neighbours; k++)
 	{
-		for (uint k = 0; k < num_neighbours; k++)
+		vec3 grad_pk_Ci = vec3 (0, 0, 0);
+		if (i == k)
 		{
-			float grad_pk_Ci = 0;
-			if (i == k)
+			for (uint j = 0; j < num_neighbours; j++)
 			{
-				for (uint j = 0; j < num_neighbours; j++)
-				{
-					grad_pk_Ci += gradWspiky (length (neighbours[i] - neighbours[j])); 
-				}
+				grad_pk_Ci += gradWspiky (particle.position - particles[neighbours[j]].position); 
 			}
-			else
-			{
-				grad_pk_Ci = -gradWspiky (length (neighbours[i] - neighbours[k]));
-			}
-			sum_k_grad_Ci += grad_pk_Ci * grad_pk_Ci;
 		}
+		else
+		{
+			grad_pk_Ci = -gradWspiky (particle.position - particles[neighbours[k]].position);
+		}
+		grad_pk_Ci /= rho_0;
+		sum_k_grad_Ci += dot (grad_pk_Ci, grad_pk_Ci);
 	}
 	
-	sum_k_grad_Ci /= rho_0;
-	for (uint i = 0; i < num_neighbours; i++)
-	{	
-		float C_i = lambda_i[i] / rho_0 - 1;
-		lambda_i[i] = -C_i / (sum_k_grad_Ci + 0.01);
-	}
+	float C_i = rho / rho_0 - 1;
+	lambda = -C_i / (sum_k_grad_Ci + 0.01);
+	
+	lambdas[particleid] = lambda;
+	
+	barrier ();
+	memoryBarrierBuffer ();
+	
 	
 	vec3 deltap = vec3 (0, 0, 0);
 	
-	for (uint i = 0; i < num_neighbours; i++)
+	for (uint j = 0; j < num_neighbours; j++)
 	{
-		for (uint j = 0; j < num_neighbours; j++)
-		{
-			deltap += (lambda_i[i] + lambda_i[j]) * gradWspiky (length (neighbours[i] - neighbours[j]));
-		}
+		deltap += (lambda + lambdas[neighbours[j]]) * gradWspiky (particle.position - particles[neighbours[j]].position);
 	}
 	
-	particle.position += deltap;					
+	particle.position += deltap / rho_0;					
 	particle.position = clamp (particle.position, vec3 (0, 0, 0), vec3 (GRID_WIDTH, GRID_HEIGHT, GRID_DEPTH));
-	
-		
+
 	barrier ();
 	
 	particles[particleid] = particle;
 	
+	barrier ();
+	memoryBarrierBuffer ();
+	}
 }

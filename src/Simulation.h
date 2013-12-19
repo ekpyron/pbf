@@ -61,10 +61,11 @@ private:
     */
     ShaderProgram particleprogram;
 
-    /** Simulation step 1 shader program.
+    /** Simulation step shader program.
      * Shader program for the first simulation step.
      */
-    ShaderProgram simulationstep1;
+    ShaderProgram simulationstep;
+
     /** Framing.
      * Takes care of rendering a framing for the scene.
      */
@@ -82,6 +83,10 @@ private:
              */
             GLuint particlebuffer;
 
+            /** Lambda buffer.
+             * Buffer in which the specific scalar values are stored during the simulation steps.
+             */
+            GLuint lambdabuffer;
             /** Transformation uniform buffer.
              * Buffer object to store the projection and view matrix.
              */
@@ -108,7 +113,7 @@ private:
          * The buffer objects are stored in a union, so that it is possible
          * to create/delete all buffer objects with a single OpenGL call.
          */
-        GLuint buffers[5];
+        GLuint buffers[6];
     };
 
     /** Font subsystem.
