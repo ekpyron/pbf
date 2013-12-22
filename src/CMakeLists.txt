@@ -1,7 +1,7 @@
 find_package (glfw REQUIRED)
 find_package (PNG REQUIRED)
 find_package (GLM REQUIRED)
-find_package (OPENGL REQUIRED)
+find_package (OpenGL REQUIRED)
 
 include_directories (${GLFW_INCLUDE_DIR} ${CMAKE_SOURCE_DIR}/glcorew ${PNG_INCLUDE_DIRS} ${GLM_INCLUDE_DIR})
 
