@@ -6,6 +6,10 @@ layout (local_size_x = 16, local_size_y = 16) in;
 #define GRID_HEIGHT	16
 #define GRID_DEPTH 128
 
+const vec3 GRID_SIZE = vec3 (GRID_WIDTH, GRID_HEIGHT, GRID_DEPTH);
+
+const float rho_0 = 2;
+
 struct ParticleInfo
 {
 	vec3 position;
@@ -24,7 +28,6 @@ layout (std430, binding = 3) buffer LambdaBuffer
 
 //uniform float timestep;
 const float timestep = 0.01;
-const float lasttimestep = 0.01;
 
 layout (std430, binding = 1) buffer GridCounters
 {
@@ -101,7 +104,6 @@ void main (void)
 	float lambda;
 	uint num_neighbours = 0;
 	
-	const float rho_0 = 2.0;
 	uint i;
 	
 	ivec3 gridoffset;
@@ -168,12 +170,21 @@ void main (void)
 	
 	for (uint j = 0; j < num_neighbours; j++)
 	{
-		deltap += (lambda + lambdas[neighbours[j]] + scorr) * gradWspiky (particle.position - particles[neighbours[j]].position);
+		deltap += (lambda + lambdas[neighbours[j]]) * gradWspiky (particle.position - particles[neighbours[j]].position);
 	}
 	
-	particle.position += deltap / rho_0;					
-	particle.position = clamp (particle.position, vec3 (0, 0, 0), vec3 (GRID_WIDTH, GRID_HEIGHT, GRID_DEPTH));
-	particle.velocity = 0.25 * (particle.position - oldposition) / timestep;
+	particle.position += deltap / rho_0;
+	vec3 flipvelocity = vec3 (greaterThanEqual (particle.position, vec3 (0, 0, 0))) * vec3(lessThanEqual (particle.position, GRID_SIZE));
+	particle.position = clamp (particle.position, vec3 (0, 0, 0), GRID_SIZE);
+	particle.velocity = 0.5 * (particle.position - oldposition) / timestep;
+	//particle.velocity *= -2 * (flipvelocity - 0.5);
+/*
+	vec3 v_i = particle.velocity;
+	for (uint j = 0; j < num_neighbours; j++)
+	{
+		vec3 v_j = particles[neighbours[j]].velocity;
+		particle.velocity += 0.01 * (v_i - v_j) * Wpoly6 (particle.position - particles[neighbours[j]].position);
+	}*/
 
 	barrier ();
 	

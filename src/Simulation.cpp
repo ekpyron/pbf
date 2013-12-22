@@ -199,6 +199,10 @@ void Simulation::Frame (void)
     glBindBufferBase (GL_SHADER_STORAGE_BUFFER, 1, gridcounterbuffer);
     glClearBufferData (GL_SHADER_STORAGE_BUFFER, GL_R32UI, GL_RED, GL_UNSIGNED_INT, NULL);
 
+    // clear lambda buffer
+    glBindBufferBase (GL_SHADER_STORAGE_BUFFER, 3, lambdabuffer);
+    glClearBufferData (GL_SHADER_STORAGE_BUFFER, GL_R32UI, GL_RED, GL_UNSIGNED_INT, NULL);
+
     // run simulation step 1
     if (glfwGetKey (window, GLFW_KEY_SPACE))
     {
