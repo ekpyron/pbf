@@ -27,8 +27,9 @@ void ShaderProgram::CompileShader (GLenum type, const std::string &filename)
 
         data.resize (length);
         f.read (&data[0], length);
+		length = f.gcount ();
 
-        if (f.bad () || f.fail ())
+        if (f.bad ())
             throw std::runtime_error (std::string ("Cannot load shader: ") + filename);
     }
 
