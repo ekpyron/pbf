@@ -25,6 +25,23 @@ void glfwErrorCallback (int error, const char *msg)
     std::cerr << "GLFW error: " << msg << std::endl;
 }
 
+/** OpenGL debug callback.
+ * Outputs a debug message from OpenGL.
+ * \param source source of the debug message
+ * \param type type of the debug message
+ * \param id debug message id
+ * \param severity severity of the debug message
+ * \param length length of the debug message
+ * \param message debug message
+ * \param userParam user pointer
+ *
+ */
+void glDebugCallback (GLenum source, GLenum type, GLuint id, GLenum severity, GLsizei length,
+        const GLchar *message, const void *userParam)
+{
+    std::cerr << "OpenGL debug message: " << std::string (message, length) << std::endl;
+}
+
 /** Cursor position.
  * Stores the last known cursor position. Used to calculate relative cursor movement.
  */
@@ -83,6 +100,7 @@ void initialize (void)
     glfwWindowHint (GLFW_CONTEXT_VERSION_MINOR, 3);
     glfwWindowHint (GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
     glfwWindowHint (GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
+    glfwWindowHint (GLFW_OPENGL_DEBUG_CONTEXT, GL_TRUE);
 
     // open a window and an OpenGL context
     window = glfwCreateWindow (1280, 720, "PBF", NULL, NULL);
@@ -92,6 +110,9 @@ void initialize (void)
 
     // get OpenGL entry points
     glcorewInit ((glcorewGetProcAddressCallback) glfwGetProcAddress);
+
+    glDebugMessageCallback (glDebugCallback, NULL);
+    glEnable (GL_DEBUG_OUTPUT);
 
     // create the simulation class
     simulation = new Simulation ();
