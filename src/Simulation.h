@@ -28,6 +28,11 @@ public:
      */
     void OnMouseMove (const double &x, const double &y);
 
+    /** Reset particle buffer.
+     * Resets the particle buffer containing the particle information.
+     */
+    void ResetParticleBuffer (void);
+
     /** Key up event.
      * Handles key release events.
      * \param key key that was released
@@ -41,11 +46,35 @@ public:
      */
     void Resize (const unsigned int &width, const unsigned int &height);
 
+    /** Get number of particles.
+     * Obtains the number of particles in the simulation.
+     * \returns the number of particles in the simulation.
+     */
+    const unsigned int GetNumberOfParticles (void) const;
+
     /** Animation loop.
      * This function is called every frame and performs the actual simulation.
      */
     void Frame (void);
 private:
+    /** Particle information.
+     * Structure representing the information stored for each particle.
+     */
+    typedef struct particleinfo {
+        /** Particle position.
+         */
+        glm::vec3 position;
+        /** Unused padding value.
+         */
+        float padding0;
+        /** Particle velocity.
+         */
+        glm::vec3 velocity;
+        /** Unused padding value.
+         */
+        float padding2;
+    } particleinfo_t;
+
     /** Camera.
      * Used to handle input events and create a view matrix.
      */

@@ -9,7 +9,7 @@ layout (local_size_x = 16, local_size_y = 16) in;
 struct ParticleInfo
 {
 	vec3 position;
-	vec3 oldposition;
+	vec3 velocity;
 };
 
 layout (std430, binding = 0) buffer ParticleBuffer
@@ -75,12 +75,11 @@ void main (void)
 	ParticleInfo particle = particles[particleid];
 	
 	// gravity
-	vec3 velocity = 0.5 * (particle.position - particle.oldposition) / lasttimestep;
-	velocity += 1000 * vec3 (0, -1, 0) * timestep;
+	particle.velocity += 1000 * vec3 (0, -1, 0) * timestep;
 	
 	// save old position and predict new position
-	particle.oldposition = particle.position;
-	particle.position += timestep * velocity;
+	vec3 oldposition = particle.position;
+	particle.position += timestep * particle.velocity;
 
 	// compute grid id as hash value
 	ivec3 grid;
@@ -127,10 +126,15 @@ void main (void)
 	
 	float rho = 0;
 	
+	float scorr = 0;
 	for (uint j = 0; j < num_neighbours; j++)
 	{
 		float len = length (particle.position - particles[neighbours[j]].position);
-		rho += Wpoly6 (len);
+		float tmp = Wpoly6 (len);
+		rho += tmp;
+		tmp = -tmp / Wpoly6 (0.1);
+		tmp *= tmp;
+		scorr += -0.1 * tmp * tmp;
 	}
 	
 	for (uint k = 0; k < num_neighbours; k++)
@@ -150,9 +154,9 @@ void main (void)
 		grad_pk_Ci /= rho_0;
 		sum_k_grad_Ci += dot (grad_pk_Ci, grad_pk_Ci);
 	}
-	
+		
 	float C_i = rho / rho_0 - 1;
-	lambda = -C_i / (sum_k_grad_Ci + 0.01);
+	lambda = -C_i / (sum_k_grad_Ci + 0.1);
 	
 	lambdas[particleid] = lambda;
 	
@@ -164,11 +168,12 @@ void main (void)
 	
 	for (uint j = 0; j < num_neighbours; j++)
 	{
-		deltap += (lambda + lambdas[neighbours[j]]) * gradWspiky (particle.position - particles[neighbours[j]].position);
+		deltap += (lambda + lambdas[neighbours[j]] + scorr) * gradWspiky (particle.position - particles[neighbours[j]].position);
 	}
 	
 	particle.position += deltap / rho_0;					
 	particle.position = clamp (particle.position, vec3 (0, 0, 0), vec3 (GRID_WIDTH, GRID_HEIGHT, GRID_DEPTH));
+	particle.velocity = 0.25 * (particle.position - oldposition) / timestep;
 
 	barrier ();
 	

@@ -56,54 +56,16 @@ Simulation::Simulation (void) : width (0), height (0), font ("textures/font.png"
     glClearColor (0.25f, 0.25f, 0.25f, 1.0f);
     glClearDepth (1.0f);
 
-    // generate particle information
-    typedef struct particleinfo {
-        glm::vec3 position;
-        float padding0;
-        glm::vec3 oldposition;
-        float padding2;
-    } particleinfo_t;
-    std::vector<particleinfo_t> particles;
-    particles.reserve (32 * 32 * 8 * 2);
-    srand (time (NULL));
-    for (int x = 0; x < 32; x++)
-    {
-        for (int z = 0; z < 32; z++)
-        {
-            for (int y = 0; y < 8; y++)
-            {
-                particleinfo_t particle;
-                particle.position = glm::vec3 (32 + x, y + 0, 32 + z);
-                glm::vec3 velocity = glm::vec3 (float (rand ()) / float (RAND_MAX) - 0.5f,
-                        float (rand ()) / float (RAND_MAX) - 0.5f, float (rand ()) / float (RAND_MAX) - 0.5f);
-                particle.oldposition = particle.position - 0.01f * velocity;
-                particles.push_back (particle);
-            }
-        }
-    }
-    for (int x = 0; x < 32; x++)
-    {
-        for (int z = 0; z < 32; z++)
-        {
-            for (int y = 0; y < 8; y++)
-            {
-                particleinfo_t particle;
-                particle.position = glm::vec3 (32 + 63 - x, y + 0, 32 + 63 - z);
-                glm::vec3 velocity = glm::vec3 (float (rand ()) / float (RAND_MAX) - 0.5f,
-                        float (rand ()) / float (RAND_MAX) - 0.5f, float (rand ()) / float (RAND_MAX) - 0.5f);
-                particle.oldposition = particle.position - 0.01f * velocity;
-                particles.push_back (particle);
-            }
-        }
-    }
-
-    //  store the particle in a buffer object and bind it to shader storage buffer binding point 0
+    //  allocate particle buffer and bind it to shader storage buffer binding point 0
     glBindBufferBase (GL_SHADER_STORAGE_BUFFER, 0, particlebuffer);
-    glBufferData (GL_SHADER_STORAGE_BUFFER, sizeof (particleinfo_t) * particles.size (), &particles[0], GL_DYNAMIC_DRAW);
+    glBufferData (GL_SHADER_STORAGE_BUFFER, sizeof (particleinfo_t) * GetNumberOfParticles (), NULL, GL_DYNAMIC_DRAW);
+
+    // Initialize particle buffer
+    ResetParticleBuffer ();
 
     // allocate lambda buffer and bind it to shader storage buffer binding point 3
     glBindBufferBase (GL_SHADER_STORAGE_BUFFER, 3, lambdabuffer);
-    glBufferData (GL_SHADER_STORAGE_BUFFER, sizeof (float) * particles.size (), NULL, GL_DYNAMIC_DRAW);
+    glBufferData (GL_SHADER_STORAGE_BUFFER, sizeof (float) * GetNumberOfParticles (), NULL, GL_DYNAMIC_DRAW);
 
     // allocate the grid counter buffer and bind it to shader storage buffer binding point 1
     glBindBufferBase (GL_SHADER_STORAGE_BUFFER, 1, gridcounterbuffer);
@@ -164,58 +126,57 @@ void Simulation::OnMouseMove (const double &x, const double &y)
     }
 }
 
+const unsigned int Simulation::GetNumberOfParticles (void) const
+{
+    return 32 * 32 * 8 * 2;
+}
+
+void Simulation::ResetParticleBuffer (void)
+{
+    // regenerate particle information
+    std::vector<particleinfo_t> particles;
+    particles.reserve (GetNumberOfParticles ());
+    srand (time (NULL));
+    for (int x = 0; x < 32; x++)
+    {
+        for (int z = 0; z < 32; z++)
+        {
+            for (int y = 0; y < 8; y++)
+            {
+                particleinfo_t particle;
+                particle.position = glm::vec3 (32 + x, y + 0, 32 + z);
+                particle.velocity = glm::vec3 (float (rand ()) / float (RAND_MAX) - 0.5f,
+                        float (rand ()) / float (RAND_MAX) - 0.5f, float (rand ()) / float (RAND_MAX) - 0.5f);
+                particles.push_back (particle);
+            }
+        }
+    }
+    for (int x = 0; x < 32; x++)
+    {
+        for (int z = 0; z < 32; z++)
+        {
+            for (int y = 0; y < 8; y++)
+            {
+                particleinfo_t particle;
+                particle.position = glm::vec3 (32 + 63 - x, y + 0, 32 + 63 - z);
+                particle.velocity = glm::vec3 (float (rand ()) / float (RAND_MAX) - 0.5f,
+                        float (rand ()) / float (RAND_MAX) - 0.5f, float (rand ()) / float (RAND_MAX) - 0.5f);
+                particles.push_back (particle);
+            }
+        }
+    }
+    //  update the particle buffer
+    glBindBuffer (GL_SHADER_STORAGE_BUFFER, particlebuffer);
+    glBufferSubData (GL_SHADER_STORAGE_BUFFER, 0, sizeof (particleinfo_t) * particles.size (), &particles[0]);
+}
+
 void Simulation::OnKeyUp (int key)
 {
     switch (key)
     {
     case GLFW_KEY_TAB:
-    {
-        // regenerate particle information
-        typedef struct particleinfo {
-            glm::vec3 position;
-            float padding0;
-            glm::vec3 oldposition;
-            float padding2;
-        } particleinfo_t;
-        std::vector<particleinfo_t> particles;
-        particles.reserve (32 * 32 * 8 * 2);
-        srand (time (NULL));
-        for (int x = 0; x < 32; x++)
-        {
-            for (int z = 0; z < 32; z++)
-            {
-                for (int y = 0; y < 8; y++)
-                {
-                    particleinfo_t particle;
-                    particle.position = glm::vec3 (32 + x, y + 0, 32 + z);
-                    glm::vec3 velocity = glm::vec3 (float (rand ()) / float (RAND_MAX) - 0.5f,
-                            float (rand ()) / float (RAND_MAX) - 0.5f, float (rand ()) / float (RAND_MAX) - 0.5f);
-                    particle.oldposition = particle.position - 0.01f * velocity;
-                    particles.push_back (particle);
-                }
-            }
-        }
-        for (int x = 0; x < 32; x++)
-        {
-            for (int z = 0; z < 32; z++)
-            {
-                for (int y = 0; y < 8; y++)
-                {
-                    particleinfo_t particle;
-                    particle.position = glm::vec3 (32 + 63 - x, y + 0, 32 + 63 - z);
-                    glm::vec3 velocity = glm::vec3 (float (rand ()) / float (RAND_MAX) - 0.5f,
-                            float (rand ()) / float (RAND_MAX) - 0.5f, float (rand ()) / float (RAND_MAX) - 0.5f);
-                    particle.oldposition = particle.position - 0.01f * velocity;
-                    particles.push_back (particle);
-                }
-            }
-        }
-        //  update the particle buffer
-        glBindBuffer (GL_SHADER_STORAGE_BUFFER, particlebuffer);
-        glBufferSubData (GL_SHADER_STORAGE_BUFFER, 0, sizeof (particleinfo_t) * particles.size (), &particles[0]);
-
+        ResetParticleBuffer ();
         break;
-    }
     }
 }
 
@@ -249,7 +210,7 @@ void Simulation::Frame (void)
 
     // render spheres
     particleprogram.Use ();
-    icosahedron.Render (32 * 32 * 8 * 2);
+    icosahedron.Render (GetNumberOfParticles ());
 
     // determine the framerate every second
     framecount++;
