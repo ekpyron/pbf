@@ -8,7 +8,7 @@ layout (local_size_x = 8, local_size_y = 8) in;
 
 const vec3 GRID_SIZE = vec3 (GRID_WIDTH, GRID_HEIGHT, GRID_DEPTH);
 
-const float rho_0 = 1.5;
+const float rho_0 = 1.41;
 
 struct ParticleInfo
 {
