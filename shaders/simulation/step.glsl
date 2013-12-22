@@ -1,6 +1,6 @@
 #version 430 core
 
-layout (local_size_x = 16, local_size_y = 16) in;
+layout (local_size_x = 8, local_size_y = 8) in;
 
 #define GRID_WIDTH	128
 #define GRID_HEIGHT	16
@@ -8,7 +8,7 @@ layout (local_size_x = 16, local_size_y = 16) in;
 
 const vec3 GRID_SIZE = vec3 (GRID_WIDTH, GRID_HEIGHT, GRID_DEPTH);
 
-const float rho_0 = 2;
+const float rho_0 = 1.5;
 
 struct ParticleInfo
 {
@@ -72,8 +72,9 @@ vec3 gradWspiky (vec3 r)
 void main (void)
 {
 	uint particleid;
-	particleid = gl_GlobalInvocationID.z * gl_NumWorkGroups.y * gl_NumWorkGroups.x * 256
-		+ gl_GlobalInvocationID.y * gl_NumWorkGroups.x * 16 + gl_GlobalInvocationID.x;
+	particleid = gl_GlobalInvocationID.z * gl_NumWorkGroups.y * gl_NumWorkGroups.x
+		* gl_WorkGroupSize.x * gl_WorkGroupSize.y
+		+ gl_GlobalInvocationID.y * gl_NumWorkGroups.x * gl_WorkGroupSize.x + gl_GlobalInvocationID.x;
 	
 	ParticleInfo particle = particles[particleid];
 	
@@ -100,8 +101,6 @@ void main (void)
 	memoryBarrierBuffer ();
 	
 	uint neighbours[8*27];
-	float sum_k_grad_Ci;
-	float lambda;
 	uint num_neighbours = 0;
 	
 	uint i;
@@ -116,15 +115,20 @@ void main (void)
 		for (uint j = 0; j < gridcounters[ngridid]; j++)
 		{
 			uint id = gridcells[ngridid].particleids[j];
+			if (id == particleid)
+				i = num_neighbours;
 			neighbours[num_neighbours] = id;
 			num_neighbours++;
 		}
 	}
 	
 	for (uint solver = 0; solver < 1; solver++) {
+
+	barrier ();
+	memoryBarrierBuffer ();
 	
-	sum_k_grad_Ci = 0;
-	lambda = 0;
+	float sum_k_grad_Ci = 0;
+	float lambda = 0;
 	
 	float rho = 0;
 	
@@ -156,15 +160,14 @@ void main (void)
 		grad_pk_Ci /= rho_0;
 		sum_k_grad_Ci += dot (grad_pk_Ci, grad_pk_Ci);
 	}
-		
+
 	float C_i = rho / rho_0 - 1;
-	lambda = -C_i / (sum_k_grad_Ci + 0.1);
+	lambda = -C_i / (sum_k_grad_Ci + 0.01);
 	
 	lambdas[particleid] = lambda;
 	
 	barrier ();
 	memoryBarrierBuffer ();
-	
 	
 	vec3 deltap = vec3 (0, 0, 0);
 	
@@ -174,10 +177,14 @@ void main (void)
 	}
 	
 	particle.position += deltap / rho_0;
-	vec3 flipvelocity = vec3 (greaterThanEqual (particle.position, vec3 (0, 0, 0))) * vec3(lessThanEqual (particle.position, GRID_SIZE));
 	particle.position = clamp (particle.position, vec3 (0, 0, 0), GRID_SIZE);
+	barrier ();
+	particles[particleid].position = particle.position;
+	}
+
+//	vec3 flipvelocity = vec3 (greaterThanEqual (particle.position, vec3 (0, 0, 0))) * vec3(lessThanEqual (particle.position, GRID_SIZE));
 	particle.velocity = 0.5 * (particle.position - oldposition) / timestep;
-	//particle.velocity *= -2 * (flipvelocity - 0.5);
+//	particle.velocity *= -2 * (flipvelocity - 0.5);
 /*
 	vec3 v_i = particle.velocity;
 	for (uint j = 0; j < num_neighbours; j++)
@@ -186,11 +193,7 @@ void main (void)
 		particle.velocity += 0.01 * (v_i - v_j) * Wpoly6 (particle.position - particles[neighbours[j]].position);
 	}*/
 
-	barrier ();
+//	barrier ();
 	
-	particles[particleid] = particle;
-	
-	barrier ();
-	memoryBarrierBuffer ();
-	}
+	particles[particleid].velocity = particle.velocity;
 }

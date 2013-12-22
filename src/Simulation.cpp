@@ -208,7 +208,7 @@ void Simulation::Frame (void)
     {
         simulationstep.Use ();
         glMemoryBarrier (GL_BUFFER_UPDATE_BARRIER_BIT);
-        glDispatchCompute (16, 4, 1);
+        glDispatchCompute (16, 16, 1);
         glMemoryBarrier (GL_SHADER_STORAGE_BARRIER_BIT);
     }
 
