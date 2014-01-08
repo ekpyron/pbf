@@ -8,7 +8,7 @@ layout (local_size_x = 8, local_size_y = 8) in;
 
 const vec3 GRID_SIZE = vec3 (GRID_WIDTH, GRID_HEIGHT, GRID_DEPTH);
 
-const float rho_0 = 1.41;
+const float rho_0 = 1;
 
 struct ParticleInfo
 {
@@ -178,7 +178,11 @@ void main (void)
 	}
 	
 	particle.position += deltap / rho_0;
+	
+	// collision detection begin
 	particle.position = clamp (particle.position, vec3 (0, 0, 0), GRID_SIZE);
+	// collision detection end
+	
 	barrier ();
 	particles[particleid].position = particle.position;
 	}
