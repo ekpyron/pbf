@@ -66,7 +66,7 @@ vec3 gradWspiky (vec3 r)
 	if (l > 1)
 		return vec3 (0, 0, 0);
 	float tmp = 1 - l;
-	return (-3 * 4.774648292756860 * tmp * tmp) * (r/l);
+	return (-3 * 4.774648292756860 * tmp * tmp) * r;
 }
 
 void main (void)
@@ -138,6 +138,7 @@ void main (void)
 		float len = length (particle.position - particles[neighbours[j]].position);
 		float tmp = Wpoly6 (len);
 		rho += tmp;
+		
 		tmp = -tmp / Wpoly6 (0.1);
 		tmp *= tmp;
 		scorr += -0.1 * tmp * tmp;
