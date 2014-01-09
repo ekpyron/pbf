@@ -103,14 +103,14 @@ const int gridoffsets[27] = {
 };
 
 // convenience macros to iterate over all neighbouring particles
-// within the loop "neighbourid" contains the index of the current
-// neighbourparticle in the particles[] array
-#define FOR_EACH_NEIGHBOUR 	for (int o = 0; o < 27; o++) {\
+// within the loop the given variable is defined to contain the index
+// of the current neighbour particle in the particles[] array
+#define FOR_EACH_NEIGHBOUR(var) for (int o = 0; o < 27; o++) {\
 		int ngridid = gridid + gridoffsets[o];\
 		if (ngridid < 0 || ngridid > MAX_GRID_ID)\
 			continue;\
 		for (uint gridparticle = 0; gridparticle < gridcounters[ngridid]; gridparticle++) {\
-			uint neighbourid = gridcells[ngridid].particleids[gridparticle];
+			uint var = gridcells[ngridid].particleids[gridparticle];
 #define END_FOR_EACH_NEIGHBOUR 	}}
 
 void main (void)
@@ -154,10 +154,11 @@ void main (void)
 	float rho = 0;
 	float scorr = 0;
 
-	FOR_EACH_NEIGHBOUR
+	vec3 grad_pi_Ci = vec3 (0, 0, 0);
+	FOR_EACH_NEIGHBOUR(j)
 	{			
 		// compute rho_i (equation 2)
-		float len = length (particle.position - particles[neighbourid].position);
+		float len = length (particle.position - particles[j].position);
 		float tmp = Wpoly6 (len);
 		rho += tmp;
 	
@@ -167,16 +168,22 @@ void main (void)
 		scorr += -0.1 * tmp * tmp;
 			
 		// sum gradients of Ci (equation 8 and parts of equation 9)
+		// use j as k so that we can stay in the same loop
+		uint k = j;
+		// for k=i it holds that particle.position==particles[k].position, so
+		// the summand does no harm
 		vec3 grad_pk_Ci = vec3 (0, 0, 0);
-		// plugging equation 8 into the sum in equation 9 is actually equivalent
-		// to omitting the values for k=i and instead summing over the values for k=j
-		// with a factor of 2, as direction and sign does not matter for the squared length,
-		// that is summed up in equation 9.
-		grad_pk_Ci = gradWspiky (particle.position - particles[neighbourid].position);
+		grad_pk_Ci = gradWspiky (particle.position - particles[k].position);
 		grad_pk_Ci /= rho_0;
-		sum_k_grad_Ci += 2 * dot (grad_pk_Ci, grad_pk_Ci);
+		sum_k_grad_Ci += dot (grad_pk_Ci, grad_pk_Ci);
+		
+		// now use j as j again and accumulate grad_pi_Ci for the case k=i
+		// from equation 8
+		grad_pi_Ci += gradWspiky (particle.position - particles[j].position); 
 	}
 	END_FOR_EACH_NEIGHBOUR
+	// add grad_pi_Ci to the sum
+	sum_k_grad_Ci += dot (grad_pi_Ci, grad_pi_Ci) / rho_0;
 	
 	// compute lambda_i (equations 1 and 9)
 	float C_i = rho / rho_0 - 1;
@@ -189,10 +196,10 @@ void main (void)
 	
 	vec3 deltap = vec3 (0, 0, 0);
 	
-	FOR_EACH_NEIGHBOUR
+	FOR_EACH_NEIGHBOUR(j)
 	{
 		// accumulate position corrections (part of equation 12)
-		deltap += (lambda + lambdas[neighbourid]) * gradWspiky (particle.position - particles[neighbourid].position);
+		deltap += (lambda + lambdas[j]) * gradWspiky (particle.position - particles[j].position);
 	}
 	END_FOR_EACH_NEIGHBOUR
 
