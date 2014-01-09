@@ -71,6 +71,48 @@ vec3 gradWspiky (vec3 r)
 	return (-3 * 4.774648292756860 * tmp * tmp) * r;
 }
 
+// offsets to find neighbouring cells in one dimensional array
+const int gridoffsets[27] = {
+	-GRID_WIDTH * GRID_HEIGHT - GRID_WIDTH - 1,		// -1, -1, -1
+	-GRID_WIDTH * GRID_HEIGHT - GRID_WIDTH,			// -1, -1, 0
+	-GRID_WIDTH * GRID_HEIGHT - GRID_WIDTH + 1,		// -1, -1, 1
+	-GRID_WIDTH * GRID_HEIGHT - 1,					// -1, 0, -1
+	-GRID_WIDTH * GRID_HEIGHT,						// -1, 0, 0
+	-GRID_WIDTH * GRID_HEIGHT + 1,					// -1, 0, 1
+	-GRID_WIDTH * GRID_HEIGHT + GRID_WIDTH - 1,		// -1, 1, -1
+	-GRID_WIDTH * GRID_HEIGHT + GRID_WIDTH,			// -1, 1, 0
+	-GRID_WIDTH * GRID_HEIGHT + GRID_WIDTH + 1,		// -1, 1, 1
+	-GRID_WIDTH - 1,								// 0, -1, -1
+	-GRID_WIDTH,									// 0, -1, 0
+	-GRID_WIDTH + 1,								// 0, -1, 1
+	-1,												// 0, 0, -1
+	0,												// 0, 0, 0
+	1,												// 0, 0, 1
+	GRID_WIDTH - 1,									// 0, 1, -1
+	GRID_WIDTH,										// 0, 1, 0
+	GRID_WIDTH + 1,									// 0, 1, 1
+	GRID_WIDTH * GRID_HEIGHT - GRID_WIDTH - 1,		// 1, -1, -1
+	GRID_WIDTH * GRID_HEIGHT - GRID_WIDTH,			// 1, -1, 0
+	GRID_WIDTH * GRID_HEIGHT - GRID_WIDTH + 1,		// 1, -1, 1
+	GRID_WIDTH * GRID_HEIGHT - 1,					// 1, 0, -1
+	GRID_WIDTH * GRID_HEIGHT,						// 1, 0, 0
+	GRID_WIDTH * GRID_HEIGHT + 1,					// 1, 0, 1
+	GRID_WIDTH * GRID_HEIGHT + GRID_WIDTH - 1,		// 1, 1, -1
+	GRID_WIDTH * GRID_HEIGHT + GRID_WIDTH,			// 1, 1, 0
+	GRID_WIDTH * GRID_HEIGHT + GRID_WIDTH + 1		// 1, 1, 1
+};
+
+// convenience macros to iterate over all neighbouring particles
+// within the loop "neighbourid" contains the index of the current
+// neighbourparticle in the particles[] array
+#define FOR_EACH_NEIGHBOUR 	for (int o = 0; o < 27; o++) {\
+		int ngridid = gridid + gridoffsets[o];\
+		if (ngridid < 0 || ngridid > MAX_GRID_ID)\
+			continue;\
+		for (uint gridparticle = 0; gridparticle < gridcounters[ngridid]; gridparticle++) {\
+			uint neighbourid = gridcells[ngridid].particleids[gridparticle];
+#define END_FOR_EACH_NEIGHBOUR 	}}
+
 void main (void)
 {
 	uint particleid;
@@ -102,53 +144,6 @@ void main (void)
 	barrier ();
 	memoryBarrierBuffer ();
 	
-	uint neighbours[8*27];
-	uint num_neighbours = 0;
-	
-	const int gridoffsets[27] = {
-		-GRID_WIDTH * GRID_HEIGHT - GRID_WIDTH - 1,		// -1, -1, -1
-		-GRID_WIDTH * GRID_HEIGHT - GRID_WIDTH,			// -1, -1, 0
-		-GRID_WIDTH * GRID_HEIGHT - GRID_WIDTH + 1,		// -1, -1, 1
-		-GRID_WIDTH * GRID_HEIGHT - 1,					// -1, 0, -1
-		-GRID_WIDTH * GRID_HEIGHT,						// -1, 0, 0
-		-GRID_WIDTH * GRID_HEIGHT + 1,					// -1, 0, 1
-		-GRID_WIDTH * GRID_HEIGHT + GRID_WIDTH - 1,		// -1, 1, -1
-		-GRID_WIDTH * GRID_HEIGHT + GRID_WIDTH,			// -1, 1, 0
-		-GRID_WIDTH * GRID_HEIGHT + GRID_WIDTH + 1,		// -1, 1, 1
-		-GRID_WIDTH - 1,								// 0, -1, -1
-		-GRID_WIDTH,									// 0, -1, 0
-		-GRID_WIDTH + 1,								// 0, -1, 1
-		-1,												// 0, 0, -1
-		0,												// 0, 0, 0
-		1,												// 0, 0, 1
-		GRID_WIDTH - 1,									// 0, 1, -1
-		GRID_WIDTH,										// 0, 1, 0
-		GRID_WIDTH + 1,									// 0, 1, 1
-		GRID_WIDTH * GRID_HEIGHT - GRID_WIDTH - 1,		// 1, -1, -1
-		GRID_WIDTH * GRID_HEIGHT - GRID_WIDTH,			// 1, -1, 0
-		GRID_WIDTH * GRID_HEIGHT - GRID_WIDTH + 1,		// 1, -1, 1
-		GRID_WIDTH * GRID_HEIGHT - 1,					// 1, 0, -1
-		GRID_WIDTH * GRID_HEIGHT,						// 1, 0, 0
-		GRID_WIDTH * GRID_HEIGHT + 1,					// 1, 0, 1
-		GRID_WIDTH * GRID_HEIGHT + GRID_WIDTH - 1,		// 1, 1, -1
-		GRID_WIDTH * GRID_HEIGHT + GRID_WIDTH,			// 1, 1, 0
-		GRID_WIDTH * GRID_HEIGHT + GRID_WIDTH + 1		// 1, 1, 1
-	};
-	
-	for (int o = 0; o < 27; o++)
-	{
-		int ngridid = gridid + gridoffsets[o];
-		if (ngridid < 0 || ngridid > MAX_GRID_ID)
-			continue;
-		for (uint gridparticle = 0; gridparticle < gridcounters[ngridid]; gridparticle++)
-		{
-			uint neighbourid = gridcells[ngridid].particleids[gridparticle];
-			neighbours[num_neighbours] = neighbourid;
-			num_neighbours++;
-		}
-		
-	}
-
 	for (uint solver = 0; solver < 1; solver++) {
 
 	barrier ();
@@ -156,33 +151,34 @@ void main (void)
 	
 	float sum_k_grad_Ci = 0;
 	float lambda = 0;
-	
 	float rho = 0;
-	
 	float scorr = 0;
-	for (uint j = 0; j < num_neighbours; j++)
-	{
-		float len = length (particle.position - particles[neighbours[j]].position);
+
+	FOR_EACH_NEIGHBOUR
+	{			
+		// compute rho_i (equation 2)
+		float len = length (particle.position - particles[neighbourid].position);
 		float tmp = Wpoly6 (len);
 		rho += tmp;
-		
+	
+		// compute scorr (equation 13) - currently unused
 		tmp = -tmp / Wpoly6 (0.1);
 		tmp *= tmp;
 		scorr += -0.1 * tmp * tmp;
-	}
-	
-	for (uint k = 0; k < num_neighbours; k++)
-	{
+			
+		// sum gradients of Ci (equation 8 and parts of equation 9)
 		vec3 grad_pk_Ci = vec3 (0, 0, 0);
 		// plugging equation 8 into the sum in equation 9 is actually equivalent
 		// to omitting the values for k=i and instead summing over the values for k=j
 		// with a factor of 2, as direction and sign does not matter for the squared length,
 		// that is summed up in equation 9.
-		grad_pk_Ci = gradWspiky (particle.position - particles[neighbours[k]].position);
+		grad_pk_Ci = gradWspiky (particle.position - particles[neighbourid].position);
 		grad_pk_Ci /= rho_0;
 		sum_k_grad_Ci += 2 * dot (grad_pk_Ci, grad_pk_Ci);
 	}
-
+	END_FOR_EACH_NEIGHBOUR
+	
+	// compute lambda_i (equations 1 and 9)
 	float C_i = rho / rho_0 - 1;
 	lambda = -C_i / (sum_k_grad_Ci + 0.01);
 	
@@ -193,11 +189,13 @@ void main (void)
 	
 	vec3 deltap = vec3 (0, 0, 0);
 	
-	for (uint j = 0; j < num_neighbours; j++)
+	FOR_EACH_NEIGHBOUR
 	{
-		deltap += (lambda + lambdas[neighbours[j]]) * gradWspiky (particle.position - particles[neighbours[j]].position);
+		// accumulate position corrections (part of equation 12)
+		deltap += (lambda + lambdas[neighbourid]) * gradWspiky (particle.position - particles[neighbourid].position);
 	}
-	
+	END_FOR_EACH_NEIGHBOUR
+
 	particle.position += deltap / rho_0;
 	
 	// collision detection begin
@@ -208,18 +206,5 @@ void main (void)
 	particles[particleid].position = particle.position;
 	}
 
-//	vec3 flipvelocity = vec3 (greaterThanEqual (particle.position, vec3 (0, 0, 0))) * vec3(lessThanEqual (particle.position, GRID_SIZE));
-	particle.velocity = 0.5 * (particle.position - oldposition) / timestep;
-//	particle.velocity *= -2 * (flipvelocity - 0.5);
-/*
-	vec3 v_i = particle.velocity;
-	for (uint j = 0; j < num_neighbours; j++)
-	{
-		vec3 v_j = particles[neighbours[j]].velocity;
-		particle.velocity += 0.01 * (v_j - v_i) * Wpoly6 (particle.position - particles[neighbours[j]].position);
-	}*/
-
-//	barrier ();
-	
-	particles[particleid].velocity = particle.velocity;
+	particles[particleid].velocity = 0.5 * (particle.position - oldposition) / timestep;
 }
