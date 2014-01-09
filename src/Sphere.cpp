@@ -22,11 +22,12 @@ Sphere::Sphere (void)
             vertices.push_back (pos.x * 32767);
             vertices.push_back (pos.y * 32767);
             vertices.push_back (pos.z * 32767);
+            vertices.push_back (0);
         }
     }
 
     // generate indices
-    std::vector<GLubyte> indices;
+    std::vector<GLushort> indices;
     indices.reserve (8 * 8 * 6);
     for (int i = 0; i < 7; i++)
     {
@@ -46,21 +47,21 @@ Sphere::Sphere (void)
     glBindBuffer (GL_ARRAY_BUFFER, vertexbuffer);
     glBufferData (GL_ARRAY_BUFFER, sizeof (GLushort) * vertices.size (), &vertices[0], GL_STATIC_DRAW);
     // define the vertices as vertex attribute 0
-    glVertexAttribPointer (0, 3, GL_SHORT, GL_TRUE, 0, 0);
+    glVertexAttribPointer (0, 3, GL_SHORT, GL_TRUE, 8, 0);
     glEnableVertexAttribArray (0);
 
     // store indices to a buffer object
     glBindBuffer (GL_ELEMENT_ARRAY_BUFFER, indexbuffer);
-    glBufferData (GL_ELEMENT_ARRAY_BUFFER, sizeof (GLubyte) * indices.size (), &indices[0], GL_STATIC_DRAW);
+    glBufferData (GL_ELEMENT_ARRAY_BUFFER, sizeof (GLushort) * indices.size (), &indices[0], GL_STATIC_DRAW);
 }
 
-void Sphere::SetPositionBuffer (GLuint buffer)
+void Sphere::SetPositionBuffer (GLuint buffer, GLsizei stride, GLintptr offset)
 {
     // bind the vertex array and the position buffer
     glBindVertexArray (vertexarray);
     glBindBuffer (GL_ARRAY_BUFFER, buffer);
     // define the per-instance vertex attribute
-    glVertexAttribPointer (1, 3, GL_FLOAT, GL_FALSE, 0, 0);
+    glVertexAttribPointer (1, 3, GL_FLOAT, GL_FALSE, stride, (const GLvoid*) offset);
     glEnableVertexAttribArray (1);
     glVertexAttribDivisor (1, 1);
 }

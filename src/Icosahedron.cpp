@@ -11,27 +11,27 @@ Icosahedron::Icosahedron (void)
 
     // store vertices to a buffer object
     const GLshort vertices[]= {
-            0, -17227, 27873,
-            27873, 0, 17227,
-            27873, 0, -17227,
-            -27873, 0, -17227,
-            -27873, 0, 17227,
-            -17227, 27873, 0,
-            17227, 27873, 0,
-            17227, -27873, 0,
-            -17227, -27873, 0,
-            0, -17227, -27873,
-            0, 17227, -27873,
-            0, 17227, 27873
+            0, -17227, 27873, 0,
+            27873, 0, 17227, 0,
+            27873, 0, -17227, 0,
+            -27873, 0, -17227, 0,
+            -27873, 0, 17227, 0,
+            -17227, 27873, 0, 0,
+            17227, 27873, 0, 0,
+            17227, -27873, 0, 0,
+            -17227, -27873, 0, 0,
+            0, -17227, -27873, 0,
+            0, 17227, -27873, 0,
+            0, 17227, 27873, 0
     };
     glBindBuffer (GL_ARRAY_BUFFER, vertexbuffer);
     glBufferData (GL_ARRAY_BUFFER, sizeof (vertices), &vertices[0], GL_STATIC_DRAW);
     // define the vertices as vertex attribute 0
-    glVertexAttribPointer (0, 3, GL_SHORT, GL_TRUE, 0, 0);
+    glVertexAttribPointer (0, 3, GL_SHORT, GL_TRUE, 8, 0);
     glEnableVertexAttribArray (0);
 
     // store indices to a buffer object
-    static const GLubyte indices[] = {
+    static const GLushort indices[] = {
             1, 2, 6,
             1, 7, 2,
             3, 4, 5,
@@ -81,5 +81,5 @@ void Icosahedron::Render (GLuint instances) const
     glBindVertexArray (vertexarray);
     glBindBuffer (GL_ELEMENT_ARRAY_BUFFER, indexbuffer);
     // render the framing
-    glDrawElementsInstanced (GL_TRIANGLES, 20 * 3, GL_UNSIGNED_BYTE, 0, instances);
+    glDrawElementsInstanced (GL_TRIANGLES, 20 * 3, GL_UNSIGNED_SHORT, 0, instances);
 }

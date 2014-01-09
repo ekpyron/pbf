@@ -24,7 +24,7 @@ Framing::Framing (void)
 
     // store texture coordinates to a buffer object
     glBindBuffer (GL_ARRAY_BUFFER, texcoordbuffer);
-    const GLubyte texcoords[] = {
+    const GLushort texcoords[] = {
             0, 10,
             10, 10,
             10, 0,
@@ -32,25 +32,25 @@ Framing::Framing (void)
     };
     glBufferData (GL_ARRAY_BUFFER, sizeof (texcoords), texcoords, GL_STATIC_DRAW);
     // define texture coordinates as vertex attribute 1
-    glVertexAttribPointer (1, 2, GL_UNSIGNED_BYTE, GL_FALSE, 0, 0);
+    glVertexAttribPointer (1, 2, GL_UNSIGNED_SHORT, GL_FALSE, 0, 0);
     glEnableVertexAttribArray (1);
 
     // store normals to a buffer object
     glBindBuffer (GL_ARRAY_BUFFER, normalbuffer);
     const GLbyte normals[] = {
-            0, 127, 0,
-            0, 127, 0,
-            0, 127, 0,
-            0, 127, 0
+            0, 127, 0, 0,
+            0, 127, 0, 0,
+            0, 127, 0, 0,
+            0, 127, 0, 0
     };
     glBufferData (GL_ARRAY_BUFFER, sizeof (normals), normals, GL_STATIC_DRAW);
     // define normals as vertex attribute 2
-    glVertexAttribPointer (2, 3, GL_BYTE, GL_TRUE, 0, 0);
+    glVertexAttribPointer (2, 3, GL_BYTE, GL_TRUE, 4, 0);
     glEnableVertexAttribArray (2);
 
     // store indices to a buffer object
     glBindBuffer (GL_ELEMENT_ARRAY_BUFFER, indexbuffer);
-    const GLubyte indices[] = {
+    const GLushort indices[] = {
             0, 1, 2,
             0, 2, 3
     };
@@ -78,5 +78,5 @@ void Framing::Render (void)
     glBindVertexArray (vertexarray);
     glBindBuffer (GL_ELEMENT_ARRAY_BUFFER, indexbuffer);
     // render the framing
-    glDrawElements (GL_TRIANGLES, 6, GL_UNSIGNED_BYTE, 0);
+    glDrawElements (GL_TRIANGLES, 6, GL_UNSIGNED_SHORT, 0);
 }
