@@ -11,7 +11,7 @@ Font::Font (const std::string &filename)
 
     // store vertices to the vertex buffer
     glBindBuffer (GL_ARRAY_BUFFER, vertexbuffer);
-    const GLubyte vertices[] = {
+    const GLushort vertices[] = {
             0, 0,
             1, 0,
             1, 1,
@@ -19,12 +19,12 @@ Font::Font (const std::string &filename)
     };
     glBufferData (GL_ARRAY_BUFFER, sizeof (vertices), vertices, GL_STATIC_DRAW);
     // define the vertices as vertex attribute 0
-    glVertexAttribPointer (0, 2, GL_UNSIGNED_BYTE, GL_FALSE, 0, 0);
+    glVertexAttribPointer (0, 2, GL_UNSIGNED_SHORT, GL_FALSE, 0, 0);
     glEnableVertexAttribArray (0);
 
     // store the indices to the index buffer
     glBindBuffer (GL_ELEMENT_ARRAY_BUFFER, indexbuffer);
-    const GLubyte indices[] = {
+    const GLushort indices[] = {
             1, 0, 2,
             2, 0, 3
     };
@@ -87,7 +87,7 @@ void Font::PrintStr (const float &x, const float &y, const std::string &text)
         // pass the position at which to display the character to the shader
         glUniform2f (pos_location, x + float(i)/2, y);
         // draw the "square"
-        glDrawElements (GL_TRIANGLES, 6, GL_UNSIGNED_BYTE, 0);
+        glDrawElements (GL_TRIANGLES, 6, GL_UNSIGNED_SHORT, 0);
     }
     // disable blending
     glDisable (GL_BLEND);
