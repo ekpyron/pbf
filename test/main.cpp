@@ -33,11 +33,23 @@ int main (int argc, char *argv[])
     std::cout << "DONE." << std::endl;
 
     const GLchar *src = "#version 430 core\n"
+            "\n"
             "layout (local_size_x = 1, local_size_y = 1, local_size_z = 1) in;\n"
-            "layout (std430, binding = 0) buffer Buffer { float data[]; };\n"
+            "\n"
+            "struct ParticleInfo\n"
+            "{\n"
+            "    vec3 position;\n"
+            "    vec3 velocity;\n"
+            "};\n"
+            "\n"
+            "layout (std430, binding = 0) buffer ParticleBuffer\n"
+            "{\n"
+            "    coherent ParticleInfo particles[];\n"
+            "};\n"
+            "\n"
             "void main (void)\n"
             "{\n"
-            " data[0] = 42;\n"
+            "    particles[0].position = vec3 (0, 0, 0);\n"
             "}\n";
 
     std::cout << "Compile shader source:" << std::endl;
@@ -73,24 +85,24 @@ int main (int argc, char *argv[])
     GLuint buffer;
     glGenBuffers (1, &buffer);
     glBindBufferBase (GL_SHADER_STORAGE_BUFFER, 0, buffer);
-    float data = 0;
+    float data[6] = { 42, 42, 42, 42, 42, 42 };
 
-    glBufferData (GL_SHADER_STORAGE_BUFFER, sizeof (float), &data, GL_DYNAMIC_DRAW);
+    glBufferData (GL_SHADER_STORAGE_BUFFER, sizeof (data), &data, GL_DYNAMIC_DRAW);
 
-    glGetBufferSubData (GL_SHADER_STORAGE_BUFFER, 0, sizeof (float), &data);
+    glGetBufferSubData (GL_SHADER_STORAGE_BUFFER, 0, sizeof (data), &data);
 
     std::cout << "DONE." << std::endl;
 
-    std::cout << "Before execution: " << data << std::endl;
+    std::cout << "Before execution: " << data[0] << std::endl;
 
     glDispatchCompute (1, 1, 1);
 
     glFinish ();
     glMemoryBarrier (GL_ALL_BARRIER_BITS);
 
-    glGetBufferSubData (GL_SHADER_STORAGE_BUFFER, 0, sizeof (float), &data);
+    glGetBufferSubData (GL_SHADER_STORAGE_BUFFER, 0, sizeof (data), &data);
 
-    std::cout << "After execution: " << data << std::endl;
+    std::cout << "After execution: " << data[0] << std::endl;
 
     std::cout << "TEST FINISHED" << std::endl;
 
