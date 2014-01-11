@@ -163,7 +163,8 @@ int main (int argc, char *argv[])
         // simulation loop
         while (!glfwWindowShouldClose (window))
         {
-            simulation->Frame ();
+            if (!simulation->Frame ())
+                break;
 
             glfwSwapBuffers (window);
             glfwPollEvents ();

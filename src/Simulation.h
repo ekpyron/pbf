@@ -55,7 +55,7 @@ public:
     /** Animation loop.
      * This function is called every frame and performs the actual simulation.
      */
-    void Frame (void);
+    bool Frame (void);
 private:
     /** Particle information.
      * Structure representing the information stored for each particle.

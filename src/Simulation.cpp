@@ -180,10 +180,17 @@ void Simulation::OnKeyUp (int key)
     }
 }
 
-void Simulation::Frame (void)
+bool Simulation::Frame (void)
 {
     float time_passed = glfwGetTime () - last_time;
     last_time += time_passed;
+
+    GLenum err = glGetError ();
+    if (err != GL_NO_ERROR)
+    {
+        std::cerr << "OpenGL error detected at frame begin: 0x" << std::hex << err << std::endl;
+        return false;
+    }
 
     // specify the viewport size
     glViewport (0, 0, width, height);
@@ -206,9 +213,20 @@ void Simulation::Frame (void)
     // run simulation step 1
     if (glfwGetKey (window, GLFW_KEY_SPACE))
     {
+        glBindBufferBase (GL_SHADER_STORAGE_BUFFER, 0, particlebuffer);
+        glBindBufferBase (GL_SHADER_STORAGE_BUFFER, 1, gridcounterbuffer);
+        glBindBufferBase (GL_SHADER_STORAGE_BUFFER, 2, gridcellbuffer);
+        glBindBufferBase (GL_SHADER_STORAGE_BUFFER, 3, lambdabuffer);
+
         simulationstep.Use ();
         glMemoryBarrier (GL_BUFFER_UPDATE_BARRIER_BIT);
         glDispatchCompute (16, 16, 1);
+        err = glGetError ();
+        if (err != GL_NO_ERROR)
+        {
+            std::cerr << "OpenGL Error Detected: 0x" << std::hex << err << std::endl;
+            return false;
+        }
         glMemoryBarrier (GL_SHADER_STORAGE_BARRIER_BIT);
     }
 
@@ -230,4 +248,5 @@ void Simulation::Frame (void)
         stream << "FPS: " << fps << std::endl;
         font.PrintStr (0, 0, stream.str ());
     }
+    return true;
 }
