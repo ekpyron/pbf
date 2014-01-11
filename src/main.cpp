@@ -141,6 +141,51 @@ void cleanup (void)
     glfwTerminate ();
 }
 
+/** Output hardware limits.
+ * Outputs all OpenGL Hardware Limits that can be queried.
+ */
+void OutputHardwareLimits (void)
+{
+    typedef struct integerlimit {
+        GLenum pname;
+        const char *description;
+    } integerlimit_t;
+    const integerlimit_t integerlimits[] = {
+            { GL_MAX_COMPUTE_SHADER_STORAGE_BLOCKS, "GL_MAX_COMPUTE_SHADER_STORAGE_BLOCKS" },
+            { GL_MAX_COMBINED_SHADER_STORAGE_BLOCKS, "GL_MAX_COMBINED_SHADER_STORAGE_BLOCKS" },
+            { GL_MAX_COMPUTE_UNIFORM_BLOCKS, "GL_MAX_COMPUTE_UNIFORM_BLOCKS" },
+            { GL_MAX_COMPUTE_TEXTURE_IMAGE_UNITS, "GL_MAX_COMPUTE_TEXTURE_IMAGE_UNITS" },
+            { GL_MAX_COMPUTE_UNIFORM_COMPONENTS, "GL_MAX_COMPUTE_UNIFORM_COMPONENTS" },
+            { GL_MAX_COMPUTE_ATOMIC_COUNTERS, "GL_MAX_COMPUTE_ATOMIC_COUNTERS" },
+            { GL_MAX_COMPUTE_ATOMIC_COUNTER_BUFFERS, "GL_MAX_COMPUTE_ATOMIC_COUNTER_BUFFERS" },
+            { GL_MAX_COMBINED_COMPUTE_UNIFORM_COMPONENTS, "GL_MAX_COMBINED_COMPUTE_UNIFORM_COMPONENTS" },
+            { GL_MAX_COMPUTE_WORK_GROUP_INVOCATIONS, "GL_MAX_COMPUTE_WORK_GROUP_INVOCATIONS" },
+            { GL_MAX_COMBINED_ATOMIC_COUNTERS, "GL_MAX_COMBINED_ATOMIC_COUNTERS" },
+            { GL_MAX_COMBINED_UNIFORM_BLOCKS, "GL_MAX_COMBINED_UNIFORM_BLOCKS" },
+            { GL_MAX_SHADER_STORAGE_BUFFER_BINDINGS, "GL_MAX_SHADER_STORAGE_BUFFER_BINDINGS" },
+            { GL_MAX_UNIFORM_BUFFER_BINDINGS, "GL_MAX_UNIFORM_BUFFER_BINDINGS" },
+            { GL_MAX_UNIFORM_BLOCK_SIZE, "GL_MAX_UNIFORM_BLOCK_SIZE" },
+            { GL_MAX_UNIFORM_LOCATIONS, "GL_MAX_UNIFORM_LOCATIONS" },
+            { GL_SHADER_STORAGE_BUFFER_OFFSET_ALIGNMENT, "GL_SHADER_STORAGE_BUFFER_OFFSET_ALIGNMENT" }
+    };
+
+    for (int i = 0; i < sizeof(integerlimits) / sizeof (integerlimits[0]); i++)
+    {
+        GLint v;
+        glGetIntegerv (integerlimits[i].pname, &v);
+        GLenum err = glGetError ();
+        if (err != GL_NO_ERROR)
+        {
+            std::cout << "Could not query limit: " << integerlimits[i].description << std::endl;
+        }
+        else
+        {
+            std::cout << "Hardware limit: " << integerlimits[i].description << ": " << v << std::endl;
+        }
+    }
+
+}
+
 /** Main.
  * Main entry point.
  * \param argc number of arguments
@@ -159,6 +204,9 @@ int main (int argc, char *argv[])
     try {
         // initialization
         initialize ();
+
+        // output hardware limits
+        OutputHardwareLimits ();
 
         // simulation loop
         while (!glfwWindowShouldClose (window))
