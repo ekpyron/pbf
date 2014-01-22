@@ -73,7 +73,7 @@ Simulation::Simulation (void) : width (0), height (0), font ("textures/font.png"
 
     // allocate grid cell buffer and bind it to shader storage buffer binding point 2
     glBindBuffer (GL_SHADER_STORAGE_BUFFER, gridcellbuffer);
-    glBufferData (GL_SHADER_STORAGE_BUFFER, sizeof (GLuint) * 128 * 16 * 128 * 8, NULL, GL_DYNAMIC_DRAW);
+    glBufferData (GL_SHADER_STORAGE_BUFFER, sizeof (GLuint) * 128 * 16 * 128 * 32, NULL, GL_DYNAMIC_DRAW);
 
     // pass the position buffer to the icosahedron class1
     icosahedron.SetPositionBuffer (particlebuffer, sizeof (particleinfo_t), 0);
@@ -144,9 +144,9 @@ void Simulation::ResetParticleBuffer (void)
             for (int y = 0; y < 8; y++)
             {
                 particleinfo_t particle;
-                particle.position = glm::vec3 (32 + x, y + 0, 32 + z);
-                particle.velocity = glm::vec3 (float (rand ()) / float (RAND_MAX) - 0.5f,
-                        float (rand ()) / float (RAND_MAX) - 0.5f, float (rand ()) / float (RAND_MAX) - 0.5f);
+                particle.position = glm::vec3 (32.5 + x, y + 0.5, 32.5 + z);
+                /*particle.velocity = glm::vec3 (float (rand ()) / float (RAND_MAX) - 0.5f,
+                        float (rand ()) / float (RAND_MAX) - 0.5f, float (rand ()) / float (RAND_MAX) - 0.5f);*/
                 particles.push_back (particle);
             }
         }
@@ -158,9 +158,9 @@ void Simulation::ResetParticleBuffer (void)
             for (int y = 0; y < 8; y++)
             {
                 particleinfo_t particle;
-                particle.position = glm::vec3 (32 + 63 - x, y + 0, 32 + 63 - z);
-                particle.velocity = glm::vec3 (float (rand ()) / float (RAND_MAX) - 0.5f,
-                        float (rand ()) / float (RAND_MAX) - 0.5f, float (rand ()) / float (RAND_MAX) - 0.5f);
+                particle.position = glm::vec3 (32.5 + 63 - x, y + 0.5, 32.5 + 63 - z);
+                /*particle.velocity = glm::vec3 (float (rand ()) / float (RAND_MAX) - 0.5f,
+                        float (rand ()) / float (RAND_MAX) - 0.5f, float (rand ()) / float (RAND_MAX) - 0.5f);*/
                 particles.push_back (particle);
             }
         }
