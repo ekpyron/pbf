@@ -95,7 +95,7 @@ void Simulation::Resize (const unsigned int &_width, const unsigned int &_height
     height = _height;
 
     // update the stored projection matrix and pass it to the render program
-    projmat = glm::perspective (45.0f, float (width) / float (height), 0.1f, 1000.0f);
+    projmat = glm::perspective (45.0f * float (M_PI / 180.0f), float (width) / float (height), 0.1f, 1000.0f);
     glBindBuffer (GL_UNIFORM_BUFFER, transformationbuffer);
     glBufferSubData (GL_UNIFORM_BUFFER, 0, sizeof (glm::mat4), glm::value_ptr (projmat * camera.GetViewMatrix ()));
 }

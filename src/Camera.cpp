@@ -31,8 +31,8 @@ void Camera::Rotate (const float &_xangle, const float &_yangle)
     xangle += _xangle;
     yangle += _yangle;
 
-    rot = glm::rotate (glm::quat (), yangle, glm::vec3 (0.0f, 1.0f, 0.0f));
-    rot = glm::rotate (rot, xangle, glm::vec3 (1.0f, 0.0f, 0.0f));
+    rot = glm::rotate (glm::quat (), yangle * float (M_PI / 180.0f), glm::vec3 (0.0f, 1.0f, 0.0f));
+    rot = glm::rotate (rot, xangle * float (M_PI / 180.0f), glm::vec3 (1.0f, 0.0f, 0.0f));
 }
 
 void Camera::Zoom (const float &value)
