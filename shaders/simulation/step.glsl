@@ -11,7 +11,7 @@ const vec3 GRID_SIZE = vec3 (GRID_WIDTH, GRID_HEIGHT, GRID_DEPTH);
 #define MAX_GRID_ID (GRID_WIDTH * GRID_HEIGHT * GRID_DEPTH - 1)
 
 const float rho_0 = 0.1;//1;
-const float h = 2;//1.41;
+const float h = 1;//1.41;
 
 struct ParticleInfo
 {
@@ -190,7 +190,7 @@ void main (void)
 	
 	// compute lambda_i (equations 1 and 9)
 	float C_i = rho / rho_0 - 1;
-	lambda = -C_i / (sum_k_grad_Ci + 0.01);
+	lambda = -C_i / (sum_k_grad_Ci + 100.01);
 	
 	lambdas[particleid] = lambda;
 	
