@@ -57,22 +57,22 @@ Simulation::Simulation (void) : width (0), height (0), font ("textures/font.png"
     glClearDepth (1.0f);
 
     //  allocate particle buffer and bind it to shader storage buffer binding point 0
-    glBindBufferBase (GL_SHADER_STORAGE_BUFFER, 0, particlebuffer);
+    glBindBuffer (GL_SHADER_STORAGE_BUFFER, particlebuffer);
     glBufferData (GL_SHADER_STORAGE_BUFFER, sizeof (particleinfo_t) * GetNumberOfParticles (), NULL, GL_DYNAMIC_DRAW);
 
     // Initialize particle buffer
     ResetParticleBuffer ();
 
     // allocate lambda buffer and bind it to shader storage buffer binding point 3
-    glBindBufferBase (GL_SHADER_STORAGE_BUFFER, 3, lambdabuffer);
+    glBindBuffer (GL_SHADER_STORAGE_BUFFER, lambdabuffer);
     glBufferData (GL_SHADER_STORAGE_BUFFER, sizeof (float) * GetNumberOfParticles (), NULL, GL_DYNAMIC_DRAW);
 
     // allocate the grid counter buffer and bind it to shader storage buffer binding point 1
-    glBindBufferBase (GL_SHADER_STORAGE_BUFFER, 1, gridcounterbuffer);
+    glBindBuffer (GL_SHADER_STORAGE_BUFFER, gridcounterbuffer);
     glBufferData (GL_SHADER_STORAGE_BUFFER, sizeof (GLuint) * 128 * 16 * 128, NULL, GL_DYNAMIC_DRAW);
 
     // allocate grid cell buffer and bind it to shader storage buffer binding point 2
-    glBindBufferBase (GL_SHADER_STORAGE_BUFFER, 2, gridcellbuffer);
+    glBindBuffer (GL_SHADER_STORAGE_BUFFER, gridcellbuffer);
     glBufferData (GL_SHADER_STORAGE_BUFFER, sizeof (GLuint) * 128 * 16 * 128 * 8, NULL, GL_DYNAMIC_DRAW);
 
     // pass the position buffer to the icosahedron class1
@@ -203,11 +203,11 @@ bool Simulation::Frame (void)
     framing.Render ();
 
     // clear grid counter buffer
-    glBindBufferBase (GL_SHADER_STORAGE_BUFFER, 1, gridcounterbuffer);
+    glBindBuffer (GL_SHADER_STORAGE_BUFFER, gridcounterbuffer);
     glClearBufferData (GL_SHADER_STORAGE_BUFFER, GL_R32UI, GL_RED, GL_UNSIGNED_INT, NULL);
 
     // clear lambda buffer
-    glBindBufferBase (GL_SHADER_STORAGE_BUFFER, 3, lambdabuffer);
+    glBindBuffer (GL_SHADER_STORAGE_BUFFER, lambdabuffer);
     glClearBufferData (GL_SHADER_STORAGE_BUFFER, GL_R32UI, GL_RED, GL_UNSIGNED_INT, NULL);
 
     // run simulation step 1
