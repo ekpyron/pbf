@@ -9,28 +9,49 @@ ShaderProgram::~ShaderProgram (void)
     glDeleteProgram (program);
 }
 
-void ShaderProgram::CompileShader (GLenum type, const std::string &filename)
+void ShaderProgram::CompileShader (GLenum type, const std::string &filename, const std::string &include)
 {
     GLuint shader;
 
     // load shader source into memory
     std::vector<char> data;
-    GLint length;
+    GLint length = 0;
+    if (!include.empty ())
     {
+    	size_t len;
+        std::ifstream f (include.c_str (), std::ios_base::in);
+        if (!f.is_open ())
+            throw std::runtime_error (std::string ("Cannot load shader include: ") + include);
+
+        f.seekg (0, std::ios_base::end);
+        len = f.tellg ();
+        f.seekg (0, std::ios_base::beg);
+
+        data.resize (len);
+        f.read (&data[0], len);
+		len = f.gcount ();
+
+        if (f.bad ())
+            throw std::runtime_error (std::string ("Cannot load shader include: ") + include);
+        length += len;
+    }
+    {
+    	size_t len;
         std::ifstream f (filename.c_str (), std::ios_base::in);
         if (!f.is_open ())
             throw std::runtime_error (std::string ("Cannot load shader: ") + filename);
 
         f.seekg (0, std::ios_base::end);
-        length = f.tellg ();
+        len = f.tellg ();
         f.seekg (0, std::ios_base::beg);
 
-        data.resize (length);
-        f.read (&data[0], length);
-		length = f.gcount ();
+        data.resize (length + len);
+        f.read (&data[length], len);
+		len = f.gcount ();
 
         if (f.bad ())
             throw std::runtime_error (std::string ("Cannot load shader: ") + filename);
+        length += len;
     }
 
     // create a shader, specify the source and attempt to compile it

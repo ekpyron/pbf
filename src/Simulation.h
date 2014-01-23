@@ -67,9 +67,9 @@ private:
         /** Unused padding value.
          */
         float padding0;
-        /** Particle velocity.
+        /** Old particle position.
          */
-        glm::vec3 velocity;
+        glm::vec3 oldposition;
         /** Unused padding value.
          */
         float padding2;
@@ -93,7 +93,18 @@ private:
     /** Simulation step shader program.
      * Shader program for the first simulation step.
      */
-    ShaderProgram simulationstep;
+    ShaderProgram simulationstep1;
+
+    /** Simulation step shader program.
+     * Shader program for the second simulation step.
+     */
+    ShaderProgram simulationstep2;
+
+    /** Simulation step shader program.
+     * Shader program for the third simulation step.
+     */
+    ShaderProgram simulationstep3;
+
 
     /** Framing.
      * Takes care of rendering a framing for the scene.

@@ -20,8 +20,9 @@ public:
      * Compiles a shader of given type and attaches it to the shader program.
      * \param type type of the shader to attach
      * \param filename path to the shader source
+     * \param include optional path to an include file
      */
-    void CompileShader (GLenum type, const std::string &filename);
+    void CompileShader (GLenum type, const std::string &filename, const std::string &include = std::string ());
     /** Link the shader program.
      * Links the shader program.
      */

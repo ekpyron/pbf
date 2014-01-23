@@ -13,8 +13,17 @@ Simulation::Simulation (void) : width (0), height (0), font ("textures/font.png"
     particleprogram.CompileShader (GL_FRAGMENT_SHADER, "shaders/particles/fragment.glsl");
     particleprogram.Link ();
 
-    simulationstep.CompileShader (GL_COMPUTE_SHADER, "shaders/simulation/step.glsl");
-    simulationstep.Link ();
+    simulationstep1.CompileShader (GL_COMPUTE_SHADER, "shaders/simulation/step1.glsl",
+    		"shaders/simulation/include.glsl");
+    simulationstep1.Link ();
+
+    simulationstep2.CompileShader (GL_COMPUTE_SHADER, "shaders/simulation/step2.glsl",
+    		"shaders/simulation/include.glsl");
+    simulationstep2.Link ();
+
+    simulationstep3.CompileShader (GL_COMPUTE_SHADER, "shaders/simulation/step3.glsl",
+    		"shaders/simulation/include.glsl");
+    simulationstep3.Link ();
 
     // create buffer objects
     glGenBuffers (7, buffers);
@@ -156,10 +165,9 @@ void Simulation::ResetParticleBuffer (void)
             {
                 particleinfo_t particle;
                 particle.position = glm::vec3 (32.5 + x, y + 0.5, 32.5 + z);
-/*                particle.position += 0.01f * glm::vec3 (float (rand ()) / float (RAND_MAX) - 0.5f,
-                        float (rand ()) / float (RAND_MAX) - 0.5f, float (rand ()) / float (RAND_MAX) - 0.5f);*/
-                /*particle.velocity = glm::vec3 (float (rand ()) / float (RAND_MAX) - 0.5f,
-                        float (rand ()) / float (RAND_MAX) - 0.5f, float (rand ()) / float (RAND_MAX) - 0.5f);*/
+                particle.position += 0.01f * glm::vec3 (float (rand ()) / float (RAND_MAX) - 0.5f,
+                		float (rand ()) / float (RAND_MAX) - 0.5f, float (rand ()) / float (RAND_MAX) - 0.5f);
+                particle.oldposition = particle.position;
                 particles.push_back (particle);
             }
         }
@@ -172,10 +180,9 @@ void Simulation::ResetParticleBuffer (void)
             {
                 particleinfo_t particle;
                 particle.position = glm::vec3 (32.5 + 63 - x, y + 0.5, 32.5 + 63 - z);
-/*                particle.position += 0.01f * glm::vec3 (float (rand ()) / float (RAND_MAX) - 0.5f,
-                        float (rand ()) / float (RAND_MAX) - 0.5f, float (rand ()) / float (RAND_MAX) - 0.5f);*/
-                /*particle.velocity = glm::vec3 (float (rand ()) / float (RAND_MAX) - 0.5f,
-                        float (rand ()) / float (RAND_MAX) - 0.5f, float (rand ()) / float (RAND_MAX) - 0.5f);*/
+                particle.position += 0.01f * glm::vec3 (float (rand ()) / float (RAND_MAX) - 0.5f,
+                		float (rand ()) / float (RAND_MAX) - 0.5f, float (rand ()) / float (RAND_MAX) - 0.5f);
+                particle.oldposition = particle.position;
                 particles.push_back (particle);
             }
         }
@@ -227,7 +234,7 @@ bool Simulation::Frame (void)
 
     // clear lambda buffer
     glBindBuffer (GL_SHADER_STORAGE_BUFFER, lambdabuffer);
-    glClearBufferData (GL_SHADER_STORAGE_BUFFER, GL_R32UI, GL_RED, GL_UNSIGNED_INT, NULL);
+    glClearBufferData (GL_SHADER_STORAGE_BUFFER, GL_R32F, GL_RED, GL_FLOAT, NULL);
 
     // run simulation step 1
     if (glfwGetKey (window, GLFW_KEY_SPACE))
@@ -243,16 +250,20 @@ bool Simulation::Frame (void)
         glBindBufferBase (GL_SHADER_STORAGE_BUFFER, 3, lambdabuffer);
         glBindBufferBase (GL_SHADER_STORAGE_BUFFER, 4, auxbuffer);
 
-        simulationstep.Use ();
+        simulationstep1.Use ();
         glMemoryBarrier (GL_BUFFER_UPDATE_BARRIER_BIT);
         glDispatchCompute (16, 16, 1);
-        err = glGetError ();
-        if (err != GL_NO_ERROR)
-        {
-            std::cerr << "OpenGL Error Detected: 0x" << std::hex << err << std::endl;
-            return false;
-        }
         glMemoryBarrier (GL_SHADER_STORAGE_BARRIER_BIT);
+
+        for (auto i = 0; i < 5; i++) {
+        simulationstep2.Use ();
+        glDispatchCompute (16, 16, 1);
+        glMemoryBarrier (GL_SHADER_STORAGE_BARRIER_BIT);
+
+        simulationstep3.Use ();
+        glDispatchCompute (16, 16, 1);
+        glMemoryBarrier (GL_SHADER_STORAGE_BARRIER_BIT);
+        }
     }
 
     // render spheres
