@@ -20,8 +20,18 @@ public:
     /** Specify a position buffer.
      * Specifies a buffer containing the positions for the icosahedra.
      * \param buffer the buffer object containing the position data
+     * \param stride byte offset between consecutive positions
+     * \param offset offset of the first component of the first position
      */
     void SetPositionBuffer (GLuint buffer, GLsizei stride = 0, GLintptr offset = 0);
+
+    /** Specify a color buffer.
+     * Specifies a buffer containing the colors for the icosahedra.
+     * \param buffer the buffer object containing the color data
+     * \param stride byte offset between consecutive colors
+     * \param offset offset of the first component of the first color
+     */
+    void SetColorBuffer (GLuint buffer, GLsizei stride = 0, GLintptr offset = 0);
 
     /** Render the icosahedra.
      * \param instances number of instances to render.

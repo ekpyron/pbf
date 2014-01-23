@@ -68,6 +68,17 @@ void Icosahedron::SetPositionBuffer (GLuint buffer, GLsizei stride, GLintptr off
     glVertexAttribDivisor (1, 1);
 }
 
+void Icosahedron::SetColorBuffer (GLuint buffer, GLsizei stride, GLintptr offset)
+{
+    // bind the vertex array and the color buffer
+    glBindVertexArray (vertexarray);
+    glBindBuffer (GL_ARRAY_BUFFER, buffer);
+    // define the per-instance vertex attribute
+    glVertexAttribPointer (2, 3, GL_FLOAT, GL_FALSE, stride, (const GLvoid*) offset);
+    glEnableVertexAttribArray (2);
+    glVertexAttribDivisor (2, 1);
+}
+
 Icosahedron::~Icosahedron (void)
 {
     // cleanup

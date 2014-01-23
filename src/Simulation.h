@@ -137,12 +137,17 @@ private:
              * stored.
              */
             GLuint gridcellbuffer;
+
+            /** Auxiliary buffer.
+             * Buffer in which auxiliary data used for debugging purposes can be stored.
+             */
+            GLuint auxbuffer;
         };
         /** Buffer objects.
          * The buffer objects are stored in a union, so that it is possible
          * to create/delete all buffer objects with a single OpenGL call.
          */
-        GLuint buffers[6];
+        GLuint buffers[7];
     };
 
     /** Font subsystem.

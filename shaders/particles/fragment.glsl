@@ -9,6 +9,7 @@ layout (location = 0) out vec4 color;
 // input from vertex shader
 in vec3 fPosition;
 in vec3 fNormal;
+in vec3 fColor;
 
 // lighting parameters
 layout (binding = 1, std140) uniform LightingBuffer
@@ -43,5 +44,5 @@ void main (void)
 	intensity += 0.25;
 
 	// fetch texture value and output resulting color
-	color = clamp (intensity, 0, 1) * vec4 (0.25, 0, 1, 1);
+	color = clamp (intensity, 0, 1) * vec4 (fColor, 1);
 }

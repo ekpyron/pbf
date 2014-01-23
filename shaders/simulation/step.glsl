@@ -10,8 +10,14 @@ const vec3 GRID_SIZE = vec3 (GRID_WIDTH, GRID_HEIGHT, GRID_DEPTH);
 
 #define MAX_GRID_ID (GRID_WIDTH * GRID_HEIGHT * GRID_DEPTH - 1)
 
-const float rho_0 = 0.1;//1;
-const float h = 1;//1.41;
+// parameters
+const float rho_0 = 1;
+const float h = 2.0;
+const float epsilon = 100.0;
+const float gravity = 10;
+const float timestep = 0.05;
+const uint solveriterations = 5;
+const uint highlightparticle = 32 * 32 * 8 * 2 - 1;
 
 struct ParticleInfo
 {
@@ -29,8 +35,10 @@ layout (std430, binding = 3) buffer LambdaBuffer
 	coherent float lambdas[];
 };
 
-//uniform float timestep;
-const float timestep = 0.01;
+layout (std430, binding = 4) buffer AuxBuffer
+{
+	vec4 auxdata[];
+};
 
 layout (std430, binding = 1) buffer GridCounters
 {
@@ -39,7 +47,7 @@ layout (std430, binding = 1) buffer GridCounters
 
 struct GridCell
 {
-	uint particleids[32];
+	uint particleids[64];
 };
 
 layout (std430, binding = 2) buffer GridCells
@@ -122,11 +130,15 @@ void main (void)
 	particleid = gl_GlobalInvocationID.z * gl_NumWorkGroups.y * gl_NumWorkGroups.x
 		* gl_WorkGroupSize.x * gl_WorkGroupSize.y
 		+ gl_GlobalInvocationID.y * gl_NumWorkGroups.x * gl_WorkGroupSize.x + gl_GlobalInvocationID.x;
+
+	// highlight a particle	
+	if (particleid == highlightparticle)
+		auxdata[particleid] = vec4 (1, 0, 0, 1);
 	
 	ParticleInfo particle = particles[particleid];
 	
 	// gravity
-	particle.velocity += 10 * vec3 (0, -1, 0) * timestep;
+	particle.velocity += gravity * vec3 (0, -1, 0) * timestep;
 	
 	// save old position and predict new position
 	vec3 oldposition = particle.position;
@@ -138,16 +150,16 @@ void main (void)
 	grid.y = clamp (int (floor (particle.position.y)), 0, GRID_HEIGHT);
 	grid.z = clamp (int (floor (particle.position.z)), 0, GRID_DEPTH);
 	
-	int gridid = grid.z * GRID_WIDTH * GRID_HEIGHT + grid.y * GRID_WIDTH + grid.x;
+	int gridid = grid.y * GRID_WIDTH * GRID_DEPTH + grid.z * GRID_WIDTH + grid.x;
 
 	uint pos = atomicAdd (gridcounters[gridid], 1);
-	if (pos < 32)
+	if (pos < 64)
 		gridcells[gridid].particleids[pos] = particleid;
 
 	barrier ();
 	memoryBarrierBuffer ();
-	
-	for (uint solver = 0; solver < 10; solver++) {
+		
+	for (uint solver = 0; solver < solveriterations; solver++) {
 
 	barrier ();
 	memoryBarrierBuffer ();
@@ -159,7 +171,13 @@ void main (void)
 
 	vec3 grad_pi_Ci = vec3 (0, 0, 0);
 	FOR_EACH_NEIGHBOUR(j)
-	{			
+	{
+		// highlight neighbours of the highlighted particle
+		if (particleid == highlightparticle)
+		{
+			auxdata[j] = vec4 (0, 1, 0, 1);
+		}
+	
 		// compute rho_i (equation 2)
 		float len = length (particle.position - particles[j].position);
 		float tmp = Wpoly6 (len);
@@ -190,7 +208,7 @@ void main (void)
 	
 	// compute lambda_i (equations 1 and 9)
 	float C_i = rho / rho_0 - 1;
-	lambda = -C_i / (sum_k_grad_Ci + 100.01);
+	lambda = -C_i / (sum_k_grad_Ci + epsilon);
 	
 	lambdas[particleid] = lambda;
 	
@@ -216,5 +234,5 @@ void main (void)
 	particles[particleid].position = particle.position;
 	}
 
-	particles[particleid].velocity = 1.0 * (particle.position - oldposition) / timestep;
+	particles[particleid].velocity = (particle.position - oldposition) / timestep;
 }

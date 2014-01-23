@@ -17,7 +17,7 @@ Simulation::Simulation (void) : width (0), height (0), font ("textures/font.png"
     simulationstep.Link ();
 
     // create buffer objects
-    glGenBuffers (6, buffers);
+    glGenBuffers (7, buffers);
 
     // initialize the camera position and rotation and the transformation matrix buffer.
     camera.SetPosition (glm::vec3 (20, 10, 10));
@@ -56,27 +56,38 @@ Simulation::Simulation (void) : width (0), height (0), font ("textures/font.png"
     glClearColor (0.25f, 0.25f, 0.25f, 1.0f);
     glClearDepth (1.0f);
 
-    //  allocate particle buffer and bind it to shader storage buffer binding point 0
+    //  allocate particle buffer
     glBindBuffer (GL_SHADER_STORAGE_BUFFER, particlebuffer);
     glBufferData (GL_SHADER_STORAGE_BUFFER, sizeof (particleinfo_t) * GetNumberOfParticles (), NULL, GL_DYNAMIC_DRAW);
 
     // Initialize particle buffer
     ResetParticleBuffer ();
 
-    // allocate lambda buffer and bind it to shader storage buffer binding point 3
+    // allocate lambda buffer
     glBindBuffer (GL_SHADER_STORAGE_BUFFER, lambdabuffer);
     glBufferData (GL_SHADER_STORAGE_BUFFER, sizeof (float) * GetNumberOfParticles (), NULL, GL_DYNAMIC_DRAW);
 
-    // allocate the grid counter buffer and bind it to shader storage buffer binding point 1
+
+    // allocate auxillary buffer
+    glBindBuffer (GL_SHADER_STORAGE_BUFFER, auxbuffer);
+    glBufferData (GL_SHADER_STORAGE_BUFFER, sizeof (float) * 4 * GetNumberOfParticles (), NULL, GL_DYNAMIC_DRAW);
+    // clear auxiliary buffer
+    const float auxdata[] = { 0.25, 0, 1, 1 };
+    glClearBufferData (GL_SHADER_STORAGE_BUFFER, GL_RGBA32F, GL_RGBA, GL_FLOAT, &auxdata[0]);
+
+    // allocate the grid counter buffer
     glBindBuffer (GL_SHADER_STORAGE_BUFFER, gridcounterbuffer);
     glBufferData (GL_SHADER_STORAGE_BUFFER, sizeof (GLuint) * 128 * 16 * 128, NULL, GL_DYNAMIC_DRAW);
 
-    // allocate grid cell buffer and bind it to shader storage buffer binding point 2
+    // allocate grid cell buffer
     glBindBuffer (GL_SHADER_STORAGE_BUFFER, gridcellbuffer);
-    glBufferData (GL_SHADER_STORAGE_BUFFER, sizeof (GLuint) * 128 * 16 * 128 * 32, NULL, GL_DYNAMIC_DRAW);
+    glBufferData (GL_SHADER_STORAGE_BUFFER, sizeof (GLuint) * 128 * 16 * 128 * 64, NULL, GL_DYNAMIC_DRAW);
 
-    // pass the position buffer to the icosahedron class1
+    // pass the position buffer to the icosahedron class
     icosahedron.SetPositionBuffer (particlebuffer, sizeof (particleinfo_t), 0);
+
+    // pass the auxiliary buffer as color buffer to the icosahedron class
+    icosahedron.SetColorBuffer (auxbuffer, sizeof (float) * 4, 0);
 
     // initialize last frame time
     last_time = glfwGetTime ();
@@ -85,7 +96,7 @@ Simulation::Simulation (void) : width (0), height (0), font ("textures/font.png"
 Simulation::~Simulation (void)
 {
     // cleanup
-    glDeleteBuffers (6, buffers);
+    glDeleteBuffers (7, buffers);
 }
 
 void Simulation::Resize (const unsigned int &_width, const unsigned int &_height)
@@ -145,6 +156,8 @@ void Simulation::ResetParticleBuffer (void)
             {
                 particleinfo_t particle;
                 particle.position = glm::vec3 (32.5 + x, y + 0.5, 32.5 + z);
+/*                particle.position += 0.01f * glm::vec3 (float (rand ()) / float (RAND_MAX) - 0.5f,
+                        float (rand ()) / float (RAND_MAX) - 0.5f, float (rand ()) / float (RAND_MAX) - 0.5f);*/
                 /*particle.velocity = glm::vec3 (float (rand ()) / float (RAND_MAX) - 0.5f,
                         float (rand ()) / float (RAND_MAX) - 0.5f, float (rand ()) / float (RAND_MAX) - 0.5f);*/
                 particles.push_back (particle);
@@ -159,6 +172,8 @@ void Simulation::ResetParticleBuffer (void)
             {
                 particleinfo_t particle;
                 particle.position = glm::vec3 (32.5 + 63 - x, y + 0.5, 32.5 + 63 - z);
+/*                particle.position += 0.01f * glm::vec3 (float (rand ()) / float (RAND_MAX) - 0.5f,
+                        float (rand ()) / float (RAND_MAX) - 0.5f, float (rand ()) / float (RAND_MAX) - 0.5f);*/
                 /*particle.velocity = glm::vec3 (float (rand ()) / float (RAND_MAX) - 0.5f,
                         float (rand ()) / float (RAND_MAX) - 0.5f, float (rand ()) / float (RAND_MAX) - 0.5f);*/
                 particles.push_back (particle);
@@ -168,6 +183,10 @@ void Simulation::ResetParticleBuffer (void)
     //  update the particle buffer
     glBindBuffer (GL_SHADER_STORAGE_BUFFER, particlebuffer);
     glBufferSubData (GL_SHADER_STORAGE_BUFFER, 0, sizeof (particleinfo_t) * particles.size (), &particles[0]);
+    // clear auxiliary buffer
+    glBindBuffer (GL_SHADER_STORAGE_BUFFER, auxbuffer);
+    const float auxdata[] = { 0.25, 0, 1, 1 };
+    glClearBufferData (GL_SHADER_STORAGE_BUFFER, GL_RGBA32F, GL_RGBA, GL_FLOAT, &auxdata[0]);
 }
 
 void Simulation::OnKeyUp (int key)
@@ -213,10 +232,16 @@ bool Simulation::Frame (void)
     // run simulation step 1
     if (glfwGetKey (window, GLFW_KEY_SPACE))
     {
+        // clear auxiliary buffer
+        glBindBuffer (GL_SHADER_STORAGE_BUFFER, auxbuffer);
+        const float auxdata[] = { 0.25, 0, 1, 1 };
+        glClearBufferData (GL_SHADER_STORAGE_BUFFER, GL_RGBA32F, GL_RGBA, GL_FLOAT, &auxdata[0]);
+
         glBindBufferBase (GL_SHADER_STORAGE_BUFFER, 0, particlebuffer);
         glBindBufferBase (GL_SHADER_STORAGE_BUFFER, 1, gridcounterbuffer);
         glBindBufferBase (GL_SHADER_STORAGE_BUFFER, 2, gridcellbuffer);
         glBindBufferBase (GL_SHADER_STORAGE_BUFFER, 3, lambdabuffer);
+        glBindBufferBase (GL_SHADER_STORAGE_BUFFER, 4, auxbuffer);
 
         simulationstep.Use ();
         glMemoryBarrier (GL_BUFFER_UPDATE_BARRIER_BIT);
