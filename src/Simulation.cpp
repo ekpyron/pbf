@@ -252,16 +252,16 @@ bool Simulation::Frame (void)
 
         simulationstep1.Use ();
         glMemoryBarrier (GL_BUFFER_UPDATE_BARRIER_BIT);
-        glDispatchCompute (16, 16, 1);
+        glDispatchCompute (8, 8, 1);
         glMemoryBarrier (GL_SHADER_STORAGE_BARRIER_BIT);
 
         for (auto i = 0; i < 5; i++) {
         simulationstep2.Use ();
-        glDispatchCompute (16, 16, 1);
+        glDispatchCompute (8, 8, 1);
         glMemoryBarrier (GL_SHADER_STORAGE_BARRIER_BIT);
 
         simulationstep3.Use ();
-        glDispatchCompute (16, 16, 1);
+        glDispatchCompute (8, 8, 1);
         glMemoryBarrier (GL_SHADER_STORAGE_BARRIER_BIT);
         }
     }

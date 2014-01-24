@@ -16,3 +16,5 @@ const float gravity = 10;
 const float timestep = 0.05;
 const uint highlightparticle = 32 * 32 * 8 * 2 - 1;
 
+const float tensile_instability_k = 0.1;
+const float tensile_instability_h = 0.3;

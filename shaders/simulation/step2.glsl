@@ -1,7 +1,7 @@
 // include.glsl is included here
 #line 3
 
-layout (local_size_x = 8, local_size_y = 8) in;
+layout (local_size_x = 16, local_size_y = 16) in;
 
 struct ParticleInfo
 {
@@ -141,10 +141,10 @@ void main (void)
 		float tmp = Wpoly6 (len);
 		rho += tmp;
 	
-		// compute scorr (equation 13) - currently unused
-		tmp = -tmp / Wpoly6 (0.1);
+		// compute scorr (equation 13)
+		tmp = -tmp / Wpoly6 (tensile_instability_h);
 		tmp *= tmp;
-		scorr += -0.1 * tmp * tmp;
+		scorr += -tensile_instability_k * tmp * tmp;
 			
 		// sum gradients of Ci (equation 8 and parts of equation 9)
 		// use j as k so that we can stay in the same loop
