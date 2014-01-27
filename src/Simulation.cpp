@@ -209,7 +209,7 @@ void Simulation::OnKeyUp (int key)
     {
     	glBindBuffer (GL_SHADER_STORAGE_BUFFER, flagbuffer);
     	GLubyte *data = reinterpret_cast<GLubyte*> (glMapBuffer (GL_SHADER_STORAGE_BUFFER, GL_READ_ONLY));
-    	for (int i = 0; i < GetNumberOfParticles(); i++)
+    	for (int i = 0; i < GetNumberOfParticles() + 1; i++)
     	{
     		std::cout << int (data[i]) << " ";
     	}
