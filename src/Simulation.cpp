@@ -205,13 +205,13 @@ void Simulation::OnKeyUp (int key)
     case GLFW_KEY_TAB:
         ResetParticleBuffer ();
         break;
-    case GLFW_KEY_D:
+    case GLFW_KEY_F:
     {
     	glBindBuffer (GL_SHADER_STORAGE_BUFFER, flagbuffer);
-    	GLuint *data = reinterpret_cast<GLuint*> (glMapBuffer (GL_SHADER_STORAGE_BUFFER, GL_READ_ONLY));
+    	GLubyte *data = reinterpret_cast<GLubyte*> (glMapBuffer (GL_SHADER_STORAGE_BUFFER, GL_READ_ONLY));
     	for (int i = 0; i < GetNumberOfParticles(); i++)
     	{
-    		std::cout << data[i] << " ";
+    		std::cout << int (data[i]) << " ";
     	}
     	std::cout << std::endl;
     	glUnmapBuffer (GL_SHADER_STORAGE_BUFFER);
