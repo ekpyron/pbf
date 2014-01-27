@@ -66,6 +66,17 @@ void Sphere::SetPositionBuffer (GLuint buffer, GLsizei stride, GLintptr offset)
     glVertexAttribDivisor (1, 1);
 }
 
+void Sphere::SetColorBuffer (GLuint buffer, GLsizei stride, GLintptr offset)
+{
+    // bind the vertex array and the color buffer
+    glBindVertexArray (vertexarray);
+    glBindBuffer (GL_ARRAY_BUFFER, buffer);
+    // define the per-instance vertex attribute
+    glVertexAttribPointer (2, 3, GL_FLOAT, GL_FALSE, stride, (const GLvoid*) offset);
+    glEnableVertexAttribArray (2);
+    glVertexAttribDivisor (2, 1);
+}
+
 Sphere::~Sphere (void)
 {
     // cleanup
@@ -79,5 +90,5 @@ void Sphere::Render (GLuint instances) const
     glBindVertexArray (vertexarray);
     glBindBuffer (GL_ELEMENT_ARRAY_BUFFER, indexbuffer);
     // render the framing
-    glDrawElementsInstanced (GL_TRIANGLES, 8 * 8 * 6, GL_UNSIGNED_BYTE, 0, instances);
+    glDrawElementsInstanced (GL_TRIANGLES, 8 * 8 * 6, GL_UNSIGNED_SHORT, 0, instances);
 }

@@ -7,6 +7,7 @@
 #include "Framing.h"
 #include "Font.h"
 #include "Icosahedron.h"
+#include "Sphere.h"
 #include "RadixSort.h"
 
 /** Simulation class.
@@ -105,6 +106,17 @@ private:
      */
     Icosahedron icosahedron;
 
+    /** Sphere.
+     * Model data of a sphere.
+     */
+    Sphere sphere;
+
+    /** Sphere flag.
+     * Flag indicating whether to use spheres or icosahedra for
+     * particle rendering.
+     */
+    bool usespheres;
+
     /** Radix sort.
      * Takes care of sorting the particle list.
      * The contained buffer object is used as particle buffer.
@@ -158,6 +170,12 @@ private:
      * Texture through which the flag buffer is accessed.
      */
     GLuint flagtexture;
+
+    /** Queries.
+     * Queries used to determine the time spent in the different stages
+     * of the algorithm.
+     */
+    GLuint queries[6];
 
     /** Projection matrix.
      * Matrix describing the perspective projection.

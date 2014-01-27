@@ -2,7 +2,8 @@
 
 
 Simulation::Simulation (void) : width (0), height (0), font ("textures/font.png"),
-    last_fps_time (glfwGetTime ()), framecount (0), fps (0), radixsort (GetNumberOfParticles () >> 9)
+    last_fps_time (glfwGetTime ()), framecount (0), fps (0), radixsort (GetNumberOfParticles () >> 9),
+    usespheres (false)
 {
     // load shaders
     surroundingprogram.CompileShader (GL_VERTEX_SHADER, "shaders/surrounding/vertex.glsl");
@@ -31,6 +32,9 @@ Simulation::Simulation (void) : width (0), height (0), font ("textures/font.png"
 
     // create buffer objects
     glGenBuffers (6, buffers);
+
+    // create query objects
+    glGenQueries (6, queries);
 
     // initialize the camera position and rotation and the transformation matrix buffer.
     camera.SetPosition (glm::vec3 (20, 10, 10));
@@ -98,6 +102,7 @@ Simulation::Simulation (void) : width (0), height (0), font ("textures/font.png"
 
     // pass the auxiliary buffer as color buffer to the icosahedron class
     icosahedron.SetColorBuffer (auxbuffer, sizeof (float) * 4, 0);
+    sphere.SetColorBuffer (auxbuffer, sizeof (float ) * 4, 0);
 
     // initialize last frame time
     last_time = glfwGetTime ();
@@ -106,6 +111,8 @@ Simulation::Simulation (void) : width (0), height (0), font ("textures/font.png"
 Simulation::~Simulation (void)
 {
     // cleanup
+	glDeleteQueries (6, queries);
+	glDeleteTextures (1, &flagtexture);
     glDeleteBuffers (6, buffers);
 }
 
@@ -202,9 +209,29 @@ void Simulation::OnKeyUp (int key)
 {
     switch (key)
     {
+    // reset to initial particle configuration
     case GLFW_KEY_TAB:
         ResetParticleBuffer ();
         break;
+    // output the queried time frames spent in the
+    // different simulation stages
+    case GLFW_KEY_Q:
+    {
+    	for (int i = 0; i < 6; i++)
+    	{
+    		GLint64 v;
+    		glGetQueryObjecti64v (queries[i], GL_QUERY_RESULT, &v);
+
+    		std::cout << "QUERY " << i << ": " << double (v) / 1000000 << std::endl;
+    	}
+    	break;
+    }
+    // switch between spheres and icosahedra
+    case GLFW_KEY_S:
+    	usespheres = !usespheres;
+    	break;
+    // output the flag buffer indicating the number of particles
+    // in each grid cell
     case GLFW_KEY_F:
     {
     	glBindBuffer (GL_SHADER_STORAGE_BUFFER, flagbuffer);
@@ -232,8 +259,16 @@ bool Simulation::Frame (void)
         return false;
     }
 
-    // pass the position buffer to the icosahedron class
-    icosahedron.SetPositionBuffer (radixsort.GetBuffer (), sizeof (particleinfo_t), 0);
+    if (usespheres)
+    {
+        // pass the position buffer to the sphere class
+        sphere.SetPositionBuffer (radixsort.GetBuffer (), sizeof (particleinfo_t), 0);
+    }
+    else
+    {
+    	// pass the position buffer to the icosahedron class
+    	icosahedron.SetPositionBuffer (radixsort.GetBuffer (), sizeof (particleinfo_t), 0);
+    }
 
     // specify the viewport size
     glViewport (0, 0, width, height);
@@ -249,6 +284,7 @@ bool Simulation::Frame (void)
     if (glfwGetKey (window, GLFW_KEY_SPACE))
     {
         // clear grid buffer
+    	glBeginQuery (GL_TIME_ELAPSED, queries[0]);
         glBindBuffer (GL_SHADER_STORAGE_BUFFER, gridbuffer);
         {
         	GLint v = -1;
@@ -263,44 +299,57 @@ bool Simulation::Frame (void)
         glBindBuffer (GL_SHADER_STORAGE_BUFFER, auxbuffer);
         const float auxdata[] = { 0.25, 0, 1, 1 };
         glClearBufferData (GL_SHADER_STORAGE_BUFFER, GL_RGBA32F, GL_RGBA, GL_FLOAT, &auxdata[0]);
+        glMemoryBarrier (GL_BUFFER_UPDATE_BARRIER_BIT);
+        glEndQuery (GL_TIME_ELAPSED);
 
+        // predict positions
+        glBeginQuery (GL_TIME_ELAPSED, queries[1]);
         glBindBufferBase (GL_SHADER_STORAGE_BUFFER, 0, radixsort.GetBuffer ());
         glBindBufferBase (GL_SHADER_STORAGE_BUFFER, 1, auxbuffer);
-
         predictpos.Use ();
-        glMemoryBarrier (GL_BUFFER_UPDATE_BARRIER_BIT);
         glDispatchCompute (GetNumberOfParticles () >> 8, 1, 1);
         glMemoryBarrier (GL_SHADER_STORAGE_BARRIER_BIT);
+        glEndQuery (GL_TIME_ELAPSED);
 
         // sort particles
+        glBeginQuery (GL_TIME_ELAPSED, queries[2]);
         radixsort.Run (21);
+        glEndQuery (GL_TIME_ELAPSED);
 
+        // find grid cells
+        glBeginQuery (GL_TIME_ELAPSED, queries[3]);
         glBindBufferBase (GL_SHADER_STORAGE_BUFFER, 0, radixsort.GetBuffer ());
         glBindBufferBase (GL_SHADER_STORAGE_BUFFER, 1, lambdabuffer);
         glBindBufferBase (GL_SHADER_STORAGE_BUFFER, 2, auxbuffer);
         glBindBufferBase (GL_SHADER_STORAGE_BUFFER, 3, gridbuffer);
-
         glBindImageTexture (0, flagtexture, 0, GL_FALSE, 0, GL_READ_WRITE, GL_R8I);
-
         findcells.Use ();
         glMemoryBarrier (GL_BUFFER_UPDATE_BARRIER_BIT);
         glDispatchCompute (GetNumberOfParticles () >> 8, 1, 1);
         glMemoryBarrier (GL_SHADER_STORAGE_BARRIER_BIT);
+        glEndQuery (GL_TIME_ELAPSED);
 
+        // solver iteration
+        glBeginQuery (GL_TIME_ELAPSED, queries[4]);
         for (auto i = 0; i < 3; i++) {
         calclambda.Use ();
         glDispatchCompute (GetNumberOfParticles () >> 8, 1, 1);
         glMemoryBarrier (GL_SHADER_STORAGE_BARRIER_BIT);
-
         updatepos.Use ();
         glDispatchCompute (GetNumberOfParticles () >> 8, 1, 1);
         glMemoryBarrier (GL_SHADER_STORAGE_BARRIER_BIT);
         }
+        glEndQuery (GL_TIME_ELAPSED);
     }
 
-    // render spheres
+    // render icosahedra/spheres
+    glBeginQuery (GL_TIME_ELAPSED, queries[5]);
     particleprogram.Use ();
-    icosahedron.Render (GetNumberOfParticles ());
+    if (usespheres)
+        sphere.Render (GetNumberOfParticles ());
+    else
+    	icosahedron.Render (GetNumberOfParticles ());
+    glEndQuery (GL_TIME_ELAPSED);
 
     // determine the framerate every second
     framecount++;
