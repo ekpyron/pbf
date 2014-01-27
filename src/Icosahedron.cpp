@@ -83,6 +83,7 @@ Icosahedron::~Icosahedron (void)
 {
     // cleanup
     glDeleteBuffers (2, buffers);
+    glDeleteVertexArrays (1, &vertexarray);
 }
 
 

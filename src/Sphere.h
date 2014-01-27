@@ -11,8 +11,9 @@ class Sphere
 {
 public:
     /** Constructor.
+     * \param subdivisions Number of subdivisions applied to the icosahedron.
      */
-    Sphere (void);
+    Sphere (unsigned int subdivisions = 2);
     /** Destructor
      */
     ~Sphere (void);
@@ -58,6 +59,10 @@ private:
      * of the vertex attributes.
      */
     GLuint vertexarray;
+    /** Number of indices.
+     * Number of indices to render.
+     */
+    GLuint numindices;
 };
 
 #endif /* SPHERE_H */

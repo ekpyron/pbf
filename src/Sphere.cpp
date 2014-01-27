@@ -1,6 +1,32 @@
 #include "Sphere.h"
 
-Sphere::Sphere (void)
+/** Get edge midpoint.
+ * Obtains the index of the midpoint of two vertices
+ * and maintains a cache of already calculated midpoints.
+ * \param vertices list of vertices
+ * \param cache midpoint cache
+ * \param a start vertex
+ * \param b end vertex
+ * \returns index of the midpoint
+ */
+int getMidpoint (std::vector<glm::vec3> &vertices, std::map<std::pair<int, int>, int> &cache, int a, int b)
+{
+	std::pair<int, int> key;
+	if (a < b) key = std::make_pair (a, b);
+	else key = std::make_pair (b, a);
+	std::map<std::pair<int, int>, int>::iterator it = cache.find (key);
+	if (it == cache.end ())
+	{
+		glm::vec3 v = glm::normalize (0.5f * (vertices[a] + vertices[b]));
+		int id = vertices.size ();
+		vertices.push_back (v);
+		cache[key] = id;
+		return id;
+	}
+	return it->second;
+}
+
+Sphere::Sphere (unsigned int subdivsions)
 {
     // create and bind a vertex array
     glGenVertexArrays (1, &vertexarray);
@@ -9,50 +35,92 @@ Sphere::Sphere (void)
     // generate buffer objects
     glGenBuffers (2, buffers);
 
-    // generate vertices
-    std::vector<GLshort> vertices;
-    vertices.reserve (8 * 8 * 3);
-    for (int i = 0; i < 8; i++)
+    // generate icosahedron vertices
+    std::vector<glm::vec3> vertices;
+    float t = (1.0f + sqrtf (5.0f)) / 2.0f;
+    vertices.push_back (glm::vec3 (-1, t, 0));
+    vertices.push_back (glm::vec3 ( 1, t, 0));
+    vertices.push_back (glm::vec3 (-1,-t, 0));
+    vertices.push_back (glm::vec3 ( 1,-t, 0));
+    vertices.push_back (glm::vec3 ( 0,-1, t));
+    vertices.push_back (glm::vec3 ( 0, 1, t));
+    vertices.push_back (glm::vec3 ( 0,-1,-t));
+    vertices.push_back (glm::vec3 ( 0, 1,-t));
+    vertices.push_back (glm::vec3 ( t, 0,-1));
+    vertices.push_back (glm::vec3 ( t, 0, 1));
+    vertices.push_back (glm::vec3 (-t, 0,-1));
+    vertices.push_back (glm::vec3 (-t, 0, 1));
+
+    // normalize vertices
+    for (int i = 0; i < vertices.size (); i++)
+    	vertices[i] = glm::normalize (vertices[i]);
+
+    // generate icosahedron faces
+    std::vector<glm::u16vec3> faces;
+    faces.push_back (glm::u16vec3 (0, 11, 5));
+    faces.push_back (glm::u16vec3 (0, 5, 1));
+    faces.push_back (glm::u16vec3 (0, 1, 7));
+    faces.push_back (glm::u16vec3 (0, 7, 10));
+    faces.push_back (glm::u16vec3 (0, 10, 11));
+    faces.push_back (glm::u16vec3 (1, 5, 9));
+    faces.push_back (glm::u16vec3 (5, 11, 4));
+    faces.push_back (glm::u16vec3 (11, 10, 2));
+    faces.push_back (glm::u16vec3 (10, 7, 6));
+    faces.push_back (glm::u16vec3 (7, 1, 8));
+    faces.push_back (glm::u16vec3 (3, 9, 4));
+    faces.push_back (glm::u16vec3 (3, 4, 2));
+    faces.push_back (glm::u16vec3 (3, 2, 6));
+    faces.push_back (glm::u16vec3 (3, 6, 8));
+    faces.push_back (glm::u16vec3 (3, 8, 9));
+    faces.push_back (glm::u16vec3 (4, 9, 5));
+    faces.push_back (glm::u16vec3 (2, 4, 11));
+    faces.push_back (glm::u16vec3 (6, 2, 10));
+    faces.push_back (glm::u16vec3 (8, 6, 7));
+    faces.push_back (glm::u16vec3 (9, 8, 1));
+
+    // subdivide icosahedron
     {
-        for (int j = 0; j < 8; j++)
-        {
-            glm::vec3  pos (cosf (2.0f * M_PI * float (j) / 7.0f) * sinf (M_PI * float (i) / 7.0f),
-                    sinf (2.0f * M_PI * float (j) / 7.0f) * sinf (M_PI * float (i) / 7.0f),
-                    sin (-M_PI_2 + M_PI * float (i) / 7.0f));
-            vertices.push_back (pos.x * 32767);
-            vertices.push_back (pos.y * 32767);
-            vertices.push_back (pos.z * 32767);
-            vertices.push_back (0);
-        }
+    	std::map<std::pair<int, int>, int> cache;
+    	for (int i = 0; i < subdivsions; i++)
+    	{
+    		std::vector<glm::u16vec3> newfaces;
+    		newfaces.reserve (faces.size () * 4);
+    		for (int i = 0; i < faces.size (); i++)
+    		{
+    			const glm::u16vec3 &f = faces[i];
+    			int a = getMidpoint (vertices, cache, f.x, f.y);
+    			int b = getMidpoint (vertices, cache, f.y, f.z);
+    			int c = getMidpoint (vertices, cache, f.z, f.x);
+    			newfaces.push_back (glm::u16vec3 (f.x, a, c));
+    			newfaces.push_back (glm::u16vec3 (f.y, b, a));
+    			newfaces.push_back (glm::u16vec3 (f.z, c, b));
+    			newfaces.push_back (glm::u16vec3 (a, b, c));
+    		}
+    		std::swap (faces, newfaces);
+    	}
     }
+    numindices = 3 * faces.size ();
 
-    // generate indices
-    std::vector<GLushort> indices;
-    indices.reserve (8 * 8 * 6);
-    for (int i = 0; i < 7; i++)
+    // generate normalized 16-bit vertices
+    std::vector<GLshort> svertices;
+    for (int i = 0; i < vertices.size (); i++)
     {
-        for (int j = 0; j < 7; j++)
-        {
-            indices.push_back (i * 8 + j);
-            indices.push_back (i * 8 + j + 1);
-            indices.push_back ((i + 1) * 8 + j + 1);
-
-            indices.push_back (i * 8 + j);
-            indices.push_back ((i + 1) * 8 + j + 1);
-            indices.push_back ((i + 1) * 8 + j);
-        }
+    	svertices.push_back (vertices[i].x * 32767);
+    	svertices.push_back (vertices[i].y * 32767);
+    	svertices.push_back (vertices[i].z * 32767);
+    	svertices.push_back (0);
     }
 
     // store vertices to a buffer object
     glBindBuffer (GL_ARRAY_BUFFER, vertexbuffer);
-    glBufferData (GL_ARRAY_BUFFER, sizeof (GLushort) * vertices.size (), &vertices[0], GL_STATIC_DRAW);
+    glBufferData (GL_ARRAY_BUFFER, sizeof (GLshort) * svertices.size (), &svertices[0], GL_STATIC_DRAW);
     // define the vertices as vertex attribute 0
     glVertexAttribPointer (0, 3, GL_SHORT, GL_TRUE, 8, 0);
     glEnableVertexAttribArray (0);
 
     // store indices to a buffer object
     glBindBuffer (GL_ELEMENT_ARRAY_BUFFER, indexbuffer);
-    glBufferData (GL_ELEMENT_ARRAY_BUFFER, sizeof (GLushort) * indices.size (), &indices[0], GL_STATIC_DRAW);
+    glBufferData (GL_ELEMENT_ARRAY_BUFFER, sizeof (glm::u16vec3) * faces.size (), &faces[0], GL_STATIC_DRAW);
 }
 
 void Sphere::SetPositionBuffer (GLuint buffer, GLsizei stride, GLintptr offset)
@@ -81,6 +149,7 @@ Sphere::~Sphere (void)
 {
     // cleanup
     glDeleteBuffers (2, buffers);
+    glDeleteVertexArrays (1, &vertexarray);
 }
 
 
@@ -90,5 +159,5 @@ void Sphere::Render (GLuint instances) const
     glBindVertexArray (vertexarray);
     glBindBuffer (GL_ELEMENT_ARRAY_BUFFER, indexbuffer);
     // render the framing
-    glDrawElementsInstanced (GL_TRIANGLES, 8 * 8 * 6, GL_UNSIGNED_SHORT, 0, instances);
+    glDrawElementsInstanced (GL_TRIANGLES, numindices, GL_UNSIGNED_SHORT, 0, instances);
 }

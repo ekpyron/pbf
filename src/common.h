@@ -15,6 +15,7 @@
 #include <glm/gtc/noise.hpp>
 #include <fstream>
 #include <vector>
+#include <map>
 #include <string>
 #include <sstream>
 #include <cmath>
