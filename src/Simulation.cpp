@@ -82,7 +82,12 @@ Simulation::Simulation (void) : width (0), height (0), font ("textures/font.png"
 
     // allocate flag buffer
     glBindBuffer (GL_SHADER_STORAGE_BUFFER, flagbuffer);
-    glBufferData (GL_SHADER_STORAGE_BUFFER, sizeof (GLuint) * (GetNumberOfParticles () + 1), NULL, GL_DYNAMIC_DRAW);
+    glBufferData (GL_SHADER_STORAGE_BUFFER, sizeof (GLbyte) * (GetNumberOfParticles () + 1), NULL, GL_DYNAMIC_DRAW);
+
+    // create flag texture
+    glGenTextures (1, &flagtexture);
+    glBindTexture (GL_TEXTURE_BUFFER, flagtexture);
+    glTexBuffer (GL_TEXTURE_BUFFER, GL_R8I, flagbuffer);
 
     // allocate auxillary buffer
     glBindBuffer (GL_SHADER_STORAGE_BUFFER, auxbuffer);
@@ -274,7 +279,8 @@ bool Simulation::Frame (void)
         glBindBufferBase (GL_SHADER_STORAGE_BUFFER, 1, lambdabuffer);
         glBindBufferBase (GL_SHADER_STORAGE_BUFFER, 2, auxbuffer);
         glBindBufferBase (GL_SHADER_STORAGE_BUFFER, 3, gridbuffer);
-        glBindBufferBase (GL_SHADER_STORAGE_BUFFER, 4, flagbuffer);
+
+        glBindImageTexture (0, flagtexture, 0, GL_FALSE, 0, GL_READ_WRITE, GL_R8I);
 
         simulationstep2.Use ();
         glMemoryBarrier (GL_BUFFER_UPDATE_BARRIER_BIT);

@@ -19,10 +19,7 @@ layout (std430, binding = 3) writeonly buffer GridBuffer
 	int grid[];
 };
 
-layout (std430, binding = 4) writeonly buffer FlagBuffer
-{
-	int flag[];
-};
+layout (binding = 0, r8i) uniform writeonly iimageBuffer flagtexture;
 
 uint GetHash (in vec3 pos)
 {
@@ -42,8 +39,8 @@ void main (void)
 	if (gid == 0)
 	{
 		grid[0] = 0;
-		flag[0] = 0;
-		flag[NUM_PARTICLES] = 1;
+		imageStore (flagtexture, 0, ivec4 (0, 0, 0, 0));
+		imageStore (flagtexture, int (NUM_PARTICLES), ivec4 (1, 0, 0, 0));
 		return;
 	}
 
@@ -52,10 +49,10 @@ void main (void)
 	if (hash != GetHash (particles[gid - 1].position))
 	{
 		grid[hash] = int (gid);
-		flag[gid] = 1;
+		imageStore (flagtexture, int (gid), ivec4 (1, 0, 0, 0));
 	}
 	else
 	{
-		flag[gid] = 0;
+		imageStore (flagtexture, int (gid), ivec4 (0, 0, 0, 0));
 	}
 }

@@ -29,10 +29,7 @@ layout (std430, binding = 3) readonly buffer GridBuffer
 	int grid[];
 };
 
-layout (std430, binding = 4) readonly buffer FlagBuffer
-{
-	int flag[];
-};
+layout (binding = 0, r8i) uniform readonly iimageBuffer flagtexture;
 
 float Wpoly6 (float r)
 {
@@ -97,7 +94,7 @@ const ivec3 gridoffsets[27] = {
 		int var = grid[ngridid];\
 		if (var == -1) continue;\
 		do { if (var != particleid) {
-#define END_FOR_EACH_NEIGHBOUR(var)	} var++; } while (flag[var] == 0);}
+#define END_FOR_EACH_NEIGHBOUR(var)	} var++; } while (imageLoad (flagtexture, var).x == 0);}
 
 void main (void)
 {

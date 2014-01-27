@@ -152,6 +152,11 @@ private:
      */
     Font font;
 
+    /** Flag texture.
+     * Texture through which the flag buffer is accessed.
+     */
+    GLuint flagtexture;
+
     /** Projection matrix.
      * Matrix describing the perspective projection.
      */
