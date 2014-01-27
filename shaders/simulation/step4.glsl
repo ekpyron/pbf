@@ -9,12 +9,12 @@ struct ParticleInfo
 	vec3 oldposition;
 };
 
-layout (std430, binding = 0) readonly buffer ParticleBuffer
+layout (std430, binding = 0) buffer ParticleBuffer
 {
 	ParticleInfo particles[];
 };
 
-layout (std430, binding = 1) writeonly buffer LambdaBuffer
+layout (std430, binding = 1) readonly buffer LambdaBuffer
 {
 	float lambdas[];
 };
@@ -104,59 +104,33 @@ void main (void)
 	uint particleid;
 	particleid = gl_GlobalInvocationID.x;
 
-	ParticleInfo particle = particles[particleid];
-
+	vec3 position = particles[particleid].position;
+	
 	// compute grid id as hash value
 	ivec3 gridpos;
-	gridpos.x = clamp (int (floor (particle.position.x)), 0, GRID_WIDTH);
-	gridpos.y = clamp (int (floor (particle.position.y)), 0, GRID_HEIGHT);
-	gridpos.z = clamp (int (floor (particle.position.z)), 0, GRID_DEPTH);
+	gridpos.x = clamp (int (floor (position.x)), 0, GRID_WIDTH);
+	gridpos.y = clamp (int (floor (position.y)), 0, GRID_HEIGHT);
+	gridpos.z = clamp (int (floor (position.z)), 0, GRID_DEPTH);
 	
 	int gridid = gridpos.y * GRID_WIDTH * GRID_DEPTH + gridpos.z * GRID_WIDTH + gridpos.x;
-	
-	float sum_k_grad_Ci = 0;
-	float lambda = 0;
-	float rho = 0;
-	float scorr = 0;
 
-	vec3 grad_pi_Ci = vec3 (0, 0, 0);
+	vec3 deltap = vec3 (0, 0, 0);
+	
+	float lambda = lambdas[particleid];
+		
 	FOR_EACH_NEIGHBOUR(j)
 	{
-		// highlight neighbours of the highlighted particle
-		if (particleid == highlightparticle)
-		{
-			auxdata[j] = vec4 (0, 1, 0, 1);
-		}
-	
-		// compute rho_i (equation 2)
-		float len = length (particle.position - particles[j].position);
-		float tmp = Wpoly6 (len);
-		rho += tmp;
-	
-		// compute scorr (equation 13)
-		tmp = -tmp / Wpoly6 (tensile_instability_h);
-		tmp *= tmp;
-		scorr += -tensile_instability_k * tmp * tmp;
-			
-		// sum gradients of Ci (equation 8 and parts of equation 9)
-		// use j as k so that we can stay in the same loop
-		uint k = j;
-		vec3 grad_pk_Ci = vec3 (0, 0, 0);
-		grad_pk_Ci = gradWspiky (particle.position - particles[k].position);
-		grad_pk_Ci /= rho_0;
-		sum_k_grad_Ci += dot (grad_pk_Ci, grad_pk_Ci);
-		
-		// now use j as j again and accumulate grad_pi_Ci for the case k=i
-		// from equation 8
-		grad_pi_Ci += grad_pk_Ci; // = gradWspiky (particle.position - particles[j].position); 
+		// accumulate position corrections (part of equation 12)
+		deltap += (lambda + lambdas[j]) * gradWspiky (position - particles[j].position);
 	}
 	END_FOR_EACH_NEIGHBOUR(j)
-	// add grad_pi_Ci to the sum
-	sum_k_grad_Ci += dot (grad_pi_Ci, grad_pi_Ci);
+
+	position += deltap / rho_0;
+
+	// collision detection begin
+	vec3 wall = vec3 (16, 0, 16);
+	position = clamp (position, vec3 (0, 0, 0) + wall, GRID_SIZE - wall);
+	// collision detection end
 	
-	// compute lambda_i (equations 1 and 9)
-	float C_i = rho / rho_0 - 1;
-	lambda = -C_i / (sum_k_grad_Ci + epsilon);
-	
-	lambdas[particleid] = lambda + scorr / 2;
+	particles[particleid].position = position;
 }

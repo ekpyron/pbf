@@ -29,4 +29,22 @@
 
 extern GLFWwindow *window;
 
+/** Particle information.
+ * Structure representing the information stored for each particle.
+ */
+typedef struct particleinfo {
+    /** Particle position.
+     */
+    glm::vec3 position;
+    /** Unused padding value.
+     */
+    float padding0;
+    /** Old particle position.
+     */
+    glm::vec3 oldposition;
+    /** Unused padding value.
+     */
+    float padding2;
+} particleinfo_t;
+
 #endif /* !defined COMMON_H */

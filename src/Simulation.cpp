@@ -2,7 +2,7 @@
 
 
 Simulation::Simulation (void) : width (0), height (0), font ("textures/font.png"),
-    last_fps_time (glfwGetTime ()), framecount (0), fps (0)
+    last_fps_time (glfwGetTime ()), framecount (0), fps (0), radixsort (GetNumberOfParticles () >> 9)
 {
     // load shaders
     surroundingprogram.CompileShader (GL_VERTEX_SHADER, "shaders/surrounding/vertex.glsl");
@@ -25,8 +25,12 @@ Simulation::Simulation (void) : width (0), height (0), font ("textures/font.png"
     		"shaders/simulation/include.glsl");
     simulationstep3.Link ();
 
+    simulationstep4.CompileShader (GL_COMPUTE_SHADER, "shaders/simulation/step4.glsl",
+    		"shaders/simulation/include.glsl");
+    simulationstep4.Link ();
+
     // create buffer objects
-    glGenBuffers (7, buffers);
+    glGenBuffers (6, buffers);
 
     // initialize the camera position and rotation and the transformation matrix buffer.
     camera.SetPosition (glm::vec3 (20, 10, 10));
@@ -65,10 +69,6 @@ Simulation::Simulation (void) : width (0), height (0), font ("textures/font.png"
     glClearColor (0.25f, 0.25f, 0.25f, 1.0f);
     glClearDepth (1.0f);
 
-    //  allocate particle buffer
-    glBindBuffer (GL_SHADER_STORAGE_BUFFER, particlebuffer);
-    glBufferData (GL_SHADER_STORAGE_BUFFER, sizeof (particleinfo_t) * GetNumberOfParticles (), NULL, GL_DYNAMIC_DRAW);
-
     // Initialize particle buffer
     ResetParticleBuffer ();
 
@@ -76,6 +76,13 @@ Simulation::Simulation (void) : width (0), height (0), font ("textures/font.png"
     glBindBuffer (GL_SHADER_STORAGE_BUFFER, lambdabuffer);
     glBufferData (GL_SHADER_STORAGE_BUFFER, sizeof (float) * GetNumberOfParticles (), NULL, GL_DYNAMIC_DRAW);
 
+    // allocate grid buffer
+    glBindBuffer (GL_SHADER_STORAGE_BUFFER, gridbuffer);
+    glBufferData (GL_SHADER_STORAGE_BUFFER, sizeof (GLuint) * 128 * 64 * 128, NULL, GL_DYNAMIC_DRAW);
+
+    // allocate flag buffer
+    glBindBuffer (GL_SHADER_STORAGE_BUFFER, flagbuffer);
+    glBufferData (GL_SHADER_STORAGE_BUFFER, sizeof (GLuint) * (GetNumberOfParticles () + 1), NULL, GL_DYNAMIC_DRAW);
 
     // allocate auxillary buffer
     glBindBuffer (GL_SHADER_STORAGE_BUFFER, auxbuffer);
@@ -83,17 +90,6 @@ Simulation::Simulation (void) : width (0), height (0), font ("textures/font.png"
     // clear auxiliary buffer
     const float auxdata[] = { 0.25, 0, 1, 1 };
     glClearBufferData (GL_SHADER_STORAGE_BUFFER, GL_RGBA32F, GL_RGBA, GL_FLOAT, &auxdata[0]);
-
-    // allocate the grid counter buffer
-    glBindBuffer (GL_SHADER_STORAGE_BUFFER, gridcounterbuffer);
-    glBufferData (GL_SHADER_STORAGE_BUFFER, sizeof (GLuint) * 128 * 16 * 128, NULL, GL_DYNAMIC_DRAW);
-
-    // allocate grid cell buffer
-    glBindBuffer (GL_SHADER_STORAGE_BUFFER, gridcellbuffer);
-    glBufferData (GL_SHADER_STORAGE_BUFFER, sizeof (GLuint) * 128 * 16 * 128 * 64, NULL, GL_DYNAMIC_DRAW);
-
-    // pass the position buffer to the icosahedron class
-    icosahedron.SetPositionBuffer (particlebuffer, sizeof (particleinfo_t), 0);
 
     // pass the auxiliary buffer as color buffer to the icosahedron class
     icosahedron.SetColorBuffer (auxbuffer, sizeof (float) * 4, 0);
@@ -105,7 +101,7 @@ Simulation::Simulation (void) : width (0), height (0), font ("textures/font.png"
 Simulation::~Simulation (void)
 {
     // cleanup
-    glDeleteBuffers (7, buffers);
+    glDeleteBuffers (6, buffers);
 }
 
 void Simulation::Resize (const unsigned int &_width, const unsigned int &_height)
@@ -148,7 +144,8 @@ void Simulation::OnMouseMove (const double &x, const double &y)
 
 const unsigned int Simulation::GetNumberOfParticles (void) const
 {
-    return 32 * 32 * 8 * 2;
+	// must be a multiple of 512
+    return 32 * 32 * 16 * 2;
 }
 
 void Simulation::ResetParticleBuffer (void)
@@ -161,7 +158,7 @@ void Simulation::ResetParticleBuffer (void)
     {
         for (int z = 0; z < 32; z++)
         {
-            for (int y = 0; y < 8; y++)
+            for (int y = 0; y < 16; y++)
             {
                 particleinfo_t particle;
                 particle.position = glm::vec3 (32.5 + x, y + 0.5, 32.5 + z);
@@ -176,7 +173,7 @@ void Simulation::ResetParticleBuffer (void)
     {
         for (int z = 0; z < 32; z++)
         {
-            for (int y = 0; y < 8; y++)
+            for (int y = 0; y < 16; y++)
             {
                 particleinfo_t particle;
                 particle.position = glm::vec3 (32.5 + 63 - x, y + 0.5, 32.5 + 63 - z);
@@ -188,7 +185,7 @@ void Simulation::ResetParticleBuffer (void)
         }
     }
     //  update the particle buffer
-    glBindBuffer (GL_SHADER_STORAGE_BUFFER, particlebuffer);
+    glBindBuffer (GL_SHADER_STORAGE_BUFFER, radixsort.GetBuffer ());
     glBufferSubData (GL_SHADER_STORAGE_BUFFER, 0, sizeof (particleinfo_t) * particles.size (), &particles[0]);
     // clear auxiliary buffer
     glBindBuffer (GL_SHADER_STORAGE_BUFFER, auxbuffer);
@@ -203,6 +200,18 @@ void Simulation::OnKeyUp (int key)
     case GLFW_KEY_TAB:
         ResetParticleBuffer ();
         break;
+    case GLFW_KEY_D:
+    {
+    	glBindBuffer (GL_SHADER_STORAGE_BUFFER, flagbuffer);
+    	GLuint *data = reinterpret_cast<GLuint*> (glMapBuffer (GL_SHADER_STORAGE_BUFFER, GL_READ_ONLY));
+    	for (int i = 0; i < GetNumberOfParticles(); i++)
+    	{
+    		std::cout << data[i] << " ";
+    	}
+    	std::cout << std::endl;
+    	glUnmapBuffer (GL_SHADER_STORAGE_BUFFER);
+    	break;
+    }
     }
 }
 
@@ -218,6 +227,9 @@ bool Simulation::Frame (void)
         return false;
     }
 
+    // pass the position buffer to the icosahedron class
+    icosahedron.SetPositionBuffer (radixsort.GetBuffer (), sizeof (particleinfo_t), 0);
+
     // specify the viewport size
     glViewport (0, 0, width, height);
 
@@ -228,40 +240,54 @@ bool Simulation::Frame (void)
     surroundingprogram.Use ();
     framing.Render ();
 
-    // clear grid counter buffer
-    glBindBuffer (GL_SHADER_STORAGE_BUFFER, gridcounterbuffer);
-    glClearBufferData (GL_SHADER_STORAGE_BUFFER, GL_R32UI, GL_RED, GL_UNSIGNED_INT, NULL);
-
-    // clear lambda buffer
-    glBindBuffer (GL_SHADER_STORAGE_BUFFER, lambdabuffer);
-    glClearBufferData (GL_SHADER_STORAGE_BUFFER, GL_R32F, GL_RED, GL_FLOAT, NULL);
-
     // run simulation step 1
     if (glfwGetKey (window, GLFW_KEY_SPACE))
     {
+        // clear grid buffer
+        glBindBuffer (GL_SHADER_STORAGE_BUFFER, gridbuffer);
+        {
+        	GLint v = -1;
+        	glClearBufferData (GL_SHADER_STORAGE_BUFFER, GL_R32I, GL_RED, GL_INT, &v);
+        }
+
+        // clear lambda buffer
+        glBindBuffer (GL_SHADER_STORAGE_BUFFER, lambdabuffer);
+        glClearBufferData (GL_SHADER_STORAGE_BUFFER, GL_R32F, GL_RED, GL_FLOAT, NULL);
+
         // clear auxiliary buffer
         glBindBuffer (GL_SHADER_STORAGE_BUFFER, auxbuffer);
         const float auxdata[] = { 0.25, 0, 1, 1 };
         glClearBufferData (GL_SHADER_STORAGE_BUFFER, GL_RGBA32F, GL_RGBA, GL_FLOAT, &auxdata[0]);
 
-        glBindBufferBase (GL_SHADER_STORAGE_BUFFER, 0, particlebuffer);
-        glBindBufferBase (GL_SHADER_STORAGE_BUFFER, 1, gridcounterbuffer);
-        glBindBufferBase (GL_SHADER_STORAGE_BUFFER, 2, gridcellbuffer);
-        glBindBufferBase (GL_SHADER_STORAGE_BUFFER, 3, lambdabuffer);
-        glBindBufferBase (GL_SHADER_STORAGE_BUFFER, 4, auxbuffer);
+        glBindBufferBase (GL_SHADER_STORAGE_BUFFER, 0, radixsort.GetBuffer ());
+        glBindBufferBase (GL_SHADER_STORAGE_BUFFER, 1, auxbuffer);
 
         simulationstep1.Use ();
         glMemoryBarrier (GL_BUFFER_UPDATE_BARRIER_BIT);
-        glDispatchCompute (8, 8, 1);
+        glDispatchCompute (GetNumberOfParticles () >> 8, 1, 1);
         glMemoryBarrier (GL_SHADER_STORAGE_BARRIER_BIT);
 
-        for (auto i = 0; i < 5; i++) {
+        // sort particles
+        radixsort.Run (21);
+
+        glBindBufferBase (GL_SHADER_STORAGE_BUFFER, 0, radixsort.GetBuffer ());
+        glBindBufferBase (GL_SHADER_STORAGE_BUFFER, 1, lambdabuffer);
+        glBindBufferBase (GL_SHADER_STORAGE_BUFFER, 2, auxbuffer);
+        glBindBufferBase (GL_SHADER_STORAGE_BUFFER, 3, gridbuffer);
+        glBindBufferBase (GL_SHADER_STORAGE_BUFFER, 4, flagbuffer);
+
         simulationstep2.Use ();
-        glDispatchCompute (8, 8, 1);
+        glMemoryBarrier (GL_BUFFER_UPDATE_BARRIER_BIT);
+        glDispatchCompute (GetNumberOfParticles () >> 8, 1, 1);
         glMemoryBarrier (GL_SHADER_STORAGE_BARRIER_BIT);
 
+        for (auto i = 0; i < 3; i++) {
         simulationstep3.Use ();
-        glDispatchCompute (8, 8, 1);
+        glDispatchCompute (GetNumberOfParticles () >> 8, 1, 1);
+        glMemoryBarrier (GL_SHADER_STORAGE_BARRIER_BIT);
+
+        simulationstep4.Use ();
+        glDispatchCompute (GetNumberOfParticles () >> 8, 1, 1);
         glMemoryBarrier (GL_SHADER_STORAGE_BARRIER_BIT);
         }
     }

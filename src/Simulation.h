@@ -7,6 +7,7 @@
 #include "Framing.h"
 #include "Font.h"
 #include "Icosahedron.h"
+#include "RadixSort.h"
 
 /** Simulation class.
  * This is the main class which takes care of the whole simulation.
@@ -57,24 +58,6 @@ public:
      */
     bool Frame (void);
 private:
-    /** Particle information.
-     * Structure representing the information stored for each particle.
-     */
-    typedef struct particleinfo {
-        /** Particle position.
-         */
-        glm::vec3 position;
-        /** Unused padding value.
-         */
-        float padding0;
-        /** Old particle position.
-         */
-        glm::vec3 oldposition;
-        /** Unused padding value.
-         */
-        float padding2;
-    } particleinfo_t;
-
     /** Camera.
      * Used to handle input events and create a view matrix.
      */
@@ -105,6 +88,10 @@ private:
      */
     ShaderProgram simulationstep3;
 
+    /** Simulation step shader program.
+     * Shader program for the fourth simulation step.
+     */
+    ShaderProgram simulationstep4;
 
     /** Framing.
      * Takes care of rendering a framing for the scene.
@@ -116,13 +103,14 @@ private:
      */
     Icosahedron icosahedron;
 
+    /** Radix sort.
+     * Takes care of sorting the particle list.
+     * The contained buffer object is used as particle buffer.
+     */
+    RadixSort radixsort;
+
     union {
         struct {
-            /** Particle buffer.
-             * Buffer in which the particles are stored.
-             */
-            GLuint particlebuffer;
-
             /** Lambda buffer.
              * Buffer in which the specific scalar values are stored during the simulation steps.
              */
@@ -137,28 +125,26 @@ private:
              */
             GLuint lightingbuffer;
 
-            /** Grid counter buffer.
-             * Buffer in which the grid counters are stored, in which the number
-             * of particles in each grid cell of the grid cell buffer are stored.
-             */
-            GLuint gridcounterbuffer;
-
-            /** Grid cell buffer.
-             * Buffer in which the particle ids of the particles in each grid cell are
-             * stored.
-             */
-            GLuint gridcellbuffer;
-
             /** Auxiliary buffer.
              * Buffer in which auxiliary data used for debugging purposes can be stored.
              */
             GLuint auxbuffer;
+
+            /** Grid buffer.
+             * Buffer in which the starting particle for each grid is stored.
+             */
+            GLuint gridbuffer;
+
+            /** Flag buffer.
+             * Buffer in which a flag is stored that indicates the grid cell borders in the particle buffer.
+             */
+            GLuint flagbuffer;
         };
         /** Buffer objects.
          * The buffer objects are stored in a union, so that it is possible
          * to create/delete all buffer objects with a single OpenGL call.
          */
-        GLuint buffers[7];
+        GLuint buffers[6];
     };
 
     /** Font subsystem.
