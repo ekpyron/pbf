@@ -3,7 +3,7 @@
 const int GRID_WIDTH = 128;
 const int GRID_HEIGHT = 64;
 const int GRID_DEPTH = 128;
-const uint NUM_PARTICLES = 32 * 32 * 16 * 2;
+const uint NUM_PARTICLES = 32 * 32 * 32 * 2;
 
 const vec3 GRID_SIZE = vec3 (GRID_WIDTH, GRID_HEIGHT, GRID_DEPTH);
 

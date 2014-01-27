@@ -13,21 +13,21 @@ Simulation::Simulation (void) : width (0), height (0), font ("textures/font.png"
     particleprogram.CompileShader (GL_FRAGMENT_SHADER, "shaders/particles/fragment.glsl");
     particleprogram.Link ();
 
-    simulationstep1.CompileShader (GL_COMPUTE_SHADER, "shaders/simulation/step1.glsl",
+    predictpos.CompileShader (GL_COMPUTE_SHADER, "shaders/simulation/predictpos.glsl",
     		"shaders/simulation/include.glsl");
-    simulationstep1.Link ();
+    predictpos.Link ();
 
-    simulationstep2.CompileShader (GL_COMPUTE_SHADER, "shaders/simulation/step2.glsl",
+    findcells.CompileShader (GL_COMPUTE_SHADER, "shaders/simulation/findcells.glsl",
     		"shaders/simulation/include.glsl");
-    simulationstep2.Link ();
+    findcells.Link ();
 
-    simulationstep3.CompileShader (GL_COMPUTE_SHADER, "shaders/simulation/step3.glsl",
+    calclambda.CompileShader (GL_COMPUTE_SHADER, "shaders/simulation/calclambda.glsl",
     		"shaders/simulation/include.glsl");
-    simulationstep3.Link ();
+    calclambda.Link ();
 
-    simulationstep4.CompileShader (GL_COMPUTE_SHADER, "shaders/simulation/step4.glsl",
+    updatepos.CompileShader (GL_COMPUTE_SHADER, "shaders/simulation/updatepos.glsl",
     		"shaders/simulation/include.glsl");
-    simulationstep4.Link ();
+    updatepos.Link ();
 
     // create buffer objects
     glGenBuffers (6, buffers);
@@ -150,7 +150,7 @@ void Simulation::OnMouseMove (const double &x, const double &y)
 const unsigned int Simulation::GetNumberOfParticles (void) const
 {
 	// must be a multiple of 512
-    return 32 * 32 * 16 * 2;
+    return 32 * 32 * 32 * 2;
 }
 
 void Simulation::ResetParticleBuffer (void)
@@ -163,7 +163,7 @@ void Simulation::ResetParticleBuffer (void)
     {
         for (int z = 0; z < 32; z++)
         {
-            for (int y = 0; y < 16; y++)
+            for (int y = 0; y < 32; y++)
             {
                 particleinfo_t particle;
                 particle.position = glm::vec3 (32.5 + x, y + 0.5, 32.5 + z);
@@ -178,7 +178,7 @@ void Simulation::ResetParticleBuffer (void)
     {
         for (int z = 0; z < 32; z++)
         {
-            for (int y = 0; y < 16; y++)
+            for (int y = 0; y < 32; y++)
             {
                 particleinfo_t particle;
                 particle.position = glm::vec3 (32.5 + 63 - x, y + 0.5, 32.5 + 63 - z);
@@ -267,7 +267,7 @@ bool Simulation::Frame (void)
         glBindBufferBase (GL_SHADER_STORAGE_BUFFER, 0, radixsort.GetBuffer ());
         glBindBufferBase (GL_SHADER_STORAGE_BUFFER, 1, auxbuffer);
 
-        simulationstep1.Use ();
+        predictpos.Use ();
         glMemoryBarrier (GL_BUFFER_UPDATE_BARRIER_BIT);
         glDispatchCompute (GetNumberOfParticles () >> 8, 1, 1);
         glMemoryBarrier (GL_SHADER_STORAGE_BARRIER_BIT);
@@ -282,17 +282,17 @@ bool Simulation::Frame (void)
 
         glBindImageTexture (0, flagtexture, 0, GL_FALSE, 0, GL_READ_WRITE, GL_R8I);
 
-        simulationstep2.Use ();
+        findcells.Use ();
         glMemoryBarrier (GL_BUFFER_UPDATE_BARRIER_BIT);
         glDispatchCompute (GetNumberOfParticles () >> 8, 1, 1);
         glMemoryBarrier (GL_SHADER_STORAGE_BARRIER_BIT);
 
         for (auto i = 0; i < 3; i++) {
-        simulationstep3.Use ();
+        calclambda.Use ();
         glDispatchCompute (GetNumberOfParticles () >> 8, 1, 1);
         glMemoryBarrier (GL_SHADER_STORAGE_BARRIER_BIT);
 
-        simulationstep4.Use ();
+        updatepos.Use ();
         glDispatchCompute (GetNumberOfParticles () >> 8, 1, 1);
         glMemoryBarrier (GL_SHADER_STORAGE_BARRIER_BIT);
         }

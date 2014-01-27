@@ -74,24 +74,26 @@ private:
     ShaderProgram particleprogram;
 
     /** Simulation step shader program.
-     * Shader program for the first simulation step.
+     * Shader program for the simulation step that predicts the new position
+     * of all particles.
      */
-    ShaderProgram simulationstep1;
+    ShaderProgram predictpos;
 
     /** Simulation step shader program.
-     * Shader program for the second simulation step.
+     * Shader program for the simulation step that finds grid cells in the
+     * sorted particle array.
      */
-    ShaderProgram simulationstep2;
+    ShaderProgram findcells;
 
     /** Simulation step shader program.
-     * Shader program for the third simulation step.
+     * Shader program for the simulation step that calculates lambda_i for each particle.
      */
-    ShaderProgram simulationstep3;
+    ShaderProgram calclambda;
 
     /** Simulation step shader program.
-     * Shader program for the fourth simulation step.
+     * Shader program for the simulation step that updates the position for each particle.
      */
-    ShaderProgram simulationstep4;
+    ShaderProgram updatepos;
 
     /** Framing.
      * Takes care of rendering a framing for the scene.
