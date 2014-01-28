@@ -3,7 +3,8 @@
 
 Simulation::Simulation (void) : width (0), height (0), font ("textures/font.png"),
     last_fps_time (glfwGetTime ()), framecount (0), fps (0), radixsort (GetNumberOfParticles () >> 9),
-    usespheres (false), icosahedron (0), sphere (2)
+    usespheres (false), icosahedron (0), sphere (2), offscreen_width (1280), offscreen_height (720),
+    surfacereconstruction (false)
 {
     // load shaders
     surroundingprogram.CompileShader (GL_VERTEX_SHADER, "shaders/surrounding/vertex.glsl");
@@ -14,9 +15,17 @@ Simulation::Simulation (void) : width (0), height (0), font ("textures/font.png"
     particleprogram.CompileShader (GL_FRAGMENT_SHADER, "shaders/particles/fragment.glsl");
     particleprogram.Link ();
 
+    particledepthprogram.CompileShader (GL_VERTEX_SHADER, "shaders/particledepth/vertex.glsl");
+    particledepthprogram.CompileShader (GL_FRAGMENT_SHADER, "shaders/particledepth/fragment.glsl");
+    particledepthprogram.Link ();
+
     selectionprogram.CompileShader (GL_VERTEX_SHADER, "shaders/selection/vertex.glsl");
     selectionprogram.CompileShader (GL_FRAGMENT_SHADER, "shaders/selection/fragment.glsl");
     selectionprogram.Link ();
+
+    fsquadprog.CompileShader (GL_VERTEX_SHADER, "shaders/fsquad/vertex.glsl");
+    fsquadprog.CompileShader (GL_FRAGMENT_SHADER, "shaders/fsquad/fragment.glsl");
+    fsquadprog.Link ();
 
     predictpos.CompileShader (GL_COMPUTE_SHADER, "shaders/simulation/predictpos.glsl",
     		"shaders/simulation/include.glsl");
@@ -41,27 +50,36 @@ Simulation::Simulation (void) : width (0), height (0), font ("textures/font.png"
     glGenQueries (6, queries);
 
     // create texture objects
-    glGenTextures (2, textures);
+    glGenTextures (3, textures);
 
     // create selection depth texture
     glBindTexture (GL_TEXTURE_2D, selectiondepthtexture);
     glTexImage2D (GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT32F, 1, 1, 0, GL_DEPTH_COMPONENT, GL_FLOAT, NULL);
 
+    // create particle depth texture
+    glBindTexture (GL_TEXTURE_2D, depthtexture);
+    glTexImage2D (GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT32F, offscreen_width, offscreen_height,
+    		0, GL_DEPTH_COMPONENT, GL_FLOAT, NULL);
+    glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+
     // create framebuffer objects
-    glGenFramebuffers (1, framebuffers);
+    glGenFramebuffers (2, framebuffers);
 
     // setup selection framebuffer
     glBindFramebuffer (GL_FRAMEBUFFER, selectionfb);
     glFramebufferTexture2D (GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, selectiondepthtexture, 0);
+
+    // setup depth framebuffer
+    glBindFramebuffer (GL_FRAMEBUFFER, depthfb);
+    glFramebufferTexture2D (GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, depthtexture, 0);
     glBindFramebuffer (GL_FRAMEBUFFER, 0);
 
     // initialize the camera position and rotation and the transformation matrix buffer.
     camera.SetPosition (glm::vec3 (20, 10, 10));
     camera.Rotate (30.0f, 240.0f);
     glBindBufferBase (GL_UNIFORM_BUFFER, 0, transformationbuffer);
-    glBufferData (GL_UNIFORM_BUFFER, sizeof (glm::mat4), glm::value_ptr (projmat * camera.GetViewMatrix()),
-            GL_DYNAMIC_DRAW);
-
+    glBufferData (GL_UNIFORM_BUFFER, 2 * sizeof (glm::mat4), NULL, GL_DYNAMIC_DRAW);
 
     // specify lighting parameters
     // and bind the uniform buffer object to binding point 1
@@ -129,8 +147,8 @@ Simulation::Simulation (void) : width (0), height (0), font ("textures/font.png"
 Simulation::~Simulation (void)
 {
     // cleanup
-	glDeleteTextures (2, textures);
-	glDeleteFramebuffers (1, framebuffers);
+	glDeleteTextures (3, textures);
+	glDeleteFramebuffers (2, framebuffers);
 	glDeleteQueries (6, queries);
     glDeleteBuffers (6, buffers);
 }
@@ -145,6 +163,8 @@ void Simulation::Resize (const unsigned int &_width, const unsigned int &_height
     projmat = glm::perspective (45.0f * float (M_PI / 180.0f), float (width) / float (height), 0.1f, 1000.0f);
     glBindBuffer (GL_UNIFORM_BUFFER, transformationbuffer);
     glBufferSubData (GL_UNIFORM_BUFFER, 0, sizeof (glm::mat4), glm::value_ptr (projmat * camera.GetViewMatrix ()));
+    glBufferSubData (GL_UNIFORM_BUFFER, sizeof (glm::mat4), sizeof (glm::mat4),
+    		glm::value_ptr (glm::inverse (projmat * camera.GetViewMatrix ())));
 }
 
 void Simulation::OnMouseMove (const double &x, const double &y)
@@ -170,24 +190,28 @@ void Simulation::OnMouseMove (const double &x, const double &y)
         glBindBuffer (GL_UNIFORM_BUFFER, transformationbuffer);
         glBufferSubData (GL_UNIFORM_BUFFER, 0, sizeof (glm::mat4),
                 glm::value_ptr (projmat * camera.GetViewMatrix ()));
+        glBufferSubData (GL_UNIFORM_BUFFER, sizeof (glm::mat4), sizeof (glm::mat4),
+        		glm::value_ptr (glm::inverse (projmat * camera.GetViewMatrix ())));
     }
 }
 
 void Simulation::OnMouseUp (const int &button)
 {
-
 }
 
 void Simulation::OnMouseDown (const int &button)
 {
 	if (glfwGetKey (window, GLFW_KEY_H))
 	{
+		// setup viewport according to cursor position
 		double xpos, ypos;
 		int width, height;
 		glfwGetCursorPos (window, &xpos, &ypos);
 		glfwGetFramebufferSize (window, &width, &height);
 		glBindFramebuffer (GL_FRAMEBUFFER, selectionfb);
         glViewport (-xpos, ypos - height, width, height);
+
+        // clear and fill depth buffer
        	glClear (GL_DEPTH_BUFFER_BIT);
        	selectionprogram.Use ();
        	glProgramUniform1i (selectionprogram.get (), selectionprogram.GetUniformLocation ("write"), 0);
@@ -197,6 +221,8 @@ void Simulation::OnMouseDown (const int &button)
        		sphere.Render (GetNumberOfParticles ());
        	else
        		icosahedron.Render (GetNumberOfParticles ());
+
+       	// only render the closest sphere and write the highlighted flag.
        	glProgramUniform1i (selectionprogram.get (), selectionprogram.GetUniformLocation ("write"), 1);
        	glDepthFunc (GL_EQUAL);
        	if (usespheres)
@@ -265,6 +291,10 @@ void Simulation::OnKeyUp (int key)
 {
     switch (key)
     {
+    // toggle surface reconstruction
+    case GLFW_KEY_ENTER:
+    	surfacereconstruction = !surfacereconstruction;
+    	break;
     // reset to initial particle configuration
     case GLFW_KEY_TAB:
         ResetParticleBuffer ();
@@ -398,14 +428,40 @@ bool Simulation::Frame (void)
         glEndQuery (GL_TIME_ELAPSED);
     }
 
-    // render icosahedra/spheres
-    glBeginQuery (GL_TIME_ELAPSED, queries[5]);
-    particleprogram.Use ();
-    if (usespheres)
-        sphere.Render (GetNumberOfParticles ());
+    if (!surfacereconstruction)
+    {
+    	// render icosahedra/spheres
+    	glBeginQuery (GL_TIME_ELAPSED, queries[5]);
+    	particleprogram.Use ();
+    	if (usespheres)
+    		sphere.Render (GetNumberOfParticles ());
+    	else
+    		icosahedron.Render (GetNumberOfParticles ());
+    	glEndQuery (GL_TIME_ELAPSED);
+    }
     else
-    	icosahedron.Render (GetNumberOfParticles ());
-    glEndQuery (GL_TIME_ELAPSED);
+    {
+    	// render icosahedra/spheres, storing depth
+    	glBeginQuery (GL_TIME_ELAPSED, queries[5]);
+    	glBindFramebuffer (GL_FRAMEBUFFER, depthfb);
+    	glViewport (0, 0, offscreen_width, offscreen_height);
+    	glClear (GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
+    	particledepthprogram.Use ();
+    	if (usespheres)
+    		sphere.Render (GetNumberOfParticles ());
+    	else
+    		icosahedron.Render (GetNumberOfParticles ());
+    	glBindFramebuffer (GL_FRAMEBUFFER, 0);
+
+    	// use depth texture as input
+    	glBindTexture (GL_TEXTURE_2D, depthtexture);
+    	// render a fullscreen quad
+    	glViewport (0, 0, width, height);
+    	fsquadprog.Use ();
+    	fullscreenquad.Render ();
+
+    	glEndQuery (GL_TIME_ELAPSED);
+    }
 
     // determine the framerate every second
     framecount++;

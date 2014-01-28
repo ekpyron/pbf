@@ -8,6 +8,7 @@
 #include "Font.h"
 #include "Icosphere.h"
 #include "RadixSort.h"
+#include "FullscreenQuad.h"
 
 /** Simulation class.
  * This is the main class which takes care of the whole simulation.
@@ -85,6 +86,11 @@ private:
     */
     ShaderProgram particleprogram;
 
+    /** Particle depth shader program.
+     * Shader program for rendering the particle depths only.
+    */
+    ShaderProgram particledepthprogram;
+
     /** Selection shader program.
      * Shader program for selecting particles.
      */
@@ -112,6 +118,11 @@ private:
      */
     ShaderProgram updatepos;
 
+    /** Fullscreen quad shader program.
+     * Shader program for rendering the fullscreen quad.
+     */
+    ShaderProgram fsquadprog;
+
     /** Framing.
      * Takes care of rendering a framing for the scene.
      */
@@ -132,6 +143,13 @@ private:
      * particle rendering.
      */
     bool usespheres;
+
+    /** Surface reconstruction flag.
+     * flag indicating whether the particles should be rendered
+     * as spheres or whether a reconstructed water surface should
+     * be rendered.
+     */
+    bool surfacereconstruction;
 
     /** Radix sort.
      * Takes care of sorting the particle list.
@@ -184,12 +202,16 @@ private:
     		 * space position.
     		 */
     		GLuint selectionfb;
+    		/** Depth framebuffer.
+    		 * Framebuffer object used to store the particle depths.
+    		 */
+    		GLuint depthfb;
     	};
     	/** Framebuffer objects.
     	 * The framebuffer objects are stored in a union, so that it is possible
     	 * to create/delete all texture objects with a single OpenGL call.
     	 */
-    	GLuint framebuffers[1];
+    	GLuint framebuffers[2];
     };
 
     /** Font subsystem.
@@ -208,12 +230,17 @@ private:
     		 * Texture for the depth buffer of the selection framebuffer.
     		 */
     		GLuint selectiondepthtexture;
+
+    		/** Particle depth texture.
+    		 * Texture to store the particle depths.
+    		 */
+    		GLuint depthtexture;
     	};
     	/** Texture objects.
     	 * The texture objects are stored in a union, so that it is possible
     	 * to create/delete all texture objects with a single OpenGL call.
     	 */
-    	GLuint textures[2];
+    	GLuint textures[3];
     };
 
     /** Queries.
@@ -222,19 +249,33 @@ private:
      */
     GLuint queries[6];
 
+    /** Fullscreen quad.
+     * Renders a fullscreen quad.
+     */
+    FullscreenQuad fullscreenquad;
+
     /** Projection matrix.
      * Matrix describing the perspective projection.
      */
     glm::mat4 projmat;
 
     /** Framebuffer width.
-     * Width of the current framebuffer.
+     * Width of the current display framebuffer.
      */
     unsigned int width;
     /** Framebuffer height.
-     * Height of the current framebuffer.
+     * Height of the current display framebuffer.
      */
     unsigned int height;
+
+    /** Offscreen framebuffer width.
+     * Width of the offscreen framebuffer.
+     */
+    unsigned int offscreen_width;
+    /** Offscreen framebuffer height.
+     * Height of the offscreen framebuffer.
+     */
+    unsigned int offscreen_height;
 
     /** Last frame time.
      * Stores the time when the rendering of the last frame took place.
