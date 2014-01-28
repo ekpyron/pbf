@@ -30,6 +30,18 @@ public:
      */
     void OnMouseMove (const double &x, const double &y);
 
+    /** Mouse button event.
+     * Handles mouse button events.
+     * \param button button that was pressed.
+     */
+    void OnMouseDown (const int &button);
+
+    /** Mouse button event.
+     * Handles mouse button events.
+     * \param button button that was released.
+     */
+    void OnMouseUp (const int &button);
+
     /** Reset particle buffer.
      * Resets the particle buffer containing the particle information.
      */
@@ -73,6 +85,11 @@ private:
      * Shader program for displaying the particles.
     */
     ShaderProgram particleprogram;
+
+    /** Selection shader program.
+     * Shader program for selecting particles.
+     */
+    ShaderProgram selectionprogram;
 
     /** Simulation step shader program.
      * Shader program for the simulation step that predicts the new position
@@ -161,15 +178,35 @@ private:
         GLuint buffers[6];
     };
 
+    /** Selection framebuffer.
+     * Framebuffer object used to determine which object resides at a specific screen
+     * space position.
+     */
+    GLuint selectionfb;
+
     /** Font subsystem.
      * Takes care of displaying text.
      */
     Font font;
 
-    /** Flag texture.
-     * Texture through which the flag buffer is accessed.
-     */
-    GLuint flagtexture;
+    union {
+    	struct {
+    		/** Flag texture.
+    		 * Texture through which the flag buffer is accessed.
+    		 */
+    		GLuint flagtexture;
+
+    		/** Selection depth texture.
+    		 * Texture for the depth buffer of the selection framebuffer.
+    		 */
+    		GLuint selectiondepthtexture;
+    	};
+    	/** Texture objects.
+    	 * The texture objects are stored in a union, so that it is possible
+    	 * to create/delete all texture objects with a single OpenGL call.
+    	 */
+    	GLuint textures[2];
+    };
 
     /** Queries.
      * Queries used to determine the time spent in the different stages

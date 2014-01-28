@@ -14,6 +14,10 @@ Simulation::Simulation (void) : width (0), height (0), font ("textures/font.png"
     particleprogram.CompileShader (GL_FRAGMENT_SHADER, "shaders/particles/fragment.glsl");
     particleprogram.Link ();
 
+    selectionprogram.CompileShader (GL_VERTEX_SHADER, "shaders/selection/vertex.glsl");
+    selectionprogram.CompileShader (GL_FRAGMENT_SHADER, "shaders/selection/fragment.glsl");
+    selectionprogram.Link ();
+
     predictpos.CompileShader (GL_COMPUTE_SHADER, "shaders/simulation/predictpos.glsl",
     		"shaders/simulation/include.glsl");
     predictpos.Link ();
@@ -35,6 +39,21 @@ Simulation::Simulation (void) : width (0), height (0), font ("textures/font.png"
 
     // create query objects
     glGenQueries (6, queries);
+
+    // create texture objects
+    glGenTextures (2, textures);
+
+    // create selection depth texture
+    glBindTexture (GL_TEXTURE_2D, selectiondepthtexture);
+    glTexImage2D (GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT32F, 1, 1, 0, GL_DEPTH_COMPONENT, GL_FLOAT, NULL);
+
+    // create framebuffer objects
+    glGenFramebuffers (1, &selectionfb);
+
+    // setup selection framebuffer
+    glBindFramebuffer (GL_FRAMEBUFFER, selectionfb);
+    glFramebufferTexture2D (GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, selectiondepthtexture, 0);
+    glBindFramebuffer (GL_FRAMEBUFFER, 0);
 
     // initialize the camera position and rotation and the transformation matrix buffer.
     camera.SetPosition (glm::vec3 (20, 10, 10));
@@ -89,7 +108,6 @@ Simulation::Simulation (void) : width (0), height (0), font ("textures/font.png"
     glBufferData (GL_SHADER_STORAGE_BUFFER, sizeof (GLbyte) * (GetNumberOfParticles () + 1), NULL, GL_DYNAMIC_DRAW);
 
     // create flag texture
-    glGenTextures (1, &flagtexture);
     glBindTexture (GL_TEXTURE_BUFFER, flagtexture);
     glTexBuffer (GL_TEXTURE_BUFFER, GL_R8I, flagbuffer);
 
@@ -111,8 +129,9 @@ Simulation::Simulation (void) : width (0), height (0), font ("textures/font.png"
 Simulation::~Simulation (void)
 {
     // cleanup
+	glDeleteTextures (2, textures);
+	glDeleteFramebuffers (1, &selectionfb);
 	glDeleteQueries (6, queries);
-	glDeleteTextures (1, &flagtexture);
     glDeleteBuffers (6, buffers);
 }
 
@@ -154,6 +173,41 @@ void Simulation::OnMouseMove (const double &x, const double &y)
     }
 }
 
+void Simulation::OnMouseUp (const int &button)
+{
+
+}
+
+void Simulation::OnMouseDown (const int &button)
+{
+	if (glfwGetKey (window, GLFW_KEY_H))
+	{
+		double xpos, ypos;
+		int width, height;
+		glfwGetCursorPos (window, &xpos, &ypos);
+		glfwGetFramebufferSize (window, &width, &height);
+		glBindFramebuffer (GL_FRAMEBUFFER, selectionfb);
+        glViewport (-xpos, ypos - height, width, height);
+       	glClear (GL_DEPTH_BUFFER_BIT);
+       	selectionprogram.Use ();
+       	glProgramUniform1i (selectionprogram.get (), selectionprogram.GetUniformLocation ("write"), 0);
+       	glBindBufferBase (GL_SHADER_STORAGE_BUFFER, 0, radixsort.GetBuffer ());
+       	glBindBufferBase (GL_SHADER_STORAGE_BUFFER, 1, auxbuffer);
+       	if (usespheres)
+       		sphere.Render (GetNumberOfParticles ());
+       	else
+       		icosahedron.Render (GetNumberOfParticles ());
+       	glProgramUniform1i (selectionprogram.get (), selectionprogram.GetUniformLocation ("write"), 1);
+       	glDepthFunc (GL_EQUAL);
+       	if (usespheres)
+       		sphere.Render (GetNumberOfParticles ());
+       	else
+       		icosahedron.Render (GetNumberOfParticles ());
+       	glDepthFunc (GL_LESS);
+		glBindFramebuffer (GL_FRAMEBUFFER, 0);
+	}
+}
+
 const unsigned int Simulation::GetNumberOfParticles (void) const
 {
 	// must be a multiple of 512
@@ -177,6 +231,7 @@ void Simulation::ResetParticleBuffer (void)
                 particle.position += 0.01f * glm::vec3 (float (rand ()) / float (RAND_MAX) - 0.5f,
                 		float (rand ()) / float (RAND_MAX) - 0.5f, float (rand ()) / float (RAND_MAX) - 0.5f);
                 particle.oldposition = particle.position;
+                particle.highlighted = 0;
                 particles.push_back (particle);
             }
         }
@@ -192,6 +247,7 @@ void Simulation::ResetParticleBuffer (void)
                 particle.position += 0.01f * glm::vec3 (float (rand ()) / float (RAND_MAX) - 0.5f,
                 		float (rand ()) / float (RAND_MAX) - 0.5f, float (rand ()) / float (RAND_MAX) - 0.5f);
                 particle.oldposition = particle.position;
+                particle.highlighted = 0;
                 particles.push_back (particle);
             }
         }

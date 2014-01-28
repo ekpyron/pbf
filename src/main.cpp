@@ -60,6 +60,22 @@ void OnMouseMove (GLFWwindow *window, double x, double y)
     cursor.x = x; cursor.y = y;
 }
 
+/** Mouse button callback.
+ * GLFW callback for mouse button events. Passes the event to the Simulation class.
+ * \param window GLFW window that produced the event
+ * \param button the mouse button that was pressed or released
+ * \param action one of GLFW_PRESS or GLFW_RELEASE
+ * \param mode bit field describing which modifier keys were hold down
+ */
+void OnMouseButton (GLFWwindow *window, int button, int action, int mods)
+{
+    Simulation *simulation = reinterpret_cast<Simulation*> (glfwGetWindowUserPointer (window));
+    if (action == GLFW_PRESS)
+    	simulation->OnMouseDown (button);
+    else if (action == GLFW_RELEASE)
+    	simulation->OnMouseUp (button);
+}
+
 /** Key event callback.
  * GLFW callback for key events. Passes the event to the Simulation class.
  * \param window GLFW window that produced the event
@@ -121,6 +137,7 @@ void initialize (void)
     glfwSetWindowUserPointer (window, simulation);
     glfwGetCursorPos (window, &cursor.x, &cursor.y);
     glfwSetCursorPosCallback (window, OnMouseMove);
+    glfwSetMouseButtonCallback (window, OnMouseButton);
     glfwSetKeyCallback (window, OnKeyEvent);
     glfwSetFramebufferSizeCallback (window, OnResize);
 

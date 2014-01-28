@@ -8,7 +8,7 @@ layout (local_size_x = BLOCKSIZE) in;
 struct ParticleInfo
 {
 	vec3 position;
-	vec3 oldposition;
+	vec4 oldposition;
 };
 
 layout (std430, binding = 0) readonly buffer Data

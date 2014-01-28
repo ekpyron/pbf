@@ -43,9 +43,9 @@ typedef struct particleinfo {
     /** Old particle position.
      */
     glm::vec3 oldposition;
-    /** Unused padding value.
+    /** Highlighted flag.
      */
-    float padding2;
+    float highlighted;
 } particleinfo_t;
 
 #endif /* !defined COMMON_H */

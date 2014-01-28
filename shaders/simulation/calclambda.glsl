@@ -6,7 +6,7 @@ layout (local_size_x = 256) in;
 struct ParticleInfo
 {
 	vec3 position;
-	vec3 oldposition;
+	vec4 oldposition;
 };
 
 layout (std430, binding = 0) readonly buffer ParticleBuffer
@@ -116,11 +116,14 @@ void main (void)
 	float rho = 0;
 	float scorr = 0;
 
+	if (particle.oldposition.w == 1)
+		auxdata[particleid] = vec4 (1, 0, 0, 1);
+
 	vec3 grad_pi_Ci = vec3 (0, 0, 0);
 	FOR_EACH_NEIGHBOUR(j)
 	{
 		// highlight neighbours of the highlighted particle
-		if (particleid == highlightparticle)
+		if (particle.oldposition.w == 1)
 		{
 			auxdata[j] = vec4 (0, 1, 0, 1);
 		}
