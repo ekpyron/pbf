@@ -3,7 +3,7 @@
 
 Simulation::Simulation (void) : width (0), height (0), font ("textures/font.png"),
     last_fps_time (glfwGetTime ()), framecount (0), fps (0), radixsort (GetNumberOfParticles () >> 9),
-    usespheres (false)
+    usespheres (false), icosahedron (0), sphere (2)
 {
     // load shaders
     surroundingprogram.CompileShader (GL_VERTEX_SHADER, "shaders/surrounding/vertex.glsl");
@@ -48,7 +48,7 @@ Simulation::Simulation (void) : width (0), height (0), font ("textures/font.png"
     glTexImage2D (GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT32F, 1, 1, 0, GL_DEPTH_COMPONENT, GL_FLOAT, NULL);
 
     // create framebuffer objects
-    glGenFramebuffers (1, &selectionfb);
+    glGenFramebuffers (1, framebuffers);
 
     // setup selection framebuffer
     glBindFramebuffer (GL_FRAMEBUFFER, selectionfb);
@@ -130,7 +130,7 @@ Simulation::~Simulation (void)
 {
     // cleanup
 	glDeleteTextures (2, textures);
-	glDeleteFramebuffers (1, &selectionfb);
+	glDeleteFramebuffers (1, framebuffers);
 	glDeleteQueries (6, queries);
     glDeleteBuffers (6, buffers);
 }

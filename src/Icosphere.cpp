@@ -1,4 +1,4 @@
-#include "Sphere.h"
+#include "Icosphere.h"
 
 /** Get edge midpoint.
  * Obtains the index of the midpoint of two vertices
@@ -26,7 +26,7 @@ int getMidpoint (std::vector<glm::vec3> &vertices, std::map<std::pair<int, int>,
 	return it->second;
 }
 
-Sphere::Sphere (unsigned int subdivsions)
+Icosphere::Icosphere (unsigned int subdivsions)
 {
     // create and bind a vertex array
     glGenVertexArrays (1, &vertexarray);
@@ -123,7 +123,14 @@ Sphere::Sphere (unsigned int subdivsions)
     glBufferData (GL_ELEMENT_ARRAY_BUFFER, sizeof (glm::u16vec3) * faces.size (), &faces[0], GL_STATIC_DRAW);
 }
 
-void Sphere::SetPositionBuffer (GLuint buffer, GLsizei stride, GLintptr offset)
+Icosphere::~Icosphere (void)
+{
+    // cleanup
+    glDeleteBuffers (2, buffers);
+    glDeleteVertexArrays (1, &vertexarray);
+}
+
+void Icosphere::SetPositionBuffer (GLuint buffer, GLsizei stride, GLintptr offset)
 {
     // bind the vertex array and the position buffer
     glBindVertexArray (vertexarray);
@@ -134,7 +141,7 @@ void Sphere::SetPositionBuffer (GLuint buffer, GLsizei stride, GLintptr offset)
     glVertexAttribDivisor (1, 1);
 }
 
-void Sphere::SetColorBuffer (GLuint buffer, GLsizei stride, GLintptr offset)
+void Icosphere::SetColorBuffer (GLuint buffer, GLsizei stride, GLintptr offset)
 {
     // bind the vertex array and the color buffer
     glBindVertexArray (vertexarray);
@@ -145,15 +152,7 @@ void Sphere::SetColorBuffer (GLuint buffer, GLsizei stride, GLintptr offset)
     glVertexAttribDivisor (2, 1);
 }
 
-Sphere::~Sphere (void)
-{
-    // cleanup
-    glDeleteBuffers (2, buffers);
-    glDeleteVertexArrays (1, &vertexarray);
-}
-
-
-void Sphere::Render (GLuint instances) const
+void Icosphere::Render (GLuint instances) const
 {
     // bind vertex array and index buffer
     glBindVertexArray (vertexarray);

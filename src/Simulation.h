@@ -6,8 +6,7 @@
 #include "ShaderProgram.h"
 #include "Framing.h"
 #include "Font.h"
-#include "Icosahedron.h"
-#include "Sphere.h"
+#include "Icosphere.h"
 #include "RadixSort.h"
 
 /** Simulation class.
@@ -121,12 +120,12 @@ private:
     /** Icosahedron.
      * Model data of a regular icosahedron.
      */
-    Icosahedron icosahedron;
+    Icosphere icosahedron;
 
     /** Sphere.
      * Model data of a sphere.
      */
-    Sphere sphere;
+    Icosphere sphere;
 
     /** Sphere flag.
      * Flag indicating whether to use spheres or icosahedra for
@@ -178,11 +177,20 @@ private:
         GLuint buffers[6];
     };
 
-    /** Selection framebuffer.
-     * Framebuffer object used to determine which object resides at a specific screen
-     * space position.
-     */
-    GLuint selectionfb;
+    union {
+    	struct {
+    		/** Selection framebuffer.
+    		 * Framebuffer object used to determine which object resides at a specific screen
+    		 * space position.
+    		 */
+    		GLuint selectionfb;
+    	};
+    	/** Framebuffer objects.
+    	 * The framebuffer objects are stored in a union, so that it is possible
+    	 * to create/delete all texture objects with a single OpenGL call.
+    	 */
+    	GLuint framebuffers[1];
+    };
 
     /** Font subsystem.
      * Takes care of displaying text.
