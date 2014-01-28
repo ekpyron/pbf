@@ -123,6 +123,16 @@ private:
      */
     ShaderProgram fsquadprog;
 
+    /** Depth blur shader program.
+     * Shader program for blurring the particle depth texture.
+     */
+    ShaderProgram depthblurprog;
+
+    /** Depth blur direction uniform location.
+     * Uniform location for the uniform variable storing the direction of the depth blur.
+     */
+    GLuint depthblurdir;
+
     /** Framing.
      * Takes care of rendering a framing for the scene.
      */
@@ -206,12 +216,20 @@ private:
     		 * Framebuffer object used to store the particle depths.
     		 */
     		GLuint depthfb;
+    		/** Horizontal depth blur framebuffer.
+    		 * Framebuffer object used for blurring the particle depths horizontally.
+    		 */
+    		GLuint depthhblurfb;
+    		/** Vertical depth blur framebuffer.
+    		 * Framebuffer object used for blurring the particle depths vertically.
+    		 */
+    		GLuint depthvblurfb;
     	};
     	/** Framebuffer objects.
     	 * The framebuffer objects are stored in a union, so that it is possible
     	 * to create/delete all texture objects with a single OpenGL call.
     	 */
-    	GLuint framebuffers[2];
+    	GLuint framebuffers[4];
     };
 
     /** Font subsystem.
@@ -235,12 +253,17 @@ private:
     		 * Texture to store the particle depths.
     		 */
     		GLuint depthtexture;
+
+    		/** Temporary blur texture.
+    		 * Texture to store temporary steps during blurring.
+    		 */
+    		GLuint blurtexture;
     	};
     	/** Texture objects.
     	 * The texture objects are stored in a union, so that it is possible
     	 * to create/delete all texture objects with a single OpenGL call.
     	 */
-    	GLuint textures[3];
+    	GLuint textures[4];
     };
 
     /** Queries.

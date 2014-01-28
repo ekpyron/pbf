@@ -14,6 +14,6 @@ void main (void)
 {
 	// compute and output the vertex position
 	// after view transformation and projection
-	vec3 pos = 0.2 * particlePosition + 0.2 * vec3 (-32, 1, -32) + vPosition * 0.1;
+	vec3 pos = 0.2 * particlePosition + 0.2 * vec3 (-32, 1, -32) + vPosition * 0.13;
 	gl_Position = mvpmat * vec4 (pos, 1.0);
 }

@@ -3,7 +3,7 @@
 
 Simulation::Simulation (void) : width (0), height (0), font ("textures/font.png"),
     last_fps_time (glfwGetTime ()), framecount (0), fps (0), radixsort (GetNumberOfParticles () >> 9),
-    usespheres (false), icosahedron (0), sphere (2), offscreen_width (1280), offscreen_height (720),
+    usespheres (false), icosahedron (0), sphere (1), offscreen_width (1280), offscreen_height (720),
     surfacereconstruction (false)
 {
     // load shaders
@@ -18,6 +18,12 @@ Simulation::Simulation (void) : width (0), height (0), font ("textures/font.png"
     particledepthprogram.CompileShader (GL_VERTEX_SHADER, "shaders/particledepth/vertex.glsl");
     particledepthprogram.CompileShader (GL_FRAGMENT_SHADER, "shaders/particledepth/fragment.glsl");
     particledepthprogram.Link ();
+
+    depthblurprog.CompileShader (GL_VERTEX_SHADER, "shaders/depthblur/vertex.glsl");
+    depthblurprog.CompileShader (GL_FRAGMENT_SHADER, "shaders/depthblur/fragment.glsl");
+    depthblurprog.Link ();
+
+    depthblurdir = depthblurprog.GetUniformLocation ("blurdir");
 
     selectionprogram.CompileShader (GL_VERTEX_SHADER, "shaders/selection/vertex.glsl");
     selectionprogram.CompileShader (GL_FRAGMENT_SHADER, "shaders/selection/fragment.glsl");
@@ -50,7 +56,7 @@ Simulation::Simulation (void) : width (0), height (0), font ("textures/font.png"
     glGenQueries (6, queries);
 
     // create texture objects
-    glGenTextures (3, textures);
+    glGenTextures (4, textures);
 
     // create selection depth texture
     glBindTexture (GL_TEXTURE_2D, selectiondepthtexture);
@@ -62,9 +68,20 @@ Simulation::Simulation (void) : width (0), height (0), font ("textures/font.png"
     		0, GL_DEPTH_COMPONENT, GL_FLOAT, NULL);
     glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
     glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+
+    // create particle depth blur texture
+    glBindTexture (GL_TEXTURE_2D, blurtexture);
+    glTexImage2D (GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT32F, offscreen_width, offscreen_height,
+    		0, GL_DEPTH_COMPONENT, GL_FLOAT, NULL);
+    glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 
     // create framebuffer objects
-    glGenFramebuffers (2, framebuffers);
+    glGenFramebuffers (4, framebuffers);
 
     // setup selection framebuffer
     glBindFramebuffer (GL_FRAMEBUFFER, selectionfb);
@@ -72,6 +89,14 @@ Simulation::Simulation (void) : width (0), height (0), font ("textures/font.png"
 
     // setup depth framebuffer
     glBindFramebuffer (GL_FRAMEBUFFER, depthfb);
+    glFramebufferTexture2D (GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, depthtexture, 0);
+
+    // setup depth horizontal blur framebuffer
+    glBindFramebuffer (GL_FRAMEBUFFER, depthhblurfb);
+    glFramebufferTexture2D (GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, blurtexture, 0);
+
+    // setup depth vertical blur framebuffer
+    glBindFramebuffer (GL_FRAMEBUFFER, depthvblurfb);
     glFramebufferTexture2D (GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, depthtexture, 0);
     glBindFramebuffer (GL_FRAMEBUFFER, 0);
 
@@ -147,8 +172,8 @@ Simulation::Simulation (void) : width (0), height (0), font ("textures/font.png"
 Simulation::~Simulation (void)
 {
     // cleanup
-	glDeleteTextures (3, textures);
-	glDeleteFramebuffers (2, framebuffers);
+	glDeleteTextures (4, textures);
+	glDeleteFramebuffers (4, framebuffers);
 	glDeleteQueries (6, queries);
     glDeleteBuffers (6, buffers);
 }
@@ -164,7 +189,7 @@ void Simulation::Resize (const unsigned int &_width, const unsigned int &_height
     glBindBuffer (GL_UNIFORM_BUFFER, transformationbuffer);
     glBufferSubData (GL_UNIFORM_BUFFER, 0, sizeof (glm::mat4), glm::value_ptr (projmat * camera.GetViewMatrix ()));
     glBufferSubData (GL_UNIFORM_BUFFER, sizeof (glm::mat4), sizeof (glm::mat4),
-    		glm::value_ptr (glm::inverse (projmat * camera.GetViewMatrix ())));
+    		glm::value_ptr (glm::inverse (projmat)));
 }
 
 void Simulation::OnMouseMove (const double &x, const double &y)
@@ -190,8 +215,8 @@ void Simulation::OnMouseMove (const double &x, const double &y)
         glBindBuffer (GL_UNIFORM_BUFFER, transformationbuffer);
         glBufferSubData (GL_UNIFORM_BUFFER, 0, sizeof (glm::mat4),
                 glm::value_ptr (projmat * camera.GetViewMatrix ()));
-        glBufferSubData (GL_UNIFORM_BUFFER, sizeof (glm::mat4), sizeof (glm::mat4),
-        		glm::value_ptr (glm::inverse (projmat * camera.GetViewMatrix ())));
+//        glBufferSubData (GL_UNIFORM_BUFFER, sizeof (glm::mat4), sizeof (glm::mat4),
+//        		glm::value_ptr (glm::inverse (projmat * camera.GetViewMatrix ())));
     }
 }
 
@@ -451,10 +476,30 @@ bool Simulation::Frame (void)
     		sphere.Render (GetNumberOfParticles ());
     	else
     		icosahedron.Render (GetNumberOfParticles ());
+
+    	// use depth texture as input
+    	glBindFramebuffer (GL_FRAMEBUFFER, depthhblurfb);
+    	glBindTexture (GL_TEXTURE_2D, depthtexture);
+    	depthblurprog.Use ();
+
+    	glClear (GL_DEPTH_BUFFER_BIT);
+
+    	glProgramUniform2f (depthblurprog.get (), depthblurdir, 1.0f / offscreen_width, 0.0f);
+    	fullscreenquad.Render ();
+
+    	glBindFramebuffer (GL_FRAMEBUFFER, depthvblurfb);
+    	glBindTexture (GL_TEXTURE_2D, blurtexture);
+
+    	glClear (GL_DEPTH_BUFFER_BIT);
+
+    	glProgramUniform2f (depthblurprog.get (), depthblurdir, 0.0f, 1.0f / offscreen_height);
+    	fullscreenquad.Render ();
+
     	glBindFramebuffer (GL_FRAMEBUFFER, 0);
 
     	// use depth texture as input
     	glBindTexture (GL_TEXTURE_2D, depthtexture);
+
     	// render a fullscreen quad
     	glViewport (0, 0, width, height);
     	fsquadprog.Use ();

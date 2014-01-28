@@ -19,6 +19,7 @@ layout (binding = 1, std140) uniform LightingBuffer
 	float spotexponent;
 	float lightintensity;
 };
+
 void main (void)
 {
 	// lighting calculations
