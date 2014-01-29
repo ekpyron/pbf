@@ -248,18 +248,12 @@ void Simulation::OnMouseDown (const int &button)
        	glProgramUniform1i (selectionprogram.get (), selectionprogram.GetUniformLocation ("write"), 0);
        	glBindBufferBase (GL_SHADER_STORAGE_BUFFER, 0, radixsort.GetBuffer ());
        	glBindBufferBase (GL_SHADER_STORAGE_BUFFER, 1, auxbuffer);
-       	if (usespheres)
-       		sphere.Render (GetNumberOfParticles ());
-       	else
-       		icosahedron.Render (GetNumberOfParticles ());
+       	pointsprite.Render (GetNumberOfParticles());
 
        	// only render the closest sphere and write the highlighted flag.
        	glProgramUniform1i (selectionprogram.get (), selectionprogram.GetUniformLocation ("write"), 1);
        	glDepthFunc (GL_EQUAL);
-       	if (usespheres)
-       		sphere.Render (GetNumberOfParticles ());
-       	else
-       		icosahedron.Render (GetNumberOfParticles ());
+       	pointsprite.Render (GetNumberOfParticles());
        	glDepthFunc (GL_LESS);
 		glBindFramebuffer (GL_FRAMEBUFFER, 0);
 	}
