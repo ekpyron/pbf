@@ -17,4 +17,4 @@ const float gravity = 10;
 const float timestep = 0.016;
 
 const float tensile_instability_k = 0.1;
-const float tensile_instability_h = 0.01;
+const float tensile_instability_h = 0.2;
