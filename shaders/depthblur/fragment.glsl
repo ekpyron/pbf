@@ -14,8 +14,8 @@ uniform vec2 blurdir;
 //uniform float scale;
 //uniform float falloff;
 const float radius = 24.0f;
-const float scale = 1.0f / 16.0f;
-const float falloff = 1000.0f;
+const float scale = 1.0f / 8.0f;
+const float falloff = 20.0f;
 
 void main (void)
 {

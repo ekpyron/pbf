@@ -3,7 +3,7 @@
 
 Simulation::Simulation (void) : width (0), height (0), font ("textures/font.png"),
     last_fps_time (glfwGetTime ()), framecount (0), fps (0), radixsort (GetNumberOfParticles () >> 9),
-    usespheres (false), icosahedron (0), sphere (1), offscreen_width (1280), offscreen_height (720),
+    usespheres (false), offscreen_width (1280), offscreen_height (720),
     surfacereconstruction (false)
 {
     // load shaders
@@ -66,8 +66,8 @@ Simulation::Simulation (void) : width (0), height (0), font ("textures/font.png"
     glBindTexture (GL_TEXTURE_2D, depthtexture);
     glTexImage2D (GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT32F, offscreen_width, offscreen_height,
     		0, GL_DEPTH_COMPONENT, GL_FLOAT, NULL);
-    glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-    glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
     glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
     glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 
@@ -75,8 +75,8 @@ Simulation::Simulation (void) : width (0), height (0), font ("textures/font.png"
     glBindTexture (GL_TEXTURE_2D, blurtexture);
     glTexImage2D (GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT32F, offscreen_width, offscreen_height,
     		0, GL_DEPTH_COMPONENT, GL_FLOAT, NULL);
-    glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-    glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
     glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
     glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 
@@ -104,7 +104,7 @@ Simulation::Simulation (void) : width (0), height (0), font ("textures/font.png"
     camera.SetPosition (glm::vec3 (20, 10, 10));
     camera.Rotate (30.0f, 240.0f);
     glBindBufferBase (GL_UNIFORM_BUFFER, 0, transformationbuffer);
-    glBufferData (GL_UNIFORM_BUFFER, 2 * sizeof (glm::mat4), NULL, GL_DYNAMIC_DRAW);
+    glBufferData (GL_UNIFORM_BUFFER, sizeof (transformationbuffer_t), NULL, GL_DYNAMIC_DRAW);
 
     // specify lighting parameters
     // and bind the uniform buffer object to binding point 1
@@ -161,9 +161,11 @@ Simulation::Simulation (void) : width (0), height (0), font ("textures/font.png"
     const float auxdata[] = { 0.25, 0, 1, 1 };
     glClearBufferData (GL_SHADER_STORAGE_BUFFER, GL_RGBA32F, GL_RGBA, GL_FLOAT, &auxdata[0]);
 
-    // pass the auxiliary buffer as color buffer to the icosahedron class
-    icosahedron.SetColorBuffer (auxbuffer, sizeof (float) * 4, 0);
-    sphere.SetColorBuffer (auxbuffer, sizeof (float ) * 4, 0);
+    // pass the auxiliary buffer as color buffer to the point sprite class
+    pointsprite.SetColorBuffer (auxbuffer, sizeof (float) * 4, 0);
+
+    // update view matrix
+    UpdateViewMatrix ();
 
     // initialize last frame time
     last_time = glfwGetTime ();
@@ -185,11 +187,21 @@ void Simulation::Resize (const unsigned int &_width, const unsigned int &_height
     height = _height;
 
     // update the stored projection matrix and pass it to the render program
-    projmat = glm::perspective (45.0f * float (M_PI / 180.0f), float (width) / float (height), 0.1f, 1000.0f);
+    projmat = glm::perspective (45.0f * float (M_PI / 180.0f), float (width) / float (height), 1.0f, 200.0f);
+
     glBindBuffer (GL_UNIFORM_BUFFER, transformationbuffer);
-    glBufferSubData (GL_UNIFORM_BUFFER, 0, sizeof (glm::mat4), glm::value_ptr (projmat * camera.GetViewMatrix ()));
-    glBufferSubData (GL_UNIFORM_BUFFER, sizeof (glm::mat4), sizeof (glm::mat4),
-    		glm::value_ptr (glm::inverse (projmat)));
+    glBufferSubData (GL_UNIFORM_BUFFER, offsetof (transformationbuffer_t, projmat),
+    		sizeof (glm::mat4), glm::value_ptr (projmat));
+}
+
+void Simulation::UpdateViewMatrix (void)
+{
+    // update the view matrix
+    glBindBuffer (GL_UNIFORM_BUFFER, transformationbuffer);
+    glBufferSubData (GL_UNIFORM_BUFFER, offsetof (transformationbuffer_t, viewmat),
+    		sizeof (glm::mat4), glm::value_ptr (camera.GetViewMatrix ()));
+    glBufferSubData (GL_UNIFORM_BUFFER, offsetof (transformationbuffer_t, invviewmat),
+    		sizeof (glm::mat4), glm::value_ptr (glm::inverse (camera.GetViewMatrix ())));
 }
 
 void Simulation::OnMouseMove (const double &x, const double &y)
@@ -210,13 +222,7 @@ void Simulation::OnMouseMove (const double &x, const double &y)
         {
             camera.Rotate (y, -x);
         }
-
-        // update the view matrix
-        glBindBuffer (GL_UNIFORM_BUFFER, transformationbuffer);
-        glBufferSubData (GL_UNIFORM_BUFFER, 0, sizeof (glm::mat4),
-                glm::value_ptr (projmat * camera.GetViewMatrix ()));
-//        glBufferSubData (GL_UNIFORM_BUFFER, sizeof (glm::mat4), sizeof (glm::mat4),
-//        		glm::value_ptr (glm::inverse (projmat * camera.GetViewMatrix ())));
+        UpdateViewMatrix ();
     }
 }
 
@@ -370,16 +376,8 @@ bool Simulation::Frame (void)
         return false;
     }
 
-    if (usespheres)
-    {
-        // pass the position buffer to the sphere class
-        sphere.SetPositionBuffer (radixsort.GetBuffer (), sizeof (particleinfo_t), 0);
-    }
-    else
-    {
-    	// pass the position buffer to the icosahedron class
-    	icosahedron.SetPositionBuffer (radixsort.GetBuffer (), sizeof (particleinfo_t), 0);
-    }
+    // pass the position buffer to the point sprite class
+    pointsprite.SetPositionBuffer (radixsort.GetBuffer (), sizeof (particleinfo_t), 0);
 
     // specify the viewport size
     glViewport (0, 0, width, height);
@@ -458,10 +456,7 @@ bool Simulation::Frame (void)
     	// render icosahedra/spheres
     	glBeginQuery (GL_TIME_ELAPSED, queries[5]);
     	particleprogram.Use ();
-    	if (usespheres)
-    		sphere.Render (GetNumberOfParticles ());
-    	else
-    		icosahedron.Render (GetNumberOfParticles ());
+    	pointsprite.Render (GetNumberOfParticles ());
     	glEndQuery (GL_TIME_ELAPSED);
     }
     else
@@ -472,10 +467,7 @@ bool Simulation::Frame (void)
     	glViewport (0, 0, offscreen_width, offscreen_height);
     	glClear (GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
     	particledepthprogram.Use ();
-    	if (usespheres)
-    		sphere.Render (GetNumberOfParticles ());
-    	else
-    		icosahedron.Render (GetNumberOfParticles ());
+    	pointsprite.Render (GetNumberOfParticles ());
 
     	// use depth texture as input
     	glBindFramebuffer (GL_FRAMEBUFFER, depthhblurfb);

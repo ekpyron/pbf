@@ -6,9 +6,9 @@
 #include "ShaderProgram.h"
 #include "Framing.h"
 #include "Font.h"
-#include "Icosphere.h"
 #include "RadixSort.h"
 #include "FullscreenQuad.h"
+#include "PointSprite.h"
 
 /** Simulation class.
  * This is the main class which takes care of the whole simulation.
@@ -71,6 +71,15 @@ public:
      */
     bool Frame (void);
 private:
+    typedef struct transformationbuffer {
+    	glm::mat4 viewmat;
+    	glm::mat4 projmat;
+    	glm::mat4 invviewmat;
+    } transformationbuffer_t;
+    /** Update view matrix.
+     * Called whenever the view matrix is changed.
+     */
+    void UpdateViewMatrix (void);
     /** Camera.
      * Used to handle input events and create a view matrix.
      */
@@ -138,15 +147,10 @@ private:
      */
     Framing framing;
 
-    /** Icosahedron.
-     * Model data of a regular icosahedron.
+    /** Point Sprite.
+     * Takes care of rendering particles as point sprites.
      */
-    Icosphere icosahedron;
-
-    /** Sphere.
-     * Model data of a sphere.
-     */
-    Icosphere sphere;
+    PointSprite pointsprite;
 
     /** Sphere flag.
      * Flag indicating whether to use spheres or icosahedra for

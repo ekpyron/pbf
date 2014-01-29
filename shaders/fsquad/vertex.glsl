@@ -6,6 +6,14 @@ layout (location = 0) in vec2 vPosition;
 // output to the fragment shader
 out vec2 fTexcoord;
 
+// projection and view matrix
+layout (binding = 0, std140) uniform TransformationBlock {
+	mat4 viewmat;
+	mat4 projmat;
+	mat4 invviewmat;
+};
+
+
 void main (void)
 {
 	// pass data to the fragment shader

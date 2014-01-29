@@ -11,8 +11,9 @@ in vec2 fTexcoord;
 
 // projection and view matrix
 layout (binding = 0, std140) uniform TransformationBlock {
-	mat4 mvpmat;
-	mat4 invpmat;
+	mat4 viewmat;
+	mat4 projmat;
+	mat4 invviewmat;
 };
 
 layout (binding = 0) uniform sampler2D depthtex;
@@ -27,9 +28,11 @@ layout (binding = 1, std140) uniform LightingBuffer
 };
 
 // obtain position from texcoord and depth
-vec3 getpos (vec3 p)
+vec3 getpos (in vec3 p)
 {
-	vec4 pos = invpmat * vec4 (2 * p - 1, 1);
+	vec4 pos = inverse (projmat) * vec4 (p * 2 - 1, 1);
+	pos /= pos.w;
+	pos = inverse (viewmat) * pos;
 	return pos.xyz / pos.w;
 }
 
@@ -57,7 +60,6 @@ void main (void)
 	
 	vec3 normal = normalize (cross (ddx, ddy));
 	
-	
 	// lighting calculations
 
 	// obtain light direction and distance
@@ -79,9 +81,4 @@ void main (void)
 
 	// fetch texture value and output resulting color
 	color = clamp (intensity, 0, 1) * vec4 (0.25, 0, 1, 1);
-	
-	
-	
-	// output position as color
-	//color = vec4 (normal * 0.5 + 0.5, 1); //0.1 * vec4 (pos1, 1);
 }

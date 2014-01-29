@@ -22,10 +22,16 @@ layout (binding = 1, std140) uniform LightingBuffer
 	float spotexponent;
 	float lightintensity;
 };
+
+// projection and view matrix
+layout (binding = 0, std140) uniform TransformationBlock {
+	mat4 viewmat;
+	mat4 projmat;
+};
+
 void main (void)
 {
 	// lighting calculations
-
 	// obtain light direction and distance
 	vec3 lightdir = lightpos - fPosition;
 	float lightdist = length (lightdir);

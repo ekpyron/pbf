@@ -7,7 +7,8 @@ layout (location = 2) in vec3 vNormal;
 
 // projection and view matrix
 layout (binding = 0, std140) uniform TransformationBlock {
-	mat4 mvpmat;
+	mat4 viewmat;
+	mat4 projmat;
 };
 
 // output to the fragment shader
@@ -23,5 +24,5 @@ void main (void)
 	fPosition = vPosition;
 	// compute and output the vertex position
 	// after view transformation and projection
-	gl_Position = mvpmat * vec4 (vPosition, 1.0);
+	gl_Position = projmat * viewmat * vec4 (vPosition, 1);
 }
