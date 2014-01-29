@@ -104,15 +104,9 @@ void main (void)
 	ParticleInfo particle = particles[particleid];
 
 	// compute grid id as hash value
-	ivec3 gridpos;
-	gridpos.x = clamp (int (floor (particle.position.x)), 0, GRID_WIDTH);
-	gridpos.y = clamp (int (floor (particle.position.y)), 0, GRID_HEIGHT);
-	gridpos.z = clamp (int (floor (particle.position.z)), 0, GRID_DEPTH);
-	
-	int gridid = gridpos.y * GRID_WIDTH * GRID_DEPTH + gridpos.z * GRID_WIDTH + gridpos.x;
+	ivec3 gridpos = ivec3 (clamp (particle.position, vec3 (0, 0, 0), GRID_SIZE));
 	
 	float sum_k_grad_Ci = 0;
-	float lambda = 0;
 	float rho = 0;
 
 	if (particle.oldposition.w == 1)
@@ -121,6 +115,8 @@ void main (void)
 	vec3 grad_pi_Ci = vec3 (0, 0, 0);
 	FOR_EACH_NEIGHBOUR(j)
 	{
+		vec3 position_j = particles[j].position;
+		
 		// highlight neighbours of the highlighted particle
 		if (particle.oldposition.w == 1)
 		{
@@ -128,15 +124,14 @@ void main (void)
 		}
 	
 		// compute rho_i (equation 2)
-		float len = length (particle.position - particles[j].position);
+		float len = length (particle.position - position_j);
 		float tmp = Wpoly6 (len);
 		rho += tmp;
 	
 		// sum gradients of Ci (equation 8 and parts of equation 9)
 		// use j as k so that we can stay in the same loop
-		uint k = j;
 		vec3 grad_pk_Ci = vec3 (0, 0, 0);
-		grad_pk_Ci = gradWspiky (particle.position - particles[k].position);
+		grad_pk_Ci = gradWspiky (particle.position - position_j);
 		grad_pk_Ci /= rho_0;
 		sum_k_grad_Ci += dot (grad_pk_Ci, grad_pk_Ci);
 		
@@ -150,7 +145,5 @@ void main (void)
 	
 	// compute lambda_i (equations 1 and 9)
 	float C_i = rho / rho_0 - 1;
-	lambda = -C_i / (sum_k_grad_Ci + epsilon);
-	
-	lambdas[particleid] = lambda;
+	lambdas[particleid] = -C_i / (sum_k_grad_Ci + epsilon);
 }

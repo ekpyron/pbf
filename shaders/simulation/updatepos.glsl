@@ -104,27 +104,23 @@ void main (void)
 	vec3 position = particles[particleid].position;
 	
 	// compute grid id as hash value
-	ivec3 gridpos;
-	gridpos.x = clamp (int (floor (position.x)), 0, GRID_WIDTH);
-	gridpos.y = clamp (int (floor (position.y)), 0, GRID_HEIGHT);
-	gridpos.z = clamp (int (floor (position.z)), 0, GRID_DEPTH);
+	ivec3 gridpos = ivec3 (clamp (position, vec3 (0, 0, 0), GRID_SIZE));
 	
-	int gridid = gridpos.y * GRID_WIDTH * GRID_DEPTH + gridpos.z * GRID_WIDTH + gridpos.x;
-
 	vec3 deltap = vec3 (0, 0, 0);
 	
 	float lambda = lambdas[particleid];
 		
 	FOR_EACH_NEIGHBOUR(j)
 	{
-	
-		float scorr = (Wpoly6 (length (position - particles[j].position)) / Wpoly6 (tensile_instability_h));
+		vec3 position_j = particles[j].position;
+		
+		float scorr = (Wpoly6 (length (position - position_j)) / Wpoly6 (tensile_instability_h));
 		scorr *= scorr;
 		scorr *= scorr;
 		scorr = -tensile_instability_k * scorr;  
 	
 		// accumulate position corrections (part of equation 12)
-		deltap += (lambda + lambdas[j] + scorr) * gradWspiky (position - particles[j].position);
+		deltap += (lambda + lambdas[j] + scorr) * gradWspiky (position - position_j);
 	}
 	END_FOR_EACH_NEIGHBOUR(j)
 
