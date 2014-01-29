@@ -5,6 +5,7 @@ layout (early_fragment_tests) in;
 
 // input from vertex shader
 flat in int particleid;
+in vec2 fTexcoord;
 
 struct ParticleInfo
 {
@@ -26,6 +27,13 @@ uniform bool write;
 
 void main (void)
 {
+	float r = dot (fTexcoord, fTexcoord);
+	if (r > 1)
+	{
+		discard;
+		return;
+	}
+
 	if (write && particleid != -1)
 	{
 		if (particles[particleid].oldposition.w == 0)
