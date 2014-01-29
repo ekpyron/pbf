@@ -76,7 +76,6 @@ void RadixSort::Run (unsigned int numbits)
 		SortBits (2 * i);
 		std::swap (result, buffer);
 	}
-	std::swap (result, buffer);
 }
 
 uint32_t intpow (uint32_t x, uint32_t y)
