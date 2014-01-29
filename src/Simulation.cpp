@@ -56,7 +56,7 @@ Simulation::Simulation (void) : width (0), height (0), font ("textures/font.png"
     glGenQueries (6, queries);
 
     // create texture objects
-    glGenTextures (4, textures);
+    glGenTextures (5, textures);
 
     // create selection depth texture
     glBindTexture (GL_TEXTURE_2D, selectiondepthtexture);
@@ -136,9 +136,38 @@ Simulation::Simulation (void) : width (0), height (0), font ("textures/font.png"
     glBindBuffer (GL_SHADER_STORAGE_BUFFER, lambdabuffer);
     glBufferData (GL_SHADER_STORAGE_BUFFER, sizeof (float) * GetNumberOfParticles (), NULL, GL_DYNAMIC_DRAW);
 
-    // allocate grid buffer
-    glBindBuffer (GL_SHADER_STORAGE_BUFFER, gridbuffer);
-    glBufferData (GL_SHADER_STORAGE_BUFFER, sizeof (GLuint) * 128 * 64 * 128, NULL, GL_DYNAMIC_DRAW);
+    // allocate grid clear buffer
+    if (!GL_ARB_clear_texture)
+    {
+    	glBindBuffer (GL_PIXEL_UNPACK_BUFFER, gridclearbuffer);
+    	glBufferData (GL_PIXEL_UNPACK_BUFFER, sizeof (GLint) * 128 * 64 * 128, NULL, GL_DYNAMIC_DRAW);
+    	{
+    		GLint v = -1;
+    		glClearBufferData (GL_PIXEL_UNPACK_BUFFER, GL_R32I, GL_RED_INTEGER, GL_INT, &v);
+    	}
+    }
+
+    glBindTexture (GL_TEXTURE_3D, gridtexture);
+    glTexImage3D (GL_TEXTURE_3D, 0, GL_R32I, 128, 64, 128, 0, GL_RED_INTEGER, GL_INT, NULL);
+    glTexParameteri (GL_TEXTURE_3D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    glTexParameteri (GL_TEXTURE_3D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri (GL_TEXTURE_3D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
+    glTexParameteri (GL_TEXTURE_3D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
+    glTexParameteri (GL_TEXTURE_3D, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_BORDER);
+    {
+    	GLint border[] = { -1, -1, -1, -1 };
+    	glTexParameterIiv (GL_TEXTURE_3D, GL_TEXTURE_BORDER_COLOR, border);
+    }
+
+    if (!GL_ARB_clear_texture)
+    {
+    	glBindBuffer (GL_PIXEL_UNPACK_BUFFER, 0);
+    }
+    else
+    {
+    	GLint v = -1;
+    	glClearTexImage (gridtexture, 0, GL_RED_INTEGER, GL_INT, &v);
+    }
 
     // allocate flag buffer
     glBindBuffer (GL_SHADER_STORAGE_BUFFER, flagbuffer);
@@ -168,7 +197,7 @@ Simulation::Simulation (void) : width (0), height (0), font ("textures/font.png"
 Simulation::~Simulation (void)
 {
     // cleanup
-	glDeleteTextures (4, textures);
+	glDeleteTextures (5, textures);
 	glDeleteFramebuffers (4, framebuffers);
 	glDeleteQueries (6, queries);
     glDeleteBuffers (6, buffers);
@@ -385,13 +414,20 @@ bool Simulation::Frame (void)
     // run simulation step 1
     if (glfwGetKey (window, GLFW_KEY_SPACE))
     {
-        // clear grid buffer
     	glBeginQuery (GL_TIME_ELAPSED, queries[0]);
-        glBindBuffer (GL_SHADER_STORAGE_BUFFER, gridbuffer);
-        {
-        	GLint v = -1;
-        	glClearBufferData (GL_SHADER_STORAGE_BUFFER, GL_R32I, GL_RED, GL_INT, &v);
-        }
+        // clear grid buffer
+    	if (GL_ARB_clear_texture)
+    	{
+    		GLint v = -1;
+    		glClearTexImage (gridtexture, 0, GL_RED_INTEGER, GL_INT, &v);
+    	}
+    	else
+    	{
+        	glBindTexture (GL_TEXTURE_3D, gridtexture);
+    		glBindBuffer (GL_PIXEL_UNPACK_BUFFER, gridclearbuffer);
+    		glTexSubImage3D (GL_TEXTURE_3D, 0, 0, 0, 0, 128, 64, 128, GL_RED_INTEGER, GL_INT, NULL);
+    		glBindBuffer (GL_PIXEL_UNPACK_BUFFER, 0);
+    	}
 
         // clear lambda buffer
         glBindBuffer (GL_SHADER_STORAGE_BUFFER, lambdabuffer);
@@ -423,13 +459,15 @@ bool Simulation::Frame (void)
         glBindBufferBase (GL_SHADER_STORAGE_BUFFER, 0, radixsort.GetBuffer ());
         glBindBufferBase (GL_SHADER_STORAGE_BUFFER, 1, lambdabuffer);
         glBindBufferBase (GL_SHADER_STORAGE_BUFFER, 2, auxbuffer);
-        glBindBufferBase (GL_SHADER_STORAGE_BUFFER, 3, gridbuffer);
         glBindImageTexture (0, flagtexture, 0, GL_FALSE, 0, GL_READ_WRITE, GL_R8I);
+        glBindImageTexture (1, gridtexture, 0, GL_TRUE, 0, GL_WRITE_ONLY, GL_R32I);
         findcells.Use ();
         glMemoryBarrier (GL_BUFFER_UPDATE_BARRIER_BIT);
         glDispatchCompute (GetNumberOfParticles () >> 8, 1, 1);
-        glMemoryBarrier (GL_SHADER_STORAGE_BARRIER_BIT);
+        glMemoryBarrier (GL_SHADER_STORAGE_BARRIER_BIT | GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
         glEndQuery (GL_TIME_ELAPSED);
+
+        glBindImageTexture (1, gridtexture, 0, GL_TRUE, 0, GL_READ_ONLY, GL_R32I);
 
         // solver iteration
         glBeginQuery (GL_TIME_ELAPSED, queries[4]);

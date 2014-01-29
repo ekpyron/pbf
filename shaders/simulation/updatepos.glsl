@@ -24,12 +24,8 @@ layout (std430, binding = 2) writeonly buffer AuxBuffer
 	vec4 auxdata[];
 };
 
-layout (std430, binding = 3) readonly buffer GridBuffer
-{
-	int grid[];
-};
-
 layout (binding = 0, r8i) uniform readonly iimageBuffer flagtexture;
+layout (binding = 1, r32i) uniform readonly iimage3D gridtexture;
 
 float Wpoly6 (float r)
 {
@@ -87,11 +83,8 @@ const ivec3 gridoffsets[27] = {
 };
 
 #define FOR_EACH_NEIGHBOUR(var) for (int o = 0; o < 27; o++) {\
-		ivec3 ngrid = gridpos + gridoffsets[o];\
-		if (any (lessThan (ngrid, ivec3 (0, 0, 0))) || any (greaterThanEqual (ngrid, GRID_SIZE)))\
-			continue;\
-		int ngridid = ngrid.y * GRID_WIDTH * GRID_DEPTH + ngrid.z * GRID_WIDTH + ngrid.x;\
-		int var = grid[ngridid];\
+		ivec3 ngridpos = gridpos + gridoffsets[o];\
+		int var = imageLoad (gridtexture, ngridpos).x;\
 		if (var == -1) continue;\
 		do { if (var != particleid) {
 #define END_FOR_EACH_NEIGHBOUR(var)	} var++; } while (imageLoad (flagtexture, var).x == 0);}

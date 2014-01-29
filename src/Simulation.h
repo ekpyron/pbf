@@ -202,15 +202,15 @@ private:
              */
             GLuint auxbuffer;
 
-            /** Grid buffer.
-             * Buffer in which the starting particle for each grid is stored.
-             */
-            GLuint gridbuffer;
-
             /** Flag buffer.
              * Buffer in which a flag is stored that indicates the grid cell borders in the particle buffer.
              */
             GLuint flagbuffer;
+
+            /** Grid texture clear buffer.
+             * Buffer used to clear the grid texture;
+             */
+            GLuint gridclearbuffer;
         };
         /** Buffer objects.
          * The buffer objects are stored in a union, so that it is possible
@@ -272,12 +272,18 @@ private:
     		 * Texture to store temporary steps during blurring.
     		 */
     		GLuint blurtexture;
+
+            /** Grid texture.
+             * Texture in which the starting particle for each grid is stored.
+             */
+            GLuint gridtexture;
+
     	};
     	/** Texture objects.
     	 * The texture objects are stored in a union, so that it is possible
     	 * to create/delete all texture objects with a single OpenGL call.
     	 */
-    	GLuint textures[4];
+    	GLuint textures[5];
     };
 
     /** Queries.
