@@ -467,7 +467,7 @@ bool Simulation::Frame (void)
         glMemoryBarrier (GL_SHADER_STORAGE_BARRIER_BIT | GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
         glEndQuery (GL_TIME_ELAPSED);
 
-        glBindImageTexture (1, gridtexture, 0, GL_TRUE, 0, GL_READ_ONLY, GL_R32I);
+        glBindTexture (GL_TEXTURE_3D, gridtexture);
 
         // solver iteration
         glBeginQuery (GL_TIME_ELAPSED, queries[4]);
