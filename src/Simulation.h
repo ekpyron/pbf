@@ -76,6 +76,16 @@ private:
     	glm::mat4 projmat;
     	glm::mat4 invviewmat;
     } transformationbuffer_t;
+    typedef struct lightparams {
+        glm::vec3 lightpos;
+        float padding;
+        glm::vec3 spotdir;
+        float padding2;
+        glm::vec3 eyepos;
+        float spotexponent;
+        float lightintensity;
+    } lightparams_t;
+
     /** Update view matrix.
      * Called whenever the view matrix is changed.
      */

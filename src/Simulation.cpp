@@ -109,13 +109,7 @@ Simulation::Simulation (void) : width (0), height (0), font ("textures/font.png"
     // specify lighting parameters
     // and bind the uniform buffer object to binding point 1
     {
-        struct lightparams {
-            glm::vec3 lightpos;
-            float padding;
-            glm::vec3 spotdir;
-            float spotexponent;
-            float lightintensity;
-        } lightparams;
+        lightparams_t lightparams;
         lightparams.lightpos = glm::vec3 (-20, 80, -2);
         lightparams.spotdir = glm::normalize (glm::vec3 (0.25, -1, 0.25));
         lightparams.spotexponent = 8.0f;
@@ -202,6 +196,11 @@ void Simulation::UpdateViewMatrix (void)
     		sizeof (glm::mat4), glm::value_ptr (camera.GetViewMatrix ()));
     glBufferSubData (GL_UNIFORM_BUFFER, offsetof (transformationbuffer_t, invviewmat),
     		sizeof (glm::mat4), glm::value_ptr (glm::inverse (camera.GetViewMatrix ())));
+
+    // update eye position
+    glm::vec3 eyepos = camera.GetPosition ();
+    glBindBuffer (GL_UNIFORM_BUFFER, lightingbuffer);
+    glBufferSubData (GL_UNIFORM_BUFFER, offsetof (lightparams_t, eyepos), sizeof (eyepos), glm::value_ptr (eyepos));
 }
 
 void Simulation::OnMouseMove (const double &x, const double &y)
@@ -463,6 +462,10 @@ bool Simulation::Frame (void)
     	particledepthprogram.Use ();
     	pointsprite.Render (GetNumberOfParticles ());
 
+    	// enable alpha blending
+    	glEnable (GL_BLEND);
+    	glBlendFunc (GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
     	// use depth texture as input
     	glBindFramebuffer (GL_FRAMEBUFFER, depthhblurfb);
     	glBindTexture (GL_TEXTURE_2D, depthtexture);
@@ -491,6 +494,7 @@ bool Simulation::Frame (void)
     	fsquadprog.Use ();
     	fullscreenquad.Render ();
 
+    	glDisable (GL_BLEND);
     	glEndQuery (GL_TIME_ELAPSED);
     }
 

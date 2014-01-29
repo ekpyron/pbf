@@ -114,7 +114,6 @@ void main (void)
 	float sum_k_grad_Ci = 0;
 	float lambda = 0;
 	float rho = 0;
-	float scorr = 0;
 
 	if (particle.oldposition.w == 1)
 		auxdata[particleid] = vec4 (1, 0, 0, 1);
@@ -133,11 +132,6 @@ void main (void)
 		float tmp = Wpoly6 (len);
 		rho += tmp;
 	
-		// compute scorr (equation 13)
-		tmp = -tmp / Wpoly6 (tensile_instability_h);
-		tmp *= tmp;
-		scorr += -tensile_instability_k * tmp * tmp;
-			
 		// sum gradients of Ci (equation 8 and parts of equation 9)
 		// use j as k so that we can stay in the same loop
 		uint k = j;
@@ -158,5 +152,5 @@ void main (void)
 	float C_i = rho / rho_0 - 1;
 	lambda = -C_i / (sum_k_grad_Ci + epsilon);
 	
-	lambdas[particleid] = lambda + scorr / 2;
+	lambdas[particleid] = lambda;
 }

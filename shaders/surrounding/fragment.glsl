@@ -19,6 +19,7 @@ layout (binding = 1, std140) uniform LightingBuffer
 {
 	vec3 lightpos;
 	vec3 spotdir;
+	vec3 eyepos;
 	float spotexponent;
 	float lightintensity;
 };

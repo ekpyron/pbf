@@ -23,6 +23,7 @@ layout (binding = 1, std140) uniform LightingBuffer
 {
 	vec3 lightpos;
 	vec3 spotdir;
+	vec3 eyepos;
 	float spotexponent;
 	float lightintensity;
 };
@@ -61,15 +62,20 @@ void main (void)
 	vec3 normal = normalize (cross (ddx, ddy));
 	
 	// lighting calculations
-
+	
 	// obtain light direction and distance
 	vec3 lightdir = lightpos - pos;
 	float lightdist = length (lightdir);
 	lightdir /= lightdist;
 
+	// view direction
+	vec3 viewdir = normalize (eyepos - pos);
+	vec3 halfvec = normalize (viewdir + lightdir);
+	
 	// compute light intensity as the cosine of the angle
 	// between light direction and normal direction
-	float intensity = max (dot (lightdir, normal) * 0.5 + 0.5, 0);
+	float NdotL = dot (lightdir, normal);
+	float intensity = max (NdotL * 0.5 + 0.5, 0);
 
 	// apply distance attenuation and light intensity
 	intensity /= lightdist * lightdist;
@@ -78,7 +84,15 @@ void main (void)
 	// spot light effect
 	float angle = dot (spotdir, -lightdir);
 	intensity *= pow (angle, spotexponent);
+	
+	float k = max (dot (viewdir, reflect (-lightdir, normal)), 0);
+	k = pow (k, 8);
+	
+	float cos_theta = dot (viewdir, lightdir);
+	k *= 0.7 + (1 - 0.7) * pow (1 - cos_theta, 5);
+	
 
 	// fetch texture value and output resulting color
-	color = clamp (intensity, 0, 1) * vec4 (0.25, 0, 1, 1);
+	color.xyz = clamp (intensity, 0, 1) * vec3 (0.0, 0.3, 1) + k * vec3 (0.8, 0.8, 1);
+	color.w = 0.5;
 }

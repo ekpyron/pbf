@@ -117,8 +117,14 @@ void main (void)
 		
 	FOR_EACH_NEIGHBOUR(j)
 	{
+	
+		float scorr = (Wpoly6 (length (position - particles[j].position)) / Wpoly6 (tensile_instability_h));
+		scorr *= scorr;
+		scorr *= scorr;
+		scorr = -tensile_instability_k * scorr;  
+	
 		// accumulate position corrections (part of equation 12)
-		deltap += (lambda + lambdas[j]) * gradWspiky (position - particles[j].position);
+		deltap += (lambda + lambdas[j] + scorr) * gradWspiky (position - particles[j].position);
 	}
 	END_FOR_EACH_NEIGHBOUR(j)
 
