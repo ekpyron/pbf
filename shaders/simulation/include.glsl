@@ -12,7 +12,7 @@ const vec3 GRID_SIZE = vec3 (GRID_WIDTH - 1, GRID_HEIGHT - 1, GRID_DEPTH - 1);
 // parameters
 const float rho_0 = 1.0;
 const float h = 2.0;
-const float epsilon = 10.0;
+const float epsilon = 5.0;
 const float gravity = 10;
 const float timestep = 0.016;
 

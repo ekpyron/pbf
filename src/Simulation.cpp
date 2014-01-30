@@ -314,6 +314,9 @@ void Simulation::ResetParticleBuffer (void)
     // regenerate particle information
     std::vector<particleinfo_t> particles;
     particles.reserve (GetNumberOfParticles ());
+
+    const float scale = 0.94f;
+
     srand (time (NULL));
     for (int x = 0; x < 32; x++)
     {
@@ -322,7 +325,7 @@ void Simulation::ResetParticleBuffer (void)
             for (int y = 0; y < 32; y++)
             {
                 particleinfo_t particle;
-                particle.position = glm::vec3 (32.5 + x, y + 0.5, 32.5 + z);
+                particle.position = glm::vec3 (32.5f, 0.5f, 32.5f) + scale * glm::vec3 (x, y, z);
                 particle.position += 0.01f * glm::vec3 (float (rand ()) / float (RAND_MAX) - 0.5f,
                 		float (rand ()) / float (RAND_MAX) - 0.5f, float (rand ()) / float (RAND_MAX) - 0.5f);
                 particle.oldposition = particle.position;
@@ -339,7 +342,7 @@ void Simulation::ResetParticleBuffer (void)
             for (int y = 0; y < 32; y++)
             {
                 particleinfo_t particle;
-                particle.position = glm::vec3 (32.5 + 63 - x, y + 0.5, 32.5 + 63 - z);
+                particle.position = glm::vec3 (32.5f + 63.0f, 0.5f, 32.5f + 63.0f) + scale * glm::vec3 (-x, y, -z);
                 particle.position += 0.01f * glm::vec3 (float (rand ()) / float (RAND_MAX) - 0.5f,
                 		float (rand ()) / float (RAND_MAX) - 0.5f, float (rand ()) / float (RAND_MAX) - 0.5f);
                 particle.oldposition = particle.position;
