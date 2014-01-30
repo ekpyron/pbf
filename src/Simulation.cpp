@@ -557,7 +557,7 @@ bool Simulation::Frame (void)
     	glActiveTexture (GL_TEXTURE0);
 
     	// enable alpha blending
-    	glBlendFunc (GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+    	glBlendFunc (GL_ONE_MINUS_SRC_COLOR, GL_SRC_COLOR);
 
     	// render a fullscreen quad
     	glViewport (0, 0, width, height);

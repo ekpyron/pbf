@@ -4,7 +4,7 @@
 layout (early_fragment_tests) in;
 
 // output color
-layout (location = 0) out vec4 color;
+layout (location = 0) out vec3 color;
 
 // input from vertex shader
 in vec2 fTexcoord;
@@ -95,13 +95,11 @@ void main (void)
 	k *= 0.7 + (1 - 0.7) * pow (1 - cos_theta, 5);
 	
 	// Beer-Lambert law for coloring
-	float thickness = texture (thicknesstex, fTexcoord).x;
-	vec3 c = vec3 (1 - exp (-0.1 * thickness),
-				   1 - exp (-0.5 * thickness),
-				   1 - exp (-2.5 * thickness));
+	float thickness = texture (thicknesstex, fTexcoord).x * 200;
+	vec3 c = vec3 (exp (-0.5 * thickness),
+				   exp (-0.05 * thickness),
+				   exp (-0.005 * thickness));
 
 	// apply diffuse and specular light to the color value
-	color.xyz = clamp (intensity, 0, 1) * c + k * min (c + 0.5, 1);
-	// Beer-Lambert law for calculating the alpha value
-	color.w =  1 - exp (-2 * thickness);
+	color = clamp (intensity, 0, 1) * c + k * min (c + 0.5, 1);
 }
