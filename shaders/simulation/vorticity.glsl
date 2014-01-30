@@ -133,5 +133,6 @@ void main (void)
 	
 	barrier ();
 	
+	// fake old position to update velocity
 	particles[particleid].oldposition = particle.position - velocity * timestep;
 }
