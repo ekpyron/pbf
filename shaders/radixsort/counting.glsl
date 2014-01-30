@@ -29,7 +29,6 @@ layout (std430, binding = 2) writeonly buffer BlockSum
 uniform uvec4 blocksumoffsets;
 
 shared uvec4 mask[BLOCKSIZE];
-shared uvec4 sblocksum;
 
 const int n = BLOCKSIZE;
 
@@ -72,13 +71,6 @@ void main (void)
 	
 	if (lid == 0)
 	{
-		uvec4 tmp;
-		tmp.x = 0;
-		tmp.y = mask[n - 1].x;
-		tmp.z = tmp.y + mask[n - 1].y;
-		tmp.w = tmp.z + mask[n - 1].z;
-		sblocksum = tmp;
-
 		for (int i = 0; i < 4; i++)
 		{
 			blocksum[blocksumoffsets[i] + gl_WorkGroupID.x] = mask[n - 1][i];
