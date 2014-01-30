@@ -459,7 +459,7 @@ bool Simulation::Frame (void)
         glBindBufferBase (GL_SHADER_STORAGE_BUFFER, 0, radixsort.GetBuffer ());
         glBindBufferBase (GL_SHADER_STORAGE_BUFFER, 1, lambdabuffer);
         glBindBufferBase (GL_SHADER_STORAGE_BUFFER, 2, auxbuffer);
-        glBindImageTexture (0, flagtexture, 0, GL_FALSE, 0, GL_READ_WRITE, GL_R8I);
+        glBindImageTexture (0, flagtexture, 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_R8I);
         glBindImageTexture (1, gridtexture, 0, GL_TRUE, 0, GL_WRITE_ONLY, GL_R32I);
         findcells.Use ();
         glMemoryBarrier (GL_BUFFER_UPDATE_BARRIER_BIT);
@@ -468,6 +468,9 @@ bool Simulation::Frame (void)
         glEndQuery (GL_TIME_ELAPSED);
 
         glBindTexture (GL_TEXTURE_3D, gridtexture);
+        glActiveTexture (GL_TEXTURE1);
+        glBindTexture (GL_TEXTURE_BUFFER, flagtexture);
+        glActiveTexture (GL_TEXTURE0);
 
         // solver iteration
         glBeginQuery (GL_TIME_ELAPSED, queries[4]);

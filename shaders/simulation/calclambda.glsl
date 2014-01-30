@@ -24,8 +24,8 @@ layout (std430, binding = 2) writeonly buffer AuxBuffer
 	vec4 auxdata[];
 };
 
-layout (binding = 0, r8i) uniform readonly iimageBuffer flagtexture;
 layout (binding = 0) uniform isampler3D gridtexture;
+layout (binding = 1) uniform isamplerBuffer flagtexture;
 
 float Wpoly6 (float r)
 {
@@ -83,11 +83,11 @@ const ivec3 gridoffsets[27] = {
 };
 
 #define FOR_EACH_NEIGHBOUR(var) for (int o = 0; o < 27; o++) {\
-		ivec3 ngridpos = gridpos + gridoffsets[o];\
-		int var = texelFetch (gridtexture, ngridpos, 0).x;\
+		vec3 ngridpos = gridpos + gridoffsets[o] / GRID_SIZE;\
+		int var = texture (gridtexture, ngridpos).x;\
 		if (var == -1) continue;\
 		do { if (var != particleid) {
-#define END_FOR_EACH_NEIGHBOUR(var)	} var++; } while (imageLoad (flagtexture, var).x == 0);}
+#define END_FOR_EACH_NEIGHBOUR(var)	} var++; } while (texelFetch (flagtexture, var).x == 0);}
 
 void main (void)
 {
@@ -97,7 +97,7 @@ void main (void)
 	ParticleInfo particle = particles[particleid];
 
 	// compute grid id as hash value
-	ivec3 gridpos = ivec3 (clamp (particle.position, vec3 (0, 0, 0), GRID_SIZE));
+	vec3 gridpos = floor (particle.position) / GRID_SIZE;
 	
 	float sum_k_grad_Ci = 0;
 	float rho = 0;
@@ -106,6 +106,7 @@ void main (void)
 		auxdata[particleid] = vec4 (1, 0, 0, 1);
 
 	vec3 grad_pi_Ci = vec3 (0, 0, 0);
+	
 	FOR_EACH_NEIGHBOUR(j)
 	{
 		vec3 position_j = particles[j].position;
