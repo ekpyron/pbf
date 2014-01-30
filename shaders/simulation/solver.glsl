@@ -67,9 +67,6 @@ void main (void)
 
 	ParticleInfo particle = particles[particleid];
 
-	// compute grid id as hash value
-	vec3 gridpos = floor (particle.position) / GRID_SIZE;
-	
 	float sum_k_grad_Ci = 0;
 	float rho = 0;
 

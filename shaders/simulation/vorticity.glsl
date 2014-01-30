@@ -54,9 +54,6 @@ void main (void)
 
 	ParticleInfo particle = particles[particleid];
 	
-	// compute grid id as hash value
-	vec3 gridpos = floor (particle.position) / GRID_SIZE;
-
 	// calculate velocity	
 	vec3 velocity = (particle.position - particle.oldposition) / timestep;
 
