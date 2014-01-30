@@ -97,7 +97,7 @@ void main (void)
 	// Beer-Lambert law for coloring
 	float thickness = texture (thicknesstex, fTexcoord).x * 200;
 	vec3 c = vec3 (exp (-0.5 * thickness),
-				   exp (-0.05 * thickness),
+				   exp (-0.02 * thickness),
 				   exp (-0.005 * thickness));
 
 	// apply diffuse and specular light to the color value
