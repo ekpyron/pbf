@@ -26,8 +26,7 @@ layout (std430, binding = 2) writeonly buffer AuxBuffer
 	vec4 auxdata[];
 };
 
-layout (binding = 0) uniform isampler3D gridtexture;
-layout (binding = 1) uniform isamplerBuffer flagtexture;
+layout (binding = 0) uniform isamplerBuffer neighbourcelltexture;
 
 float Wpoly6 (float r)
 {
@@ -54,41 +53,12 @@ vec3 gradWspiky (vec3 r)
 	return (-3 * 4.774648292756860 * tmp * tmp) * r / (l * h*h*h*h*h*h);
 }
 
-const vec3 gridoffsets[27] = {
-	vec3 (-1, -1, -1) / GRID_SIZE,
-	vec3 (-1, -1, 0) / GRID_SIZE,
-	vec3 (-1, -1, 1) / GRID_SIZE,
-	vec3 (-1, 0, -1) / GRID_SIZE,
-	vec3 (-1, 0, 0) / GRID_SIZE,
-	vec3 (-1, 0, 1) / GRID_SIZE,
-	vec3 (-1, 1, -1) / GRID_SIZE,
-	vec3 (-1, 1, 0) / GRID_SIZE,
-	vec3 (-1, 1, 1) / GRID_SIZE,
-	vec3 (0, -1, -1) / GRID_SIZE,
-	vec3 (0, -1, 0) / GRID_SIZE,
-	vec3 (0, -1, 1) / GRID_SIZE,
-	vec3 (0, 0, -1) / GRID_SIZE,
-	vec3 (0, 0, 0) / GRID_SIZE,
-	vec3 (0, 0, 1) / GRID_SIZE,
-	vec3 (0, 1, -1) / GRID_SIZE,
-	vec3 (0, 1, 0) / GRID_SIZE,
-	vec3 (0, 1, 1) / GRID_SIZE,
-	vec3 (1, -1, -1) / GRID_SIZE,
-	vec3 (1, -1, 0) / GRID_SIZE,
-	vec3 (1, -1, 1) / GRID_SIZE,
-	vec3 (1, 0, -1) / GRID_SIZE,
-	vec3 (1, 0, 0) / GRID_SIZE,
-	vec3 (1, 0, 1) / GRID_SIZE,
-	vec3 (1, 1, -1) / GRID_SIZE,
-	vec3 (1, 1, 0) / GRID_SIZE,
-	vec3 (1, 1, 1) / GRID_SIZE
-};
-
-#define FOR_EACH_NEIGHBOUR(var) for (int o = 0; o < 27; o++) {\
-		int var = cells[o];\
-		if (var == -1) continue;\
-		do { if (var != particleid) {
-#define END_FOR_EACH_NEIGHBOUR(var)	} var++; } while (texelFetch (flagtexture, var).x == 0);}
+#define FOR_EACH_NEIGHBOUR(var) for (int o = 0; o < 9; o++) {\
+		ivec2 data = texelFetch (neighbourcelltexture, int (particleid * 9 + o)).xy;\
+		if (data.y == 0) continue;\
+		for (int var = data.x; var < data.x + data.y; var++) {\
+		if (var != particleid) {
+#define END_FOR_EACH_NEIGHBOUR(var)	}}}
 
 void main (void)
 {
@@ -107,12 +77,6 @@ void main (void)
 		auxdata[particleid] = vec4 (1, 0, 0, 1);
 		
 	vec3 grad_pi_Ci = vec3 (0, 0, 0);
-	
-	// fetch surrounding cells
-	int cells[27];
-	for (int o = 0; o < 27; o++) {
-		cells[o] = texture (gridtexture, gridpos + gridoffsets[o]).x;
-	}
 	
 	FOR_EACH_NEIGHBOUR(j)
 	{

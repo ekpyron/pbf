@@ -152,6 +152,11 @@ private:
      */
     ShaderProgram vorticityprog;
 
+    /** Neighbour cell program.
+     * Shader program for finding neighbouring cells for a particle.
+     */
+    ShaderProgram neighbourcells;
+
     /** Depth blur direction uniform location.
      * Uniform location for the uniform variable storing the direction of the depth blur.
      */
@@ -226,12 +231,18 @@ private:
              * Buffer used to clear the grid texture;
              */
             GLuint gridclearbuffer;
+
+            /** Neighbour cell buffer.
+             * Buffer used to store neighbouring cells for each particle.
+             */
+            GLuint neighbourcellbuffer;
+
         };
         /** Buffer objects.
          * The buffer objects are stored in a union, so that it is possible
          * to create/delete all buffer objects with a single OpenGL call.
          */
-        GLuint buffers[6];
+        GLuint buffers[7];
     };
 
     union {
@@ -301,12 +312,17 @@ private:
              * Texture in which the water thickness is stored.
              */
             GLuint thicknesstexture;
+
+            /** Neighbour cell texture.
+             * Texture through which the neighbour cell buffer is accessed.
+             */
+            GLuint neighbourcelltexture;
     	};
     	/** Texture objects.
     	 * The texture objects are stored in a union, so that it is possible
     	 * to create/delete all texture objects with a single OpenGL call.
     	 */
-    	GLuint textures[6];
+    	GLuint textures[7];
     };
 
     /** Queries.

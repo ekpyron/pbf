@@ -53,14 +53,18 @@ Simulation::Simulation (void) : width (0), height (0), font ("textures/font.png"
     		"shaders/simulation/include.glsl");
     vorticityprog.Link ();
 
+    neighbourcells.CompileShader (GL_COMPUTE_SHADER, "shaders/simulation/neighbourcells.glsl",
+    		"shaders/simulation/include.glsl");
+    neighbourcells.Link ();
+
     // create buffer objects
-    glGenBuffers (6, buffers);
+    glGenBuffers (7, buffers);
 
     // create query objects
     glGenQueries (7, queries);
 
     // create texture objects
-    glGenTextures (6, textures);
+    glGenTextures (7, textures);
 
     // create selection depth texture
     glBindTexture (GL_TEXTURE_2D, selectiondepthtexture);
@@ -193,6 +197,14 @@ Simulation::Simulation (void) : width (0), height (0), font ("textures/font.png"
     glBindTexture (GL_TEXTURE_BUFFER, flagtexture);
     glTexBuffer (GL_TEXTURE_BUFFER, GL_R8I, flagbuffer);
 
+    // allocate neighbour cell buffer
+    glBindBuffer (GL_SHADER_STORAGE_BUFFER, neighbourcellbuffer);
+    glBufferData (GL_SHADER_STORAGE_BUFFER, 2 * sizeof (GLuint) * 9 * GetNumberOfParticles (), NULL, GL_DYNAMIC_DRAW);
+
+    // create neighbour cell texture
+    glBindTexture (GL_TEXTURE_BUFFER, neighbourcelltexture);
+    glTexBuffer (GL_TEXTURE_BUFFER, GL_RG32I, neighbourcellbuffer);
+
     // allocate auxillary buffer
     glBindBuffer (GL_SHADER_STORAGE_BUFFER, auxbuffer);
     glBufferData (GL_SHADER_STORAGE_BUFFER, sizeof (float) * 4 * GetNumberOfParticles (), NULL, GL_DYNAMIC_DRAW);
@@ -213,10 +225,10 @@ Simulation::Simulation (void) : width (0), height (0), font ("textures/font.png"
 Simulation::~Simulation (void)
 {
     // cleanup
-	glDeleteTextures (6, textures);
+	glDeleteTextures (7, textures);
 	glDeleteFramebuffers (5, framebuffers);
 	glDeleteQueries (7, queries);
-    glDeleteBuffers (6, buffers);
+    glDeleteBuffers (7, buffers);
 }
 
 void Simulation::Resize (const unsigned int &_width, const unsigned int &_height)
@@ -495,12 +507,22 @@ bool Simulation::Frame (void)
         glMemoryBarrier (GL_BUFFER_UPDATE_BARRIER_BIT);
         glDispatchCompute (GetNumberOfParticles () >> 8, 1, 1);
         glMemoryBarrier (GL_SHADER_STORAGE_BARRIER_BIT | GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
-        glEndQuery (GL_TIME_ELAPSED);
 
+        // grid and flag textures as input
         glBindTexture (GL_TEXTURE_3D, gridtexture);
         glActiveTexture (GL_TEXTURE1);
         glBindTexture (GL_TEXTURE_BUFFER, flagtexture);
         glActiveTexture (GL_TEXTURE0);
+
+        // find neighbour cells for each particle
+        glBindImageTexture (0, neighbourcelltexture, 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RG32I);
+        neighbourcells.Use ();
+        glDispatchCompute (GetNumberOfParticles() >> 8, 1, 1);
+        glMemoryBarrier (GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
+        glEndQuery (GL_TIME_ELAPSED);
+
+        // use neighbour cell texture as input
+        glBindTexture (GL_TEXTURE_BUFFER, neighbourcelltexture);
 
         // solver iteration
         glBeginQuery (GL_TIME_ELAPSED, queries[4]);
