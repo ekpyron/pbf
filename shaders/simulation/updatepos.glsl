@@ -53,39 +53,38 @@ vec3 gradWspiky (vec3 r)
 	return (-3 * 4.774648292756860 * tmp * tmp) * r / (l * h*h*h*h*h*h);
 }
 
-const ivec3 gridoffsets[27] = {
-	ivec3 (-1, -1, -1),
-	ivec3 (-1, -1, 0),
-	ivec3 (-1, -1, 1),
-	ivec3 (-1, 0, -1),
-	ivec3 (-1, 0, 0),
-	ivec3 (-1, 0, 1),
-	ivec3 (-1, 1, -1),
-	ivec3 (-1, 1, 0),
-	ivec3 (-1, 1, 1),
-	ivec3 (0, -1, -1),
-	ivec3 (0, -1, 0),
-	ivec3 (0, -1, 1),
-	ivec3 (0, 0, -1),
-	ivec3 (0, 0, 0),
-	ivec3 (0, 0, 1),
-	ivec3 (0, 1, -1),
-	ivec3 (0, 1, 0),
-	ivec3 (0, 1, 1),
-	ivec3 (1, -1, -1),
-	ivec3 (1, -1, 0),
-	ivec3 (1, -1, 1),
-	ivec3 (1, 0, -1),
-	ivec3 (1, 0, 0),
-	ivec3 (1, 0, 1),
-	ivec3 (1, 1, -1),
-	ivec3 (1, 1, 0),
-	ivec3 (1, 1, 1)
+const vec3 gridoffsets[27] = {
+	vec3 (-1, -1, -1) / GRID_SIZE,
+	vec3 (-1, -1, 0) / GRID_SIZE,
+	vec3 (-1, -1, 1) / GRID_SIZE,
+	vec3 (-1, 0, -1) / GRID_SIZE,
+	vec3 (-1, 0, 0) / GRID_SIZE,
+	vec3 (-1, 0, 1) / GRID_SIZE,
+	vec3 (-1, 1, -1) / GRID_SIZE,
+	vec3 (-1, 1, 0) / GRID_SIZE,
+	vec3 (-1, 1, 1) / GRID_SIZE,
+	vec3 (0, -1, -1) / GRID_SIZE,
+	vec3 (0, -1, 0) / GRID_SIZE,
+	vec3 (0, -1, 1) / GRID_SIZE,
+	vec3 (0, 0, -1) / GRID_SIZE,
+	vec3 (0, 0, 0) / GRID_SIZE,
+	vec3 (0, 0, 1) / GRID_SIZE,
+	vec3 (0, 1, -1) / GRID_SIZE,
+	vec3 (0, 1, 0) / GRID_SIZE,
+	vec3 (0, 1, 1) / GRID_SIZE,
+	vec3 (1, -1, -1) / GRID_SIZE,
+	vec3 (1, -1, 0) / GRID_SIZE,
+	vec3 (1, -1, 1) / GRID_SIZE,
+	vec3 (1, 0, -1) / GRID_SIZE,
+	vec3 (1, 0, 0) / GRID_SIZE,
+	vec3 (1, 0, 1) / GRID_SIZE,
+	vec3 (1, 1, -1) / GRID_SIZE,
+	vec3 (1, 1, 0) / GRID_SIZE,
+	vec3 (1, 1, 1) / GRID_SIZE
 };
 
 #define FOR_EACH_NEIGHBOUR(var) for (int o = 0; o < 27; o++) {\
-		vec3 ngridpos = gridpos + gridoffsets[o] / GRID_SIZE;\
-		int var = texture (gridtexture, ngridpos).x;\
+		int var = texture (gridtexture, gridpos + gridoffsets[o]).x;\
 		if (var == -1) continue;\
 		do { if (var != particleid) {
 #define END_FOR_EACH_NEIGHBOUR(var)	} var++; } while (texelFetch (flagtexture, var).x == 0);}
