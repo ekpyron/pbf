@@ -4,7 +4,7 @@
 Simulation::Simulation (void) : width (0), height (0), font ("textures/font.png"),
     last_fps_time (glfwGetTime ()), framecount (0), fps (0), radixsort (GetNumberOfParticles () >> 9),
     usespheres (false), offscreen_width (1280), offscreen_height (720),
-    surfacereconstruction (false)
+    surfacereconstruction (false), running (false)
 {
     // load shaders
     surroundingprogram.CompileShader (GL_VERTEX_SHADER, "shaders/surrounding/vertex.glsl");
@@ -360,6 +360,10 @@ void Simulation::OnKeyUp (int key)
     case GLFW_KEY_ENTER:
     	surfacereconstruction = !surfacereconstruction;
     	break;
+    // toggle simulation
+    case GLFW_KEY_SPACE:
+    	running = !running;
+    	break;
     // reset to initial particle configuration
     case GLFW_KEY_TAB:
         ResetParticleBuffer ();
@@ -424,7 +428,7 @@ bool Simulation::Frame (void)
     framing.Render ();
 
     // run simulation step 1
-    if (glfwGetKey (window, GLFW_KEY_SPACE))
+    if (running)
     {
     	glBeginQuery (GL_TIME_ELAPSED, queries[0]);
         // clear grid buffer

@@ -168,6 +168,11 @@ private:
      */
     bool usespheres;
 
+    /** Running flag
+     * Flag indicating whether the simulation is running.
+     */
+    bool running;
+
     /** Surface reconstruction flag.
      * flag indicating whether the particles should be rendered
      * as spheres or whether a reconstructed water surface should
