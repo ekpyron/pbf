@@ -105,7 +105,7 @@ void main (void)
 		vec3 v_ij = ((p_j - particles[j].oldposition) / timestep) - velocity;
 		vec3 p_ij = particle.position - p_j;
 		v += v_ij * Wpoly6 (length (p_ij));
-		vorticity += v_ij * gradWspiky (p_ij);
+		vorticity += cross (v_ij, gradWspiky (p_ij));
 	}
 	END_FOR_EACH_NEIGHBOUR(j)
 	velocity += xsph_viscosity_c * v;
@@ -129,7 +129,7 @@ void main (void)
 	vec3 N = gradVorticity;
 	
 	// vorticity force
-	velocity += vorticity_epsilon * particle.vorticity * N * timestep;
+	velocity +=  timestep * vorticity_epsilon * cross (N, vorticity);
 	
 	barrier ();
 	

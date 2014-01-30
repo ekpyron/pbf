@@ -20,4 +20,4 @@ const float tensile_instability_k = 0.1;
 const float tensile_instability_h = 0.2;
 
 const float xsph_viscosity_c = 0.01;
-const float vorticity_epsilon = 15;
+const float vorticity_epsilon = 10.0;
