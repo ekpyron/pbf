@@ -7,7 +7,7 @@ layout (local_size_x = BLOCKSIZE) in;
 
 struct ParticleInfo
 {
-	vec3 position;
+	vec4 position;
 	vec4 oldposition;
 };
 
@@ -37,7 +37,7 @@ uniform int bitshift;
 
 uint GetHash (int id)
 {
-	vec3 pos = data[id].position;
+	vec3 pos = data[id].position.xyz;
 	ivec3 grid = ivec3 (clamp (pos, vec3 (0, 0, 0), GRID_SIZE));
 	return grid.y * GRID_WIDTH * GRID_DEPTH + grid.z * GRID_WIDTH + grid.x;
 }

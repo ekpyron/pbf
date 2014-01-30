@@ -4,7 +4,7 @@
 Simulation::Simulation (void) : width (0), height (0), font ("textures/font.png"),
     last_fps_time (glfwGetTime ()), framecount (0), fps (0), radixsort (GetNumberOfParticles () >> 9),
     usespheres (false), offscreen_width (1280), offscreen_height (720),
-    surfacereconstruction (false), running (false)
+    surfacereconstruction (false), running (false), vorticityconfinement (false)
 {
     // load shaders
     surroundingprogram.CompileShader (GL_VERTEX_SHADER, "shaders/surrounding/vertex.glsl");
@@ -49,11 +49,15 @@ Simulation::Simulation (void) : width (0), height (0), font ("textures/font.png"
     		"shaders/simulation/include.glsl");
     solver.Link ();
 
+    vorticityprog.CompileShader (GL_COMPUTE_SHADER, "shaders/simulation/vorticity.glsl",
+    		"shaders/simulation/include.glsl");
+    vorticityprog.Link ();
+
     // create buffer objects
     glGenBuffers (6, buffers);
 
     // create query objects
-    glGenQueries (6, queries);
+    glGenQueries (7, queries);
 
     // create texture objects
     glGenTextures (6, textures);
@@ -211,7 +215,7 @@ Simulation::~Simulation (void)
     // cleanup
 	glDeleteTextures (6, textures);
 	glDeleteFramebuffers (5, framebuffers);
-	glDeleteQueries (6, queries);
+	glDeleteQueries (7, queries);
     glDeleteBuffers (6, buffers);
 }
 
@@ -323,6 +327,7 @@ void Simulation::ResetParticleBuffer (void)
                 		float (rand ()) / float (RAND_MAX) - 0.5f, float (rand ()) / float (RAND_MAX) - 0.5f);
                 particle.oldposition = particle.position;
                 particle.highlighted = 0;
+                particle.vorticity = 0;
                 particles.push_back (particle);
             }
         }
@@ -339,6 +344,7 @@ void Simulation::ResetParticleBuffer (void)
                 		float (rand ()) / float (RAND_MAX) - 0.5f, float (rand ()) / float (RAND_MAX) - 0.5f);
                 particle.oldposition = particle.position;
                 particle.highlighted = 0;
+                particle.vorticity = 0;
                 particles.push_back (particle);
             }
         }
@@ -364,6 +370,10 @@ void Simulation::OnKeyUp (int key)
     case GLFW_KEY_SPACE:
     	running = !running;
     	break;
+    // toggle vorticity confinement
+    case GLFW_KEY_V:
+    	vorticityconfinement = !vorticityconfinement;
+    	break;
     // reset to initial particle configuration
     case GLFW_KEY_TAB:
         ResetParticleBuffer ();
@@ -372,8 +382,9 @@ void Simulation::OnKeyUp (int key)
     // different simulation stages
     case GLFW_KEY_Q:
     {
-    	for (int i = 0; i < 6; i++)
+    	for (int i = 0; i < 7; i++)
     	{
+    		if (!glIsQuery (queries[i])) continue;
     		GLint64 v;
     		glGetQueryObjecti64v (queries[i], GL_QUERY_RESULT, &v);
 
@@ -497,12 +508,21 @@ bool Simulation::Frame (void)
         	glMemoryBarrier (GL_SHADER_STORAGE_BARRIER_BIT);
         }
         glEndQuery (GL_TIME_ELAPSED);
+
+        // calculate vorticity
+        if (vorticityconfinement)
+        {
+        	glBeginQuery (GL_TIME_ELAPSED, queries[5]);
+        	vorticityprog.Use ();
+        	glDispatchCompute (GetNumberOfParticles() >> 8, 1, 1);
+        	glEndQuery (GL_TIME_ELAPSED);
+        }
     }
 
     if (!surfacereconstruction)
     {
     	// render icosahedra/spheres
-    	glBeginQuery (GL_TIME_ELAPSED, queries[5]);
+    	glBeginQuery (GL_TIME_ELAPSED, queries[6]);
     	particleprogram.Use ();
     	pointsprite.Render (GetNumberOfParticles ());
     	glEndQuery (GL_TIME_ELAPSED);
@@ -510,7 +530,7 @@ bool Simulation::Frame (void)
     else
     {
     	// render point sprites, storing depth
-    	glBeginQuery (GL_TIME_ELAPSED, queries[5]);
+    	glBeginQuery (GL_TIME_ELAPSED, queries[6]);
     	glBindFramebuffer (GL_FRAMEBUFFER, depthfb);
     	glViewport (0, 0, offscreen_width, offscreen_height);
     	glClear (GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);

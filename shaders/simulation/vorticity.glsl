@@ -16,12 +16,7 @@ layout (std430, binding = 0) buffer ParticleBuffer
 	ParticleInfo particles[];
 };
 
-layout (std430, binding = 1) buffer LambdaBuffer
-{
-	float lambdas[];
-};
-
-layout (std430, binding = 2) writeonly buffer AuxBuffer
+layout (std430, binding = 1) writeonly buffer AuxBuffer
 {
 	vec4 auxdata[];
 };
@@ -35,14 +30,6 @@ float Wpoly6 (float r)
 		return 0;
 	float tmp = h * h - r * r;
 	return 1.56668147106 * tmp * tmp * tmp / (h*h*h*h*h*h*h*h*h);
-}
-
-float Wspiky (float r)
-{
-	if (r > h)
-		return 0;
-	float tmp = h - r;
-	return 4.774648292756860 * tmp * tmp * tmp / (h*h*h*h*h*h);
 }
 
 vec3 gradWspiky (vec3 r)
@@ -96,84 +83,55 @@ void main (void)
 	particleid = gl_GlobalInvocationID.x;
 
 	ParticleInfo particle = particles[particleid];
-
+	
 	// compute grid id as hash value
 	vec3 gridpos = floor (particle.position) / GRID_SIZE;
-	
-	float sum_k_grad_Ci = 0;
-	float rho = 0;
 
-	if (particle.highlighted == 1)
-		auxdata[particleid] = vec4 (1, 0, 0, 1);
-		
-	vec3 grad_pi_Ci = vec3 (0, 0, 0);
-	
 	// fetch surrounding cells
 	int cells[27];
 	for (int o = 0; o < 27; o++) {
 		cells[o] = texture (gridtexture, gridpos + gridoffsets[o]).x;
 	}
-	
+
+	// calculate velocity	
+	vec3 velocity = (particle.position - particle.oldposition) / timestep;
+
+	// vorticity confinement & XSPH viscosity
+	vec3 v = vec3 (0, 0, 0);
+	vec3 vorticity = vec3 (0, 0, 0);
 	FOR_EACH_NEIGHBOUR(j)
 	{
-		vec3 position_j = particles[j].position;
-		
-		// highlight neighbours of the highlighted particle
-		if (particle.highlighted == 1)
-		{
-			auxdata[j] = vec4 (0, 1, 0, 1);
-		}
-	
-		// compute rho_i (equation 2)
-		float len = distance (particle.position, position_j);
-		float tmp = Wpoly6 (len);
-		rho += tmp;
-	
-		// sum gradients of Ci (equation 8 and parts of equation 9)
-		// use j as k so that we can stay in the same loop
-		vec3 grad_pk_Ci = vec3 (0, 0, 0);
-		grad_pk_Ci = gradWspiky (particle.position - position_j);
-		grad_pk_Ci /= rho_0;
-		sum_k_grad_Ci += dot (grad_pk_Ci, grad_pk_Ci);
-		
-		// now use j as j again and accumulate grad_pi_Ci for the case k=i
-		// from equation 8
-		grad_pi_Ci += grad_pk_Ci; // = gradWspiky (particle.position - particles[j].position); 
+		vec3 p_j = particles[j].position;
+		vec3 v_ij = ((p_j - particles[j].oldposition) / timestep) - velocity;
+		vec3 p_ij = particle.position - p_j;
+		v += v_ij * Wpoly6 (length (p_ij));
+		vorticity += v_ij * gradWspiky (p_ij);
 	}
 	END_FOR_EACH_NEIGHBOUR(j)
-	// add grad_pi_Ci to the sum
-	sum_k_grad_Ci += dot (grad_pi_Ci, grad_pi_Ci);
+	velocity += xsph_viscosity_c * v;
 	
-	// compute lambda_i (equations 1 and 9)
-	float C_i = rho / rho_0 - 1;
-	float lambda = -C_i / (sum_k_grad_Ci + epsilon);
-	lambdas[particleid] = lambda;
+	particles[particleid].vorticity = length (vorticity);
 	
 	barrier ();
 	memoryBarrierBuffer ();
 	
-	vec3 deltap = vec3 (0, 0, 0);
-			
+	vec3 gradVorticity = vec3 (0, 0, 0);
 	FOR_EACH_NEIGHBOUR(j)
 	{
-		vec3 position_j = particles[j].position;
-		
-		float scorr = (Wpoly6 (distance (particle.position, position_j)) / Wpoly6 (tensile_instability_h));
-		scorr *= scorr;
-		scorr *= scorr;
-		scorr = -tensile_instability_k * scorr;  
-	
-		// accumulate position corrections (part of equation 12)
-		deltap += (lambda + lambdas[j] + scorr) * gradWspiky (particle.position - position_j);
+		vec3 p_ij = particle.position - particles[j].position;
+		gradVorticity += particles[j].vorticity * gradWspiky (p_ij);
 	}
 	END_FOR_EACH_NEIGHBOUR(j)
-
-	particle.position += deltap / rho_0;
-
-	// collision detection begin
-	vec3 wall = vec3 (16, 0, 16);
-	particle.position = clamp (particle.position, vec3 (0, 0, 0) + wall, GRID_SIZE - wall);
-	// collision detection end
 	
-	particles[particleid].position = particle.position;
+	float l = length (gradVorticity);
+	if (l > 0)
+		gradVorticity /= l;
+	vec3 N = gradVorticity;
+	
+	// vorticity force
+	velocity += vorticity_epsilon * particle.vorticity * N * timestep;
+	
+	barrier ();
+	
+	particles[particleid].oldposition = particle.position - velocity * timestep;
 }

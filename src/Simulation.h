@@ -147,6 +147,11 @@ private:
      */
     ShaderProgram thicknessprog;
 
+    /** Vorticity program.
+     * Shader program for calculating particle vorticity.
+     */
+    ShaderProgram vorticityprog;
+
     /** Depth blur direction uniform location.
      * Uniform location for the uniform variable storing the direction of the depth blur.
      */
@@ -179,6 +184,11 @@ private:
      * be rendered.
      */
     bool surfacereconstruction;
+
+    /** Vorticity confinement flag.
+     * flag indicating whether vorticity confinement should be used.
+     */
+    bool vorticityconfinement;
 
     /** Radix sort.
      * Takes care of sorting the particle list.
@@ -303,7 +313,7 @@ private:
      * Queries used to determine the time spent in the different stages
      * of the algorithm.
      */
-    GLuint queries[6];
+    GLuint queries[7];
 
     /** Fullscreen quad.
      * Renders a fullscreen quad.

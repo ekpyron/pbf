@@ -7,7 +7,7 @@ layout (local_size_x = HALFBLOCKSIZE) in;
 
 struct ParticleInfo
 {
-	vec3 position;
+	vec4 position;
 	vec4 oldposition;
 };
 
@@ -36,7 +36,7 @@ uniform int bitshift;
 
 uint GetHash (in vec3 pos)
 {
-	ivec3 grid = ivec3 (clamp (pos, vec3 (0, 0, 0), GRID_SIZE));
+	ivec3 grid = ivec3 (clamp (pos.xyz, vec3 (0, 0, 0), GRID_SIZE));
 	return grid.y * GRID_WIDTH * GRID_DEPTH + grid.z * GRID_WIDTH + grid.x;
 }
 
@@ -45,8 +45,8 @@ void main (void)
 	const int gid = int (gl_GlobalInvocationID.x);
 	const int lid = int (gl_LocalInvocationIndex);
 	
-	uint bits1 = bitfieldExtract (GetHash (data[2 * gid].position), bitshift, 2);
-	uint bits2 = bitfieldExtract (GetHash (data[2 * gid + 1].position), bitshift, 2);
+	uint bits1 = bitfieldExtract (GetHash (data[2 * gid].position.xyz), bitshift, 2);
+	uint bits2 = bitfieldExtract (GetHash (data[2 * gid + 1].position.xyz), bitshift, 2);
 	mask[2 * lid] = uvec4 (equal (bits1 * uvec4 (1, 1, 1, 1), uvec4 (0, 1, 2, 3)));
 	mask[2 * lid + 1] = uvec4 (equal (bits2 * uvec4 (1, 1, 1, 1), uvec4 (0, 1, 2, 3)));
 
