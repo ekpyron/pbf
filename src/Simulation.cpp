@@ -45,13 +45,9 @@ Simulation::Simulation (void) : width (0), height (0), font ("textures/font.png"
     		"shaders/simulation/include.glsl");
     findcells.Link ();
 
-    calclambda.CompileShader (GL_COMPUTE_SHADER, "shaders/simulation/calclambda.glsl",
+    solver.CompileShader (GL_COMPUTE_SHADER, "shaders/simulation/solver.glsl",
     		"shaders/simulation/include.glsl");
-    calclambda.Link ();
-
-    updatepos.CompileShader (GL_COMPUTE_SHADER, "shaders/simulation/updatepos.glsl",
-    		"shaders/simulation/include.glsl");
-    updatepos.Link ();
+    solver.Link ();
 
     // create buffer objects
     glGenBuffers (6, buffers);
@@ -490,13 +486,11 @@ bool Simulation::Frame (void)
 
         // solver iteration
         glBeginQuery (GL_TIME_ELAPSED, queries[4]);
-        for (auto i = 0; i < 3; i++) {
-        calclambda.Use ();
-        glDispatchCompute (GetNumberOfParticles () >> 8, 1, 1);
-        glMemoryBarrier (GL_SHADER_STORAGE_BARRIER_BIT);
-        updatepos.Use ();
-        glDispatchCompute (GetNumberOfParticles () >> 8, 1, 1);
-        glMemoryBarrier (GL_SHADER_STORAGE_BARRIER_BIT);
+        solver.Use ();
+        for (auto i = 0; i < 3; i++)
+        {
+        	glDispatchCompute (GetNumberOfParticles () >> 8, 1, 1);
+        	glMemoryBarrier (GL_SHADER_STORAGE_BARRIER_BIT);
         }
         glEndQuery (GL_TIME_ELAPSED);
     }

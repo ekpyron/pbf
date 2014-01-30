@@ -128,14 +128,9 @@ private:
     ShaderProgram findcells;
 
     /** Simulation step shader program.
-     * Shader program for the simulation step that calculates lambda_i for each particle.
+     * Shader program for the simulation step that performs the solver iteration for each particle.
      */
-    ShaderProgram calclambda;
-
-    /** Simulation step shader program.
-     * Shader program for the simulation step that updates the position for each particle.
-     */
-    ShaderProgram updatepos;
+    ShaderProgram solver;
 
     /** Fullscreen quad shader program.
      * Shader program for rendering the fullscreen quad.
