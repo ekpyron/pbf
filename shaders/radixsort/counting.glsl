@@ -46,8 +46,8 @@ void main (void)
 	const int gid = int (gl_GlobalInvocationID.x);
 	const int lid = int (gl_LocalInvocationIndex);
 	
-	uint bits1 = (GetHash (data[2 * gid].position) & (3 << bitshift)) >> bitshift;
-	uint bits2 = (GetHash (data[2 * gid + 1].position) & (3 << bitshift)) >> bitshift;
+	uint bits1 = bitfieldExtract (GetHash (data[2 * gid].position), bitshift, 2);
+	uint bits2 = bitfieldExtract (GetHash (data[2 * gid + 1].position), bitshift, 2);
 	mask[2 * lid] = uvec4 (equal (bits1 * uvec4 (1, 1, 1, 1), uvec4 (0, 1, 2, 3)));
 	mask[2 * lid + 1] = uvec4 (equal (bits2 * uvec4 (1, 1, 1, 1), uvec4 (0, 1, 2, 3)));
 

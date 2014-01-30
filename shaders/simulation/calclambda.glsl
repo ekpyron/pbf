@@ -117,7 +117,7 @@ void main (void)
 		}
 	
 		// compute rho_i (equation 2)
-		float len = length (particle.position - position_j);
+		float len = distance (particle.position, position_j);
 		float tmp = Wpoly6 (len);
 		rho += tmp;
 	

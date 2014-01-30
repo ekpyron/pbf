@@ -107,7 +107,7 @@ void main (void)
 	{
 		vec3 position_j = particles[j].position;
 		
-		float scorr = (Wpoly6 (length (position - position_j)) / Wpoly6 (tensile_instability_h));
+		float scorr = (Wpoly6 (distance (position, position_j)) / Wpoly6 (tensile_instability_h));
 		scorr *= scorr;
 		scorr *= scorr;
 		scorr = -tensile_instability_k * scorr;  

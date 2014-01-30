@@ -47,7 +47,7 @@ void main (void)
 	const int gid = int (gl_GlobalInvocationID.x);
 	const int lid = int (gl_LocalInvocationIndex);
 
-	uint bits = (GetHash (gid) & (3 << bitshift)) >> bitshift;
+	uint bits = bitfieldExtract (GetHash (gid), bitshift, 2);
 	
 	result[blocksum[blocksumoffsets[bits] + gl_WorkGroupID.x] + prefixsum[gid]] = data[gid];
 }
