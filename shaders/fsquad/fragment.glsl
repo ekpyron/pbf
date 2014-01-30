@@ -17,6 +17,7 @@ layout (binding = 0, std140) uniform TransformationBlock {
 };
 
 layout (binding = 0) uniform sampler2D depthtex;
+layout (binding = 1) uniform sampler2D thicknesstex;
 
 // lighting parameters
 layout (binding = 1, std140) uniform LightingBuffer
@@ -94,5 +95,5 @@ void main (void)
 
 	// fetch texture value and output resulting color
 	color.xyz = clamp (intensity, 0, 1) * vec3 (0.0, 0.3, 1) + k * vec3 (0.8, 0.8, 1);
-	color.w = 0.5;
+	color.w = clamp (texture (thicknesstex, fTexcoord).x, 0.2, 0.6);
 }

@@ -147,6 +147,11 @@ private:
      */
     ShaderProgram depthblurprog;
 
+    /** Thickness program.
+     * Shader program for storing the particle thickness.
+     */
+    ShaderProgram thicknessprog;
+
     /** Depth blur direction uniform location.
      * Uniform location for the uniform variable storing the direction of the depth blur.
      */
@@ -238,12 +243,16 @@ private:
     		 * Framebuffer object used for blurring the particle depths vertically.
     		 */
     		GLuint depthvblurfb;
+    		/** Thickness framebuffer.
+    		 * Framebuffer object used for rendering to the thickness texture.
+    		 */
+    		GLuint thicknessfb;
     	};
     	/** Framebuffer objects.
     	 * The framebuffer objects are stored in a union, so that it is possible
     	 * to create/delete all texture objects with a single OpenGL call.
     	 */
-    	GLuint framebuffers[4];
+    	GLuint framebuffers[5];
     };
 
     /** Font subsystem.
@@ -278,12 +287,16 @@ private:
              */
             GLuint gridtexture;
 
+            /** Thickness texture.
+             * Texture in which the water thickness is stored.
+             */
+            GLuint thicknesstexture;
     	};
     	/** Texture objects.
     	 * The texture objects are stored in a union, so that it is possible
     	 * to create/delete all texture objects with a single OpenGL call.
     	 */
-    	GLuint textures[5];
+    	GLuint textures[6];
     };
 
     /** Queries.

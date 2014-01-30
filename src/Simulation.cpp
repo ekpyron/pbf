@@ -23,6 +23,10 @@ Simulation::Simulation (void) : width (0), height (0), font ("textures/font.png"
     depthblurprog.CompileShader (GL_FRAGMENT_SHADER, "shaders/depthblur/fragment.glsl");
     depthblurprog.Link ();
 
+    thicknessprog.CompileShader (GL_VERTEX_SHADER, "shaders/thickness/vertex.glsl");
+    thicknessprog.CompileShader (GL_FRAGMENT_SHADER, "shaders/thickness/fragment.glsl");
+    thicknessprog.Link ();
+
     depthblurdir = depthblurprog.GetUniformLocation ("blurdir");
 
     selectionprogram.CompileShader (GL_VERTEX_SHADER, "shaders/selection/vertex.glsl");
@@ -56,7 +60,7 @@ Simulation::Simulation (void) : width (0), height (0), font ("textures/font.png"
     glGenQueries (6, queries);
 
     // create texture objects
-    glGenTextures (5, textures);
+    glGenTextures (6, textures);
 
     // create selection depth texture
     glBindTexture (GL_TEXTURE_2D, selectiondepthtexture);
@@ -80,8 +84,16 @@ Simulation::Simulation (void) : width (0), height (0), font ("textures/font.png"
     glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
     glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 
+    // create particle thickness texture
+    glBindTexture (GL_TEXTURE_2D, thicknesstexture);
+    glTexImage2D (GL_TEXTURE_2D, 0, GL_R32F, 512, 512, 0, GL_RED, GL_FLOAT, NULL);
+    glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+    glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+
     // create framebuffer objects
-    glGenFramebuffers (4, framebuffers);
+    glGenFramebuffers (5, framebuffers);
 
     // setup selection framebuffer
     glBindFramebuffer (GL_FRAMEBUFFER, selectionfb);
@@ -90,6 +102,10 @@ Simulation::Simulation (void) : width (0), height (0), font ("textures/font.png"
     // setup depth framebuffer
     glBindFramebuffer (GL_FRAMEBUFFER, depthfb);
     glFramebufferTexture2D (GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, depthtexture, 0);
+
+    // setup thickness framebuffer
+    glBindFramebuffer (GL_FRAMEBUFFER, thicknessfb);
+    glFramebufferTexture2D (GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, thicknesstexture, 0);
 
     // setup depth horizontal blur framebuffer
     glBindFramebuffer (GL_FRAMEBUFFER, depthhblurfb);
@@ -197,8 +213,8 @@ Simulation::Simulation (void) : width (0), height (0), font ("textures/font.png"
 Simulation::~Simulation (void)
 {
     // cleanup
-	glDeleteTextures (5, textures);
-	glDeleteFramebuffers (4, framebuffers);
+	glDeleteTextures (6, textures);
+	glDeleteFramebuffers (5, framebuffers);
 	glDeleteQueries (6, queries);
     glDeleteBuffers (6, buffers);
 }
@@ -495,17 +511,13 @@ bool Simulation::Frame (void)
     }
     else
     {
-    	// render icosahedra/spheres, storing depth
+    	// render point sprites, storing depth
     	glBeginQuery (GL_TIME_ELAPSED, queries[5]);
     	glBindFramebuffer (GL_FRAMEBUFFER, depthfb);
     	glViewport (0, 0, offscreen_width, offscreen_height);
     	glClear (GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
     	particledepthprogram.Use ();
     	pointsprite.Render (GetNumberOfParticles ());
-
-    	// enable alpha blending
-    	glEnable (GL_BLEND);
-    	glBlendFunc (GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
     	// use depth texture as input
     	glBindFramebuffer (GL_FRAMEBUFFER, depthhblurfb);
@@ -525,10 +537,33 @@ bool Simulation::Frame (void)
     	glProgramUniform2f (depthblurprog.get (), depthblurdir, 0.0f, 1.0f / offscreen_height);
     	fullscreenquad.Render ();
 
+    	// render point sprites storing thickness
+    	glBindFramebuffer (GL_FRAMEBUFFER, thicknessfb);
+    	{
+    		float c[] = { 0, 0, 0, 0 };
+        	glClearBufferfv (GL_COLOR, 0, c);
+    	}
+    	// enable additive blending
+    	glEnable (GL_BLEND);
+    	glBlendFunc (GL_ONE, GL_ONE);
+    	glDisable (GL_DEPTH_TEST);
+    	thicknessprog.Use ();
+    	glViewport (0, 0, 512, 512);
+    	pointsprite.Render (GetNumberOfParticles ());
+    	glEnable (GL_DEPTH_TEST);
+
     	glBindFramebuffer (GL_FRAMEBUFFER, 0);
 
     	// use depth texture as input
     	glBindTexture (GL_TEXTURE_2D, depthtexture);
+    	// use thickness texture as input
+    	glActiveTexture (GL_TEXTURE1);
+    	glBindTexture (GL_TEXTURE_2D, thicknesstexture);
+    	glGenerateMipmap (GL_TEXTURE_2D);
+    	glActiveTexture (GL_TEXTURE0);
+
+    	// enable alpha blending
+    	glBlendFunc (GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
     	// render a fullscreen quad
     	glViewport (0, 0, width, height);
