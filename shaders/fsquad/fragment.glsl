@@ -86,14 +86,22 @@ void main (void)
 	float angle = dot (spotdir, -lightdir);
 	intensity *= pow (angle, spotexponent);
 	
+	// specular light
 	float k = max (dot (viewdir, reflect (-lightdir, normal)), 0);
 	k = pow (k, 8);
 	
+	// Schlick's approximation for the fresnel term
 	float cos_theta = dot (viewdir, lightdir);
 	k *= 0.7 + (1 - 0.7) * pow (1 - cos_theta, 5);
 	
+	// Beer-Lambert law for coloring
+	float thickness = texture (thicknesstex, fTexcoord).x;
+	vec3 c = vec3 (1 - exp (-0.1 * thickness),
+				   1 - exp (-0.5 * thickness),
+				   1 - exp (-2.5 * thickness));
 
-	// fetch texture value and output resulting color
-	color.xyz = clamp (intensity, 0, 1) * vec3 (0.0, 0.3, 1) + k * vec3 (0.8, 0.8, 1);
-	color.w = clamp (texture (thicknesstex, fTexcoord).x, 0.2, 0.6);
+	// apply diffuse and specular light to the color value
+	color.xyz = clamp (intensity, 0, 1) * c + k * min (c + 0.5, 1);
+	// Beer-Lambert law for calculating the alpha value
+	color.w =  1 - exp (-2 * thickness);
 }
