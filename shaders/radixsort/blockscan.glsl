@@ -15,8 +15,8 @@ layout (std430, binding = 1) writeonly buffer BlockSums
 	uint blocksums[];
 };
 
-#define NUM_BANKS 16
-#define LOG_NUM_BANKS 4
+#define NUM_BANKS 32
+#define LOG_NUM_BANKS 5
 #define CONFLICT_FREE_OFFSET(n) ((n) >> LOG_NUM_BANKS)
 
 shared uint temp[BLOCKSIZE + CONFLICT_FREE_OFFSET(BLOCKSIZE)];
