@@ -83,7 +83,7 @@ const vec3 gridoffsets[27] = {
 };
 
 #define FOR_EACH_NEIGHBOUR(var) for (int o = 0; o < 27; o++) {\
-		int var = texture (gridtexture, gridpos + gridoffsets[o]).x;\
+		int var = cells[o];\
 		if (var == -1) continue;\
 		do { if (var != particleid) {
 #define END_FOR_EACH_NEIGHBOUR(var)	} var++; } while (texelFetch (flagtexture, var).x == 0);}
@@ -105,6 +105,12 @@ void main (void)
 		auxdata[particleid] = vec4 (1, 0, 0, 1);
 
 	vec3 grad_pi_Ci = vec3 (0, 0, 0);
+	
+	// fetch surrounding cells
+	int cells[27];
+	for (int o = 0; o < 27; o++) {
+		cells[o] = texture (gridtexture, gridpos + gridoffsets[o]).x;
+	}
 	
 	FOR_EACH_NEIGHBOUR(j)
 	{
