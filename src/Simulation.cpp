@@ -463,7 +463,7 @@ bool Simulation::Frame (void)
 
         // sort particles
         glBeginQuery (GL_TIME_ELAPSED, queries[2]);
-        radixsort.Run (21);
+        radixsort.Run (20);
         glEndQuery (GL_TIME_ELAPSED);
 
         // find grid cells
