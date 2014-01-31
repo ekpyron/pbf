@@ -4,7 +4,7 @@
 layout (early_fragment_tests) in;
 
 // output color
-layout (location = 0) out vec3 color;
+layout (location = 0) out vec4 color;
 
 // input from vertex shader
 in vec2 fTexcoord;
@@ -99,7 +99,7 @@ void main (void)
 	vec3 c = vec3 (exp (-0.5 * thickness),
 				   exp (-0.02 * thickness),
 				   exp (-0.005 * thickness));
-
 	// apply diffuse and specular light to the color value
-	color = clamp (intensity, 0, 1) * c + k * min (c + 0.5, 1);
+	color.xyz = clamp (intensity, 0, 1) * c + k * min (c + 0.5, 1);
+	color.w = min (dot (c, c), 0.9);
 }

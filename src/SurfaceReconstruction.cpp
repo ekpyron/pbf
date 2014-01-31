@@ -145,7 +145,7 @@ void SurfaceReconstruction::Render (const GLuint &particlebuffer, const GLuint &
 	glActiveTexture (GL_TEXTURE0);
 
 	// enable alpha blending
-	glBlendFunc (GL_ONE_MINUS_SRC_COLOR, GL_SRC_COLOR);
+	glBlendFunc (GL_ONE_MINUS_SRC_ALPHA, GL_SRC_ALPHA);
 
 	// render a fullscreen quad
 	glViewport (0, 0, width, height);
