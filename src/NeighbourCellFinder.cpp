@@ -63,11 +63,11 @@ NeighbourCellFinder::NeighbourCellFinder (const GLuint &_numparticles) : numpart
 
     // allocate neighbour cell buffer
     glBindBuffer (GL_SHADER_STORAGE_BUFFER, neighbourcellbuffer);
-    glBufferData (GL_SHADER_STORAGE_BUFFER, 2 * sizeof (GLuint) * 9 * numparticles, NULL, GL_DYNAMIC_DRAW);
+    glBufferData (GL_SHADER_STORAGE_BUFFER, sizeof (GLuint) * 9 * numparticles, NULL, GL_DYNAMIC_DRAW);
 
     // create neighbour cell texture
     glBindTexture (GL_TEXTURE_BUFFER, neighbourcelltexture);
-    glTexBuffer (GL_TEXTURE_BUFFER, GL_RG32I, neighbourcellbuffer);
+    glTexBuffer (GL_TEXTURE_BUFFER, GL_R32I, neighbourcellbuffer);
 
 }
 
@@ -116,7 +116,7 @@ void NeighbourCellFinder::FindNeighbourCells (const GLuint &particlebuffer)
     glActiveTexture (GL_TEXTURE0);
 
     // find neighbour cells for each particle
-    glBindImageTexture (0, neighbourcelltexture, 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RG32I);
+    glBindImageTexture (0, neighbourcelltexture, 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_R32I);
     neighbourcells.Use ();
     glDispatchCompute (numparticles >> 8, 1, 1);
     glMemoryBarrier (GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);

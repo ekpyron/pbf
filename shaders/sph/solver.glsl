@@ -54,9 +54,11 @@ vec3 gradWspiky (vec3 r)
 }
 
 #define FOR_EACH_NEIGHBOUR(var) for (int o = 0; o < 9; o++) {\
-		ivec2 data = texelFetch (neighbourcelltexture, int (particleid * 9 + o)).xy;\
-		if (data.y == 0) continue;\
-		for (int var = data.x; var < data.x + data.y; var++) {\
+		int data = texelFetch (neighbourcelltexture, int (particleid * 9 + o)).x;\
+		int entries = data >> 24;\
+		data = data & 0xFFFFFF;\
+		if (data == 0) continue;\
+		for (int var = data; var < data + entries; var++) {\
 		if (var != particleid) {
 #define END_FOR_EACH_NEIGHBOUR(var)	}}}
 

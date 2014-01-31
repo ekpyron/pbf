@@ -64,6 +64,6 @@ void main (void)
 		}
 
 		// store everything in the neighbour texture
-		imageStore (neighbourtexture, int (particleid * 9 + o), ivec4 (cell, entries, 0, 0));
+		imageStore (neighbourtexture, int (particleid * 9 + o), ivec4 (cell + (entries<<24), 0, 0, 0));
 	}
 }
