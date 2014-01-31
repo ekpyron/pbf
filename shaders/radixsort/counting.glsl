@@ -28,7 +28,11 @@ layout (std430, binding = 2) writeonly buffer BlockSum
 
 uniform uvec4 blocksumoffsets;
 
-shared uvec4 mask[BLOCKSIZE];
+#define NUM_BANKS 32
+#define LOG_NUM_BANKS 5
+#define CONFLICT_FREE_OFFSET(n) ((n) >> LOG_NUM_BANKS)
+
+shared uvec4 mask[BLOCKSIZE + CONFLICT_FREE_OFFSET(BLOCKSIZE)];
 
 const int n = BLOCKSIZE;
 
@@ -45,10 +49,16 @@ void main (void)
 	const int gid = int (gl_GlobalInvocationID.x);
 	const int lid = int (gl_LocalInvocationIndex);
 	
-	uint bits1 = bitfieldExtract (GetHash (data[2 * gid].position.xyz), bitshift, 2);
-	uint bits2 = bitfieldExtract (GetHash (data[2 * gid + 1].position.xyz), bitshift, 2);
-	mask[2 * lid] = uvec4 (equal (bits1 * uvec4 (1, 1, 1, 1), uvec4 (0, 1, 2, 3)));
-	mask[2 * lid + 1] = uvec4 (equal (bits2 * uvec4 (1, 1, 1, 1), uvec4 (0, 1, 2, 3)));
+	int ai = lid;
+	int bi = lid + (n/2);
+	
+	int bankOffsetA = CONFLICT_FREE_OFFSET(ai);
+	int bankOffsetB = CONFLICT_FREE_OFFSET(bi);
+	
+	uint bits1 = bitfieldExtract (GetHash (data[gl_WorkGroupID.x * BLOCKSIZE + lid].position.xyz), bitshift, 2);
+	uint bits2 = bitfieldExtract (GetHash (data[gl_WorkGroupID.x * BLOCKSIZE + lid + (n/2)].position.xyz), bitshift, 2);
+	mask[ai + bankOffsetA] = uvec4 (equal (bits1 * uvec4 (1, 1, 1, 1), uvec4 (0, 1, 2, 3)));
+	mask[bi + bankOffsetB] = uvec4 (equal (bits2 * uvec4 (1, 1, 1, 1), uvec4 (0, 1, 2, 3)));
 
 	int offset = 1;	
 	for (int d = n >> 1; d > 0; d >>= 1)
@@ -60,6 +70,8 @@ void main (void)
 		{
 			int ai = offset * (2 * lid + 1) - 1;
 			int bi = offset * (2 * lid + 2) - 1;
+			ai += CONFLICT_FREE_OFFSET(ai);
+			bi += CONFLICT_FREE_OFFSET(bi);
 
 			mask[bi] += mask[ai];
 		}
@@ -73,10 +85,10 @@ void main (void)
 	{
 		for (int i = 0; i < 4; i++)
 		{
-			blocksum[blocksumoffsets[i] + gl_WorkGroupID.x] = mask[n - 1][i];
+			blocksum[blocksumoffsets[i] + gl_WorkGroupID.x] = mask[n - 1 + CONFLICT_FREE_OFFSET(n - 1)][i];
 		}
 
-		mask[n - 1] = uvec4 (0, 0, 0, 0);
+		mask[n - 1 + CONFLICT_FREE_OFFSET(n - 1)] = uvec4 (0, 0, 0, 0);
 	}
 	
 	
@@ -90,6 +102,8 @@ void main (void)
 		{
 			int ai = offset * (2 * lid + 1) - 1;
 			int bi = offset * (2 * lid + 2) - 1;
+			ai += CONFLICT_FREE_OFFSET(ai);
+			bi += CONFLICT_FREE_OFFSET(bi);
 			
 			uvec4 tmp = mask[ai];
 			mask[ai] = mask[bi];
@@ -100,6 +114,6 @@ void main (void)
 	barrier ();
 	memoryBarrierShared ();
 	
-	prefixsum[2 * gid] = mask[2 * lid][bits1];
-	prefixsum[2 * gid + 1] = mask[2 * lid + 1][bits2];
+	prefixsum[gl_WorkGroupID.x * BLOCKSIZE + lid] = mask[ai + bankOffsetA][bits1];
+	prefixsum[gl_WorkGroupID.x * BLOCKSIZE + lid + (n/2)] = mask[bi + bankOffsetB][bits2];
 }

@@ -35,8 +35,8 @@ void main (void)
 	int bankOffsetA = CONFLICT_FREE_OFFSET(ai);
 	int bankOffsetB = CONFLICT_FREE_OFFSET(bi);
 	
-	temp[ai + bankOffsetA] = data[gid];
-	temp[bi + bankOffsetB] = data[gid + (n/2)];
+	temp[ai + bankOffsetA] = data[gl_WorkGroupID.x * BLOCKSIZE + lid];
+	temp[bi + bankOffsetB] = data[gl_WorkGroupID.x * BLOCKSIZE + lid + (n/2)];
 	
 	for (int d = n >> 1; d > 0; d >>= 1)
 	{
@@ -83,6 +83,6 @@ void main (void)
 	barrier ();
 	memoryBarrierShared ();
 	
-	data[gid] = temp[ai + bankOffsetA];
-	data[gid + (n/2)] = temp[bi + bankOffsetB];
+	data[gl_WorkGroupID.x * BLOCKSIZE + lid] = temp[ai + bankOffsetA];
+	data[gl_WorkGroupID.x * BLOCKSIZE + lid + (n/2)] = temp[bi + bankOffsetB];
 }
