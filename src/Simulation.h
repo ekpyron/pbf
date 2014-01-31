@@ -106,6 +106,11 @@ private:
      */
     ShaderProgram selectionprogram;
 
+    /** Selection depth shader program.
+     * Shader program for determining particle depths for selecting particles.
+     */
+    ShaderProgram selectiondepthprogram;
+
     /** Framing.
      * Takes care of rendering a framing for the scene.
      */

@@ -28,7 +28,7 @@ layout (binding = 0, std140) uniform TransformationBlock {
 void main (void)
 {
 	float r = dot (fTexcoord, fTexcoord);
-	if (r > 1)
+	if (r > 0.6)
 		discard;
 		
 	vec3 normal = vec3 (fTexcoord, -sqrt (1 - r));
@@ -41,7 +41,7 @@ void main (void)
 	// lighting calculations
 
 	// obtain light direction and distance
-	vec3 lightdir = lightpos - fPos.xyz;
+	vec3 lightdir = lightpos - (invviewmat * fPos).xyz;
 	float lightdist = length (lightdir);
 	lightdir /= lightdist;
 

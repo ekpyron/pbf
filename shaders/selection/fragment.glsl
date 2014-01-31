@@ -23,18 +23,16 @@ layout (std430, binding = 1) writeonly buffer AuxBuffer
 	vec4 auxdata[];
 };
 
-uniform bool write;
-
 void main (void)
 {
 	float r = dot (fTexcoord, fTexcoord);
-	if (r > 1)
+	if (r > 0.6)
 	{
 		discard;
 		return;
 	}
 
-	if (write && particleid != -1)
+	if (particleid != -1)
 	{
 		if (particles[particleid].oldposition.w == 0)
 		{

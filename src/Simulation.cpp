@@ -14,6 +14,10 @@ Simulation::Simulation (void) : width (0), height (0), font ("textures/font.png"
     selectionprogram.CompileShader (GL_FRAGMENT_SHADER, "shaders/selection/fragment.glsl");
     selectionprogram.Link ();
 
+    selectiondepthprogram.CompileShader (GL_VERTEX_SHADER, "shaders/selection/vertex.glsl");
+    selectiondepthprogram.CompileShader (GL_FRAGMENT_SHADER, "shaders/selection/depth.glsl");
+    selectiondepthprogram.Link ();
+
     // create buffer objects
     glGenBuffers (2, buffers);
 
@@ -158,14 +162,13 @@ void Simulation::OnMouseDown (const int &button)
 
         // clear and fill depth buffer
        	glClear (GL_DEPTH_BUFFER_BIT);
-       	selectionprogram.Use ();
-       	glProgramUniform1i (selectionprogram.get (), selectionprogram.GetUniformLocation ("write"), 0);
+       	selectiondepthprogram.Use ();
        	glBindBufferBase (GL_SHADER_STORAGE_BUFFER, 0, sph.GetParticleBuffer ());
        	glBindBufferBase (GL_SHADER_STORAGE_BUFFER, 1, sph.GetAuxiliaryBuffer ());
        	pointsprite.Render (GetNumberOfParticles());
 
        	// only render the closest sphere and write the highlighted flag.
-       	glProgramUniform1i (selectionprogram.get (), selectionprogram.GetUniformLocation ("write"), 1);
+       	selectionprogram.Use ();
        	glDepthFunc (GL_EQUAL);
        	pointsprite.Render (GetNumberOfParticles());
        	glDepthFunc (GL_LESS);
