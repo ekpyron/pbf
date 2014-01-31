@@ -2,11 +2,11 @@
 
 NeighbourCellFinder::NeighbourCellFinder (const GLuint &_numparticles) : numparticles (_numparticles)
 {
-    findcells.CompileShader (GL_COMPUTE_SHADER, "shaders/simulation/findcells.glsl",
+    findcells.CompileShader (GL_COMPUTE_SHADER, "shaders/neighbourcellfinder/findcells.glsl",
     		"shaders/simulation/include.glsl");
     findcells.Link ();
 
-    neighbourcells.CompileShader (GL_COMPUTE_SHADER, "shaders/simulation/neighbourcells.glsl",
+    neighbourcells.CompileShader (GL_COMPUTE_SHADER, "shaders/neighbourcellfinder/neighbourcells.glsl",
     		"shaders/simulation/include.glsl");
     neighbourcells.Link ();
 

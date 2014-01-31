@@ -2,10 +2,9 @@
 
 
 Simulation::Simulation (void) : width (0), height (0), font ("textures/font.png"),
-    last_fps_time (glfwGetTime ()), framecount (0), fps (0), radixsort (GetNumberOfParticles () >> 9),
-    usespheres (false), offscreen_width (1280), offscreen_height (720),
-    surfacereconstruction (false), running (false), vorticityconfinement (false),
-    neighbourcellfinder (GetNumberOfParticles())
+    last_fps_time (glfwGetTime ()), framecount (0), fps (0), running (false),
+    offscreen_width (1280), offscreen_height (720), surfacereconstruction (false),
+    sph (GetNumberOfParticles ())
 {
     // load shaders
     surroundingprogram.CompileShader (GL_VERTEX_SHADER, "shaders/surrounding/vertex.glsl");
@@ -38,23 +37,11 @@ Simulation::Simulation (void) : width (0), height (0), font ("textures/font.png"
     fsquadprog.CompileShader (GL_FRAGMENT_SHADER, "shaders/fsquad/fragment.glsl");
     fsquadprog.Link ();
 
-    predictpos.CompileShader (GL_COMPUTE_SHADER, "shaders/simulation/predictpos.glsl",
-    		"shaders/simulation/include.glsl");
-    predictpos.Link ();
-
-    solver.CompileShader (GL_COMPUTE_SHADER, "shaders/simulation/solver.glsl",
-    		"shaders/simulation/include.glsl");
-    solver.Link ();
-
-    vorticityprog.CompileShader (GL_COMPUTE_SHADER, "shaders/simulation/vorticity.glsl",
-    		"shaders/simulation/include.glsl");
-    vorticityprog.Link ();
-
     // create buffer objects
-    glGenBuffers (4, buffers);
+    glGenBuffers (2, buffers);
 
     // create query objects
-    glGenQueries (7, queries);
+    glGenQueries (1, &renderingquery);
 
     // create texture objects
     glGenTextures (4, textures);
@@ -145,19 +132,8 @@ Simulation::Simulation (void) : width (0), height (0), font ("textures/font.png"
     // Initialize particle buffer
     ResetParticleBuffer ();
 
-    // allocate lambda buffer
-    glBindBuffer (GL_SHADER_STORAGE_BUFFER, lambdabuffer);
-    glBufferData (GL_SHADER_STORAGE_BUFFER, sizeof (float) * GetNumberOfParticles (), NULL, GL_DYNAMIC_DRAW);
-
-    // allocate auxillary buffer
-    glBindBuffer (GL_SHADER_STORAGE_BUFFER, auxbuffer);
-    glBufferData (GL_SHADER_STORAGE_BUFFER, sizeof (float) * 4 * GetNumberOfParticles (), NULL, GL_DYNAMIC_DRAW);
-    // clear auxiliary buffer
-    const float auxdata[] = { 0.25, 0, 1, 1 };
-    glClearBufferData (GL_SHADER_STORAGE_BUFFER, GL_RGBA32F, GL_RGBA, GL_FLOAT, &auxdata[0]);
-
     // pass the auxiliary buffer as color buffer to the point sprite class
-    pointsprite.SetColorBuffer (auxbuffer, sizeof (float) * 4, 0);
+    pointsprite.SetColorBuffer (sph.GetAuxiliaryBuffer (), sizeof (float) * 4, 0);
 
     // update view matrix
     UpdateViewMatrix ();
@@ -171,8 +147,8 @@ Simulation::~Simulation (void)
     // cleanup
 	glDeleteTextures (4, textures);
 	glDeleteFramebuffers (5, framebuffers);
-	glDeleteQueries (7, queries);
-    glDeleteBuffers (4, buffers);
+	glDeleteQueries (1, &renderingquery);
+    glDeleteBuffers (2, buffers);
 }
 
 void Simulation::Resize (const unsigned int &_width, const unsigned int &_height)
@@ -246,8 +222,8 @@ void Simulation::OnMouseDown (const int &button)
        	glClear (GL_DEPTH_BUFFER_BIT);
        	selectionprogram.Use ();
        	glProgramUniform1i (selectionprogram.get (), selectionprogram.GetUniformLocation ("write"), 0);
-       	glBindBufferBase (GL_SHADER_STORAGE_BUFFER, 0, radixsort.GetBuffer ());
-       	glBindBufferBase (GL_SHADER_STORAGE_BUFFER, 1, auxbuffer);
+       	glBindBufferBase (GL_SHADER_STORAGE_BUFFER, 0, sph.GetAuxiliaryBuffer ());
+       	glBindBufferBase (GL_SHADER_STORAGE_BUFFER, 1, sph.GetParticleBuffer ());
        	pointsprite.Render (GetNumberOfParticles());
 
        	// only render the closest sphere and write the highlighted flag.
@@ -309,10 +285,10 @@ void Simulation::ResetParticleBuffer (void)
         }
     }
     //  update the particle buffer
-    glBindBuffer (GL_SHADER_STORAGE_BUFFER, radixsort.GetBuffer ());
+    glBindBuffer (GL_SHADER_STORAGE_BUFFER, sph.GetParticleBuffer ());
     glBufferSubData (GL_SHADER_STORAGE_BUFFER, 0, sizeof (particleinfo_t) * particles.size (), &particles[0]);
     // clear auxiliary buffer
-    glBindBuffer (GL_SHADER_STORAGE_BUFFER, auxbuffer);
+    glBindBuffer (GL_SHADER_STORAGE_BUFFER, sph.GetAuxiliaryBuffer ());
     const float auxdata[] = { 0.25, 0, 1, 1 };
     glClearBufferData (GL_SHADER_STORAGE_BUFFER, GL_RGBA32F, GL_RGBA, GL_FLOAT, &auxdata[0]);
 }
@@ -331,7 +307,7 @@ void Simulation::OnKeyUp (int key)
     	break;
     // toggle vorticity confinement
     case GLFW_KEY_V:
-    	vorticityconfinement = !vorticityconfinement;
+    	sph.SetVorticityConfinementEnabled (!sph.IsVorticityConfinementEnabled ());
     	break;
     // reset to initial particle configuration
     case GLFW_KEY_TAB:
@@ -339,22 +315,17 @@ void Simulation::OnKeyUp (int key)
         break;
     // output the queried time frames spent in the
     // different simulation stages
-    case GLFW_KEY_Q:
+    case GLFW_KEY_T:
     {
-    	for (int i = 0; i < 7; i++)
+    	sph.OutputTiming ();
+    	if (glIsQuery (renderingquery))
     	{
-    		if (!glIsQuery (queries[i])) continue;
     		GLint64 v;
-    		glGetQueryObjecti64v (queries[i], GL_QUERY_RESULT, &v);
-
-    		std::cout << "QUERY " << i << ": " << double (v) / 1000000 << std::endl;
+    		glGetQueryObjecti64v (renderingquery, GL_QUERY_RESULT, &v);
+    		std::cout << "Rendering: " << double (v) / 1000000.0 << " ms" << std::endl;
     	}
     	break;
     }
-    // switch between spheres and icosahedra
-    case GLFW_KEY_S:
-    	usespheres = !usespheres;
-    	break;
     }
 }
 
@@ -371,7 +342,7 @@ bool Simulation::Frame (void)
     }
 
     // pass the position buffer to the point sprite class
-    pointsprite.SetPositionBuffer (radixsort.GetBuffer (), sizeof (particleinfo_t), 0);
+    pointsprite.SetPositionBuffer (sph.GetParticleBuffer (), sizeof (particleinfo_t), 0);
 
     // specify the viewport size
     glViewport (0, 0, width, height);
@@ -386,77 +357,19 @@ bool Simulation::Frame (void)
     // run simulation step 1
     if (running)
     {
-    	glBeginQuery (GL_TIME_ELAPSED, queries[0]);
-
-        // clear lambda buffer
-        glBindBuffer (GL_SHADER_STORAGE_BUFFER, lambdabuffer);
-        glClearBufferData (GL_SHADER_STORAGE_BUFFER, GL_R32F, GL_RED, GL_FLOAT, NULL);
-
-        // clear auxiliary buffer
-        glBindBuffer (GL_SHADER_STORAGE_BUFFER, auxbuffer);
-        const float auxdata[] = { 0.25, 0, 1, 1 };
-        glClearBufferData (GL_SHADER_STORAGE_BUFFER, GL_RGBA32F, GL_RGBA, GL_FLOAT, &auxdata[0]);
-        glMemoryBarrier (GL_BUFFER_UPDATE_BARRIER_BIT);
-        glEndQuery (GL_TIME_ELAPSED);
-
-        // predict positions
-        glBeginQuery (GL_TIME_ELAPSED, queries[1]);
-        glBindBufferBase (GL_SHADER_STORAGE_BUFFER, 0, radixsort.GetBuffer ());
-        predictpos.Use ();
-        glDispatchCompute (GetNumberOfParticles () >> 8, 1, 1);
-        glMemoryBarrier (GL_SHADER_STORAGE_BARRIER_BIT);
-        glEndQuery (GL_TIME_ELAPSED);
-
-        // sort particles
-        glBeginQuery (GL_TIME_ELAPSED, queries[2]);
-        radixsort.Run (20);
-        glEndQuery (GL_TIME_ELAPSED);
-
-        // find neighbour cells
-        glBeginQuery (GL_TIME_ELAPSED, queries[3]);
-        neighbourcellfinder.FindNeighbourCells (radixsort.GetBuffer ());
-        glEndQuery (GL_TIME_ELAPSED);
-
-        // restore/set buffer bindings
-        glBindBufferBase (GL_SHADER_STORAGE_BUFFER, 0, radixsort.GetBuffer ());
-        glBindBufferBase (GL_SHADER_STORAGE_BUFFER, 1, lambdabuffer);
-        glBindBufferBase (GL_SHADER_STORAGE_BUFFER, 2, auxbuffer);
-
-        // use neighbour cell texture as input
-        glBindTexture (GL_TEXTURE_BUFFER, neighbourcellfinder.GetResult ());
-
-        // solver iteration
-        glBeginQuery (GL_TIME_ELAPSED, queries[4]);
-        solver.Use ();
-        for (auto i = 0; i < 5; i++)
-        {
-        	glDispatchCompute (GetNumberOfParticles () >> 8, 1, 1);
-        	glMemoryBarrier (GL_SHADER_STORAGE_BARRIER_BIT);
-        }
-        glEndQuery (GL_TIME_ELAPSED);
-
-        // calculate vorticity
-        if (vorticityconfinement)
-        {
-        	glBeginQuery (GL_TIME_ELAPSED, queries[5]);
-        	vorticityprog.Use ();
-        	glDispatchCompute (GetNumberOfParticles() >> 8, 1, 1);
-        	glEndQuery (GL_TIME_ELAPSED);
-        }
+    	sph.Run ();
     }
 
+	glBeginQuery (GL_TIME_ELAPSED, renderingquery);
     if (!surfacereconstruction)
     {
     	// render icosahedra/spheres
-    	glBeginQuery (GL_TIME_ELAPSED, queries[6]);
     	particleprogram.Use ();
     	pointsprite.Render (GetNumberOfParticles ());
-    	glEndQuery (GL_TIME_ELAPSED);
     }
     else
     {
     	// render point sprites, storing depth
-    	glBeginQuery (GL_TIME_ELAPSED, queries[6]);
     	glBindFramebuffer (GL_FRAMEBUFFER, depthfb);
     	glViewport (0, 0, offscreen_width, offscreen_height);
     	glClear (GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
@@ -515,8 +428,9 @@ bool Simulation::Frame (void)
     	fullscreenquad.Render ();
 
     	glDisable (GL_BLEND);
-    	glEndQuery (GL_TIME_ELAPSED);
     }
+	glEndQuery (GL_TIME_ELAPSED);
+
 
     // determine the framerate every second
     framecount++;

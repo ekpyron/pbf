@@ -64,7 +64,7 @@ RadixSort::~RadixSort (void)
 	glDeleteBuffers (3, buffers);
 }
 
-GLuint RadixSort::GetBuffer (void)
+GLuint RadixSort::GetBuffer (void) const
 {
 	return buffer;
 }

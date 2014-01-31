@@ -6,10 +6,9 @@
 #include "ShaderProgram.h"
 #include "Framing.h"
 #include "Font.h"
-#include "RadixSort.h"
 #include "FullscreenQuad.h"
 #include "PointSprite.h"
-#include "NeighbourCellFinder.h"
+#include "SPH.h"
 
 /** Simulation class.
  * This is the main class which takes care of the whole simulation.
@@ -116,17 +115,6 @@ private:
      */
     ShaderProgram selectionprogram;
 
-    /** Simulation step shader program.
-     * Shader program for the simulation step that predicts the new position
-     * of all particles.
-     */
-    ShaderProgram predictpos;
-
-    /** Simulation step shader program.
-     * Shader program for the simulation step that performs the solver iteration for each particle.
-     */
-    ShaderProgram solver;
-
     /** Fullscreen quad shader program.
      * Shader program for rendering the fullscreen quad.
      */
@@ -141,11 +129,6 @@ private:
      * Shader program for storing the particle thickness.
      */
     ShaderProgram thicknessprog;
-
-    /** Vorticity program.
-     * Shader program for calculating particle vorticity.
-     */
-    ShaderProgram vorticityprog;
 
     /** Depth blur direction uniform location.
      * Uniform location for the uniform variable storing the direction of the depth blur.
@@ -162,16 +145,10 @@ private:
      */
     PointSprite pointsprite;
 
-    /** Neighbour Cell finder.
-     * Takes care of finding neighbour cells for the particles.
+    /** SPH.
+     * Takes care of the SPH simulation.
      */
-    NeighbourCellFinder neighbourcellfinder;
-
-    /** Sphere flag.
-     * Flag indicating whether to use spheres or icosahedra for
-     * particle rendering.
-     */
-    bool usespheres;
+    SPH sph;
 
     /** Running flag
      * Flag indicating whether the simulation is running.
@@ -185,23 +162,8 @@ private:
      */
     bool surfacereconstruction;
 
-    /** Vorticity confinement flag.
-     * flag indicating whether vorticity confinement should be used.
-     */
-    bool vorticityconfinement;
-
-    /** Radix sort.
-     * Takes care of sorting the particle list.
-     * The contained buffer object is used as particle buffer.
-     */
-    RadixSort radixsort;
-
     union {
         struct {
-            /** Lambda buffer.
-             * Buffer in which the specific scalar values are stored during the simulation steps.
-             */
-            GLuint lambdabuffer;
             /** Transformation uniform buffer.
              * Buffer object to store the projection and view matrix.
              */
@@ -212,17 +174,12 @@ private:
              */
             GLuint lightingbuffer;
 
-            /** Auxiliary buffer.
-             * Buffer in which auxiliary data used for debugging purposes can be stored.
-             */
-            GLuint auxbuffer;
-
         };
         /** Buffer objects.
          * The buffer objects are stored in a union, so that it is possible
          * to create/delete all buffer objects with a single OpenGL call.
          */
-        GLuint buffers[4];
+        GLuint buffers[2];
     };
 
     union {
@@ -289,11 +246,10 @@ private:
     	GLuint textures[4];
     };
 
-    /** Queries.
-     * Queries used to determine the time spent in the different stages
-     * of the algorithm.
-     */
-    GLuint queries[7];
+	/** Rendering query object.
+	 * Query object to record the time spent in the rendering phase.
+	 */
+    GLuint renderingquery;
 
     /** Fullscreen quad.
      * Renders a fullscreen quad.

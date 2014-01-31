@@ -9,7 +9,7 @@ class RadixSort
 public:
 	 RadixSort (GLuint numblocks);
 	 ~RadixSort (void);
-	 GLuint GetBuffer (void);
+	 GLuint GetBuffer (void) const;
 	 void Run (unsigned int numbits);
 private:
 	 void SortBits (int bits);
