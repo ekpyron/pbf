@@ -29,12 +29,9 @@ void main (void)
 	}
 
 	ivec3 gridpos = ivec3 (clamp (particles[gid].position, vec3 (0, 0, 0), GRID_SIZE));
-	uint hash = gridpos.y * GRID_WIDTH * GRID_DEPTH + gridpos.z * GRID_WIDTH + gridpos.x;
-	
 	ivec3 gridpos2 = ivec3 (clamp (particles[gid - 1].position, vec3 (0, 0, 0), GRID_SIZE));
-	uint hash2 = gridpos2.y * GRID_WIDTH * GRID_DEPTH + gridpos2.z * GRID_WIDTH + gridpos2.x;
 	
-	if (hash != hash2)
+	if (gridpos != gridpos2)
 	{
 		imageStore (gridtexture, gridpos, ivec4 (gid, 0, 0, 0));
 		imageStore (gridendtexture, gridpos2, ivec4 (gid, 0, 0, 0));
