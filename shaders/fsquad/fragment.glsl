@@ -95,11 +95,11 @@ void main (void)
 	k *= 0.7 + (1 - 0.7) * pow (1 - cos_theta, 5);
 	
 	// Beer-Lambert law for coloring
-	float thickness = texture (thicknesstex, fTexcoord).x * 200;
+	float thickness = texture (thicknesstex, fTexcoord).x * 1000;
 	vec3 c = vec3 (exp (-0.5 * thickness),
 				   exp (-0.02 * thickness),
 				   exp (-0.005 * thickness));
 	// apply diffuse and specular light to the color value
 	color.xyz = clamp (intensity, 0, 1) * c + k * min (c + 0.5, 1);
-	color.w = min (dot (c, c), 0.9);
+	color.w = min (dot (c, c), 0.8);
 }

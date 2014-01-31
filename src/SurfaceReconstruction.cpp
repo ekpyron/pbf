@@ -31,10 +31,10 @@ SurfaceReconstruction::SurfaceReconstruction (void)
     depthblurdir = depthblurprog.GetUniformLocation ("blurdir");
 
 	// create framebuffer objects
-	glGenFramebuffers (4, framebuffers);
+	glGenFramebuffers (5, framebuffers);
 
 	// create texture objects
-	glGenTextures (3, textures);
+	glGenTextures (4, textures);
 
     // create particle depth texture
     glBindTexture (GL_TEXTURE_2D, depthtexture);
@@ -58,9 +58,21 @@ SurfaceReconstruction::SurfaceReconstruction (void)
     glBindTexture (GL_TEXTURE_2D, thicknesstexture);
     glTexImage2D (GL_TEXTURE_2D, 0, GL_R32F, 512, 512, 0, GL_RED, GL_FLOAT, NULL);
     glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-    glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+    glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
     glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
     glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+
+    // create particle thickness blur texture
+    glBindTexture (GL_TEXTURE_2D, thicknessblurtexture);
+    glTexImage2D (GL_TEXTURE_2D, 0, GL_R32F, 512, 512, 0, GL_RED, GL_FLOAT, NULL);
+    glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+
+    glGenBuffers (1, &thicknessblurweights);
+    glBindBuffer (GL_SHADER_STORAGE_BUFFER, thicknessblurweights);
+    Blur::ComputeWeights (GL_SHADER_STORAGE_BUFFER, 10.0f);
 
     // setup depth framebuffer
     glBindFramebuffer (GL_FRAMEBUFFER, depthfb);
@@ -69,6 +81,10 @@ SurfaceReconstruction::SurfaceReconstruction (void)
     // setup thickness framebuffer
     glBindFramebuffer (GL_FRAMEBUFFER, thicknessfb);
     glFramebufferTexture2D (GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, thicknesstexture, 0);
+
+    // setup thickness blur framebuffer
+    glBindFramebuffer (GL_FRAMEBUFFER, thicknessblurfb);
+    glFramebufferTexture2D (GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, thicknessblurtexture, 0);
 
     // setup depth horizontal blur framebuffer
     glBindFramebuffer (GL_FRAMEBUFFER, depthhblurfb);
@@ -132,9 +148,19 @@ void SurfaceReconstruction::Render (const GLuint &particlebuffer, const GLuint &
 	thicknessprog.Use ();
 	glViewport (0, 0, 512, 512);
 	pointsprite.Render (numparticles);
-	glEnable (GL_DEPTH_TEST);
 
+	// blur thickness texture
+	glDisable (GL_BLEND);
+	glBindFramebuffer (GL_FRAMEBUFFER, thicknessblurfb);
+	glBindTexture (GL_TEXTURE_2D, thicknesstexture);
+	thicknessblur.Apply (glm::vec2 (1.0f / 512.0f, 0), thicknessblurweights);
+	glBindFramebuffer (GL_FRAMEBUFFER, thicknessfb);
+	glBindTexture (GL_TEXTURE_2D, thicknessblurtexture);
+	thicknessblur.Apply (glm::vec2 (0, 1.0f / 512.0f), thicknessblurweights);
+	glEnable (GL_BLEND);
 	glBindFramebuffer (GL_FRAMEBUFFER, 0);
+
+	glEnable (GL_DEPTH_TEST);
 
 	// use depth texture as input
 	glBindTexture (GL_TEXTURE_2D, depthtexture);
@@ -151,6 +177,4 @@ void SurfaceReconstruction::Render (const GLuint &particlebuffer, const GLuint &
 	glViewport (0, 0, width, height);
 	fsquadprog.Use ();
 	fullscreenquad.Render ();
-
-	glDisable (GL_BLEND);
 }

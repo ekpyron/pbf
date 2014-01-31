@@ -5,6 +5,7 @@
 #include "PointSprite.h"
 #include "ShaderProgram.h"
 #include "FullscreenQuad.h"
+#include "Blur.h"
 
 class SurfaceReconstruction
 {
@@ -44,6 +45,16 @@ private:
      */
     PointSprite pointsprite;
 
+    /** Thickness blur.
+     * Takes care of blurring the thickness image.
+     */
+    Blur thicknessblur;
+
+	/** Thickness blur weights.
+	 * Weights used for blurring the thickness texture.
+	 */
+	GLuint thicknessblurweights;
+
     union {
     	struct {
     		/** Depth framebuffer.
@@ -62,12 +73,16 @@ private:
     		 * Framebuffer object used for rendering to the thickness texture.
     		 */
     		GLuint thicknessfb;
+    		/** Thickness blur framebuffer.
+    		 * Framebuffer object used for blurring the thickness texture.
+    		 */
+    		GLuint thicknessblurfb;
     	};
     	/** Framebuffer objects.
     	 * The framebuffer objects are stored in a union, so that it is possible
     	 * to create/delete all texture objects with a single OpenGL call.
     	 */
-    	GLuint framebuffers[4];
+    	GLuint framebuffers[5];
     };
 
     union {
@@ -85,12 +100,16 @@ private:
              * Texture in which the water thickness is stored.
              */
             GLuint thicknesstexture;
+            /** Thickness blur texture.
+             * Temporary texture used for blurring the water thickness.
+             */
+            GLuint thicknessblurtexture;
     	};
     	/** Texture objects.
     	 * The texture objects are stored in a union, so that it is possible
     	 * to create/delete all texture objects with a single OpenGL call.
     	 */
-    	GLuint textures[3];
+    	GLuint textures[4];
     };
 
     /** Fullscreen quad.
