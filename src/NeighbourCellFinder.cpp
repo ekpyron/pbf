@@ -11,7 +11,7 @@ NeighbourCellFinder::NeighbourCellFinder (const GLuint &_numparticles) : numpart
     neighbourcells.Link ();
 
 	// create buffer objects
-	glGenBuffers (3, buffers);
+	glGenBuffers (2, buffers);
 
 	// create texture objects
 	glGenTextures (3, textures);
@@ -52,13 +52,14 @@ NeighbourCellFinder::NeighbourCellFinder (const GLuint &_numparticles) : numpart
     	glClearTexImage (gridtexture, 0, GL_RED_INTEGER, GL_INT, &v);
     }
 
-    // allocate flag buffer
-    glBindBuffer (GL_SHADER_STORAGE_BUFFER, flagbuffer);
-    glBufferData (GL_SHADER_STORAGE_BUFFER, sizeof (GLbyte) * (numparticles + 1), NULL, GL_DYNAMIC_DRAW);
-
-    // create flag texture
-    glBindTexture (GL_TEXTURE_BUFFER, flagtexture);
-    glTexBuffer (GL_TEXTURE_BUFFER, GL_R8I, flagbuffer);
+    // allocate grid end texture
+    glBindTexture (GL_TEXTURE_3D, gridendtexture);
+    glTexImage3D (GL_TEXTURE_3D, 0, GL_R32I, 128, 64, 128, 0, GL_RED_INTEGER, GL_INT, NULL);
+    glTexParameteri (GL_TEXTURE_3D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    glTexParameteri (GL_TEXTURE_3D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri (GL_TEXTURE_3D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri (GL_TEXTURE_3D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    glTexParameteri (GL_TEXTURE_3D, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
 
     // allocate neighbour cell buffer
     glBindBuffer (GL_SHADER_STORAGE_BUFFER, neighbourcellbuffer);
@@ -74,7 +75,7 @@ NeighbourCellFinder::~NeighbourCellFinder (void)
 {
 	// cleanup
 	glDeleteTextures (3, textures);
-	glDeleteBuffers (3, buffers);
+	glDeleteBuffers (2, buffers);
 }
 
 const GLuint &NeighbourCellFinder::GetResult (void) const
@@ -101,8 +102,8 @@ void NeighbourCellFinder::FindNeighbourCells (const GLuint &particlebuffer)
     glBindBufferBase (GL_SHADER_STORAGE_BUFFER, 0, particlebuffer);
 
     // find grid cells
-    glBindImageTexture (0, flagtexture, 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_R8I);
-    glBindImageTexture (1, gridtexture, 0, GL_TRUE, 0, GL_WRITE_ONLY, GL_R32I);
+    glBindImageTexture (0, gridtexture, 0, GL_TRUE, 0, GL_WRITE_ONLY, GL_R32I);
+    glBindImageTexture (1, gridendtexture, 0, GL_TRUE, 0, GL_WRITE_ONLY, GL_R32I);
     findcells.Use ();
     glMemoryBarrier (GL_BUFFER_UPDATE_BARRIER_BIT);
     glDispatchCompute (numparticles >> 8, 1, 1);
@@ -111,7 +112,7 @@ void NeighbourCellFinder::FindNeighbourCells (const GLuint &particlebuffer)
     // grid and flag textures as input
     glBindTexture (GL_TEXTURE_3D, gridtexture);
     glActiveTexture (GL_TEXTURE1);
-    glBindTexture (GL_TEXTURE_BUFFER, flagtexture);
+    glBindTexture (GL_TEXTURE_3D, gridendtexture);
     glActiveTexture (GL_TEXTURE0);
 
     // find neighbour cells for each particle

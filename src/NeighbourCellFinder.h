@@ -47,11 +47,6 @@ private:
 
     union {
         struct {
-            /** Flag buffer.
-             * Buffer in which a flag is stored that indicates the grid cell borders in the particle buffer.
-             */
-            GLuint flagbuffer;
-
             /** Grid texture clear buffer.
              * Buffer used to clear the grid texture;
              */
@@ -67,20 +62,20 @@ private:
          * The buffer objects are stored in a union, so that it is possible
          * to create/delete all buffer objects with a single OpenGL call.
          */
-        GLuint buffers[3];
+        GLuint buffers[2];
     };
 
     union {
     	struct {
-    		/** Flag texture.
-    		 * Texture through which the flag buffer is accessed.
-    		 */
-    		GLuint flagtexture;
-
     		/** Grid texture.
-             * Texture in which the starting particle for each grid is stored.
+             * Texture in which the offset of the first particle for each grid is stored.
              */
             GLuint gridtexture;
+
+    		/** Grid end texture.
+             * Texture in which the offset of the last particle for each grid is stored.
+             */
+    		GLuint gridendtexture;
 
             /** Neighbour cell texture.
              * Texture through which the neighbour cell buffer is accessed.

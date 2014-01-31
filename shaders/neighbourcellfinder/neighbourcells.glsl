@@ -15,7 +15,7 @@ layout (std430, binding = 0) readonly buffer ParticleBuffer
 };
 
 layout (binding = 0) uniform isampler3D gridtexture;
-layout (binding = 1) uniform isamplerBuffer flagtexture;
+layout (binding = 1) uniform isampler3D gridendtexture;
 
 layout (binding = 0, rg32i) uniform writeonly iimageBuffer neighbourtexture;
 
@@ -58,13 +58,8 @@ void main (void)
 			// if the cell exists
 			if (c != -1)
 			{
-				numcells++; // increment cell count
-				// and count the entries in the cell
-				do
-				{
-					entries++;
-					c++;
-				} while (texelFetch (flagtexture, c).x == 0);
+				int end = texture (gridendtexture, gridpos + gridoffsets[o] + j * gridxoffset).x;
+				entries += end - c;
 			}
 		}
 
