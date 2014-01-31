@@ -290,9 +290,7 @@ bool Simulation::Frame (void)
 
     // run simulation step 1
     if (running)
-    {
     	sph.Run ();
-    }
 
 	glBeginQuery (GL_TIME_ELAPSED, renderingquery);
     if (!usesurfacereconstruction)

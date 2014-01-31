@@ -149,7 +149,6 @@ private:
              * Buffer object to store the lighting parameters.
              */
             GLuint lightingbuffer;
-
         };
         /** Buffer objects.
          * The buffer objects are stored in a union, so that it is possible
