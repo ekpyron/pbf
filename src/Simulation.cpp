@@ -4,7 +4,8 @@
 Simulation::Simulation (void) : width (0), height (0), font ("textures/font.png"),
     last_fps_time (glfwGetTime ()), framecount (0), fps (0), radixsort (GetNumberOfParticles () >> 9),
     usespheres (false), offscreen_width (1280), offscreen_height (720),
-    surfacereconstruction (false), running (false), vorticityconfinement (false)
+    surfacereconstruction (false), running (false), vorticityconfinement (false),
+    neighbourcellfinder (GetNumberOfParticles())
 {
     // load shaders
     surroundingprogram.CompileShader (GL_VERTEX_SHADER, "shaders/surrounding/vertex.glsl");
@@ -41,10 +42,6 @@ Simulation::Simulation (void) : width (0), height (0), font ("textures/font.png"
     		"shaders/simulation/include.glsl");
     predictpos.Link ();
 
-    findcells.CompileShader (GL_COMPUTE_SHADER, "shaders/simulation/findcells.glsl",
-    		"shaders/simulation/include.glsl");
-    findcells.Link ();
-
     solver.CompileShader (GL_COMPUTE_SHADER, "shaders/simulation/solver.glsl",
     		"shaders/simulation/include.glsl");
     solver.Link ();
@@ -53,18 +50,14 @@ Simulation::Simulation (void) : width (0), height (0), font ("textures/font.png"
     		"shaders/simulation/include.glsl");
     vorticityprog.Link ();
 
-    neighbourcells.CompileShader (GL_COMPUTE_SHADER, "shaders/simulation/neighbourcells.glsl",
-    		"shaders/simulation/include.glsl");
-    neighbourcells.Link ();
-
     // create buffer objects
-    glGenBuffers (7, buffers);
+    glGenBuffers (4, buffers);
 
     // create query objects
     glGenQueries (7, queries);
 
     // create texture objects
-    glGenTextures (7, textures);
+    glGenTextures (4, textures);
 
     // create selection depth texture
     glBindTexture (GL_TEXTURE_2D, selectiondepthtexture);
@@ -156,55 +149,6 @@ Simulation::Simulation (void) : width (0), height (0), font ("textures/font.png"
     glBindBuffer (GL_SHADER_STORAGE_BUFFER, lambdabuffer);
     glBufferData (GL_SHADER_STORAGE_BUFFER, sizeof (float) * GetNumberOfParticles (), NULL, GL_DYNAMIC_DRAW);
 
-    // allocate grid clear buffer
-    if (!GL_ARB_clear_texture)
-    {
-    	glBindBuffer (GL_PIXEL_UNPACK_BUFFER, gridclearbuffer);
-    	glBufferData (GL_PIXEL_UNPACK_BUFFER, sizeof (GLint) * 128 * 64 * 128, NULL, GL_DYNAMIC_DRAW);
-    	{
-    		GLint v = -1;
-    		glClearBufferData (GL_PIXEL_UNPACK_BUFFER, GL_R32I, GL_RED_INTEGER, GL_INT, &v);
-    	}
-    }
-
-    glBindTexture (GL_TEXTURE_3D, gridtexture);
-    glTexImage3D (GL_TEXTURE_3D, 0, GL_R32I, 128, 64, 128, 0, GL_RED_INTEGER, GL_INT, NULL);
-    glTexParameteri (GL_TEXTURE_3D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-    glTexParameteri (GL_TEXTURE_3D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-    glTexParameteri (GL_TEXTURE_3D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
-    glTexParameteri (GL_TEXTURE_3D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
-    glTexParameteri (GL_TEXTURE_3D, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_BORDER);
-    {
-    	GLint border[] = { -1, -1, -1, -1 };
-    	glTexParameterIiv (GL_TEXTURE_3D, GL_TEXTURE_BORDER_COLOR, border);
-    }
-
-    if (!GL_ARB_clear_texture)
-    {
-    	glBindBuffer (GL_PIXEL_UNPACK_BUFFER, 0);
-    }
-    else
-    {
-    	GLint v = -1;
-    	glClearTexImage (gridtexture, 0, GL_RED_INTEGER, GL_INT, &v);
-    }
-
-    // allocate flag buffer
-    glBindBuffer (GL_SHADER_STORAGE_BUFFER, flagbuffer);
-    glBufferData (GL_SHADER_STORAGE_BUFFER, sizeof (GLbyte) * (GetNumberOfParticles () + 1), NULL, GL_DYNAMIC_DRAW);
-
-    // create flag texture
-    glBindTexture (GL_TEXTURE_BUFFER, flagtexture);
-    glTexBuffer (GL_TEXTURE_BUFFER, GL_R8I, flagbuffer);
-
-    // allocate neighbour cell buffer
-    glBindBuffer (GL_SHADER_STORAGE_BUFFER, neighbourcellbuffer);
-    glBufferData (GL_SHADER_STORAGE_BUFFER, 2 * sizeof (GLuint) * 9 * GetNumberOfParticles (), NULL, GL_DYNAMIC_DRAW);
-
-    // create neighbour cell texture
-    glBindTexture (GL_TEXTURE_BUFFER, neighbourcelltexture);
-    glTexBuffer (GL_TEXTURE_BUFFER, GL_RG32I, neighbourcellbuffer);
-
     // allocate auxillary buffer
     glBindBuffer (GL_SHADER_STORAGE_BUFFER, auxbuffer);
     glBufferData (GL_SHADER_STORAGE_BUFFER, sizeof (float) * 4 * GetNumberOfParticles (), NULL, GL_DYNAMIC_DRAW);
@@ -225,10 +169,10 @@ Simulation::Simulation (void) : width (0), height (0), font ("textures/font.png"
 Simulation::~Simulation (void)
 {
     // cleanup
-	glDeleteTextures (7, textures);
+	glDeleteTextures (4, textures);
 	glDeleteFramebuffers (5, framebuffers);
 	glDeleteQueries (7, queries);
-    glDeleteBuffers (7, buffers);
+    glDeleteBuffers (4, buffers);
 }
 
 void Simulation::Resize (const unsigned int &_width, const unsigned int &_height)
@@ -411,20 +355,6 @@ void Simulation::OnKeyUp (int key)
     case GLFW_KEY_S:
     	usespheres = !usespheres;
     	break;
-    // output the flag buffer indicating the number of particles
-    // in each grid cell
-    case GLFW_KEY_F:
-    {
-    	glBindBuffer (GL_SHADER_STORAGE_BUFFER, flagbuffer);
-    	GLubyte *data = reinterpret_cast<GLubyte*> (glMapBuffer (GL_SHADER_STORAGE_BUFFER, GL_READ_ONLY));
-    	for (int i = 0; i < GetNumberOfParticles() + 1; i++)
-    	{
-    		std::cout << int (data[i]) << " ";
-    	}
-    	std::cout << std::endl;
-    	glUnmapBuffer (GL_SHADER_STORAGE_BUFFER);
-    	break;
-    }
     }
 }
 
@@ -457,19 +387,6 @@ bool Simulation::Frame (void)
     if (running)
     {
     	glBeginQuery (GL_TIME_ELAPSED, queries[0]);
-        // clear grid buffer
-    	if (GL_ARB_clear_texture)
-    	{
-    		GLint v = -1;
-    		glClearTexImage (gridtexture, 0, GL_RED_INTEGER, GL_INT, &v);
-    	}
-    	else
-    	{
-        	glBindTexture (GL_TEXTURE_3D, gridtexture);
-    		glBindBuffer (GL_PIXEL_UNPACK_BUFFER, gridclearbuffer);
-    		glTexSubImage3D (GL_TEXTURE_3D, 0, 0, 0, 0, 128, 64, 128, GL_RED_INTEGER, GL_INT, NULL);
-    		glBindBuffer (GL_PIXEL_UNPACK_BUFFER, 0);
-    	}
 
         // clear lambda buffer
         glBindBuffer (GL_SHADER_STORAGE_BUFFER, lambdabuffer);
@@ -485,7 +402,6 @@ bool Simulation::Frame (void)
         // predict positions
         glBeginQuery (GL_TIME_ELAPSED, queries[1]);
         glBindBufferBase (GL_SHADER_STORAGE_BUFFER, 0, radixsort.GetBuffer ());
-        glBindBufferBase (GL_SHADER_STORAGE_BUFFER, 1, auxbuffer);
         predictpos.Use ();
         glDispatchCompute (GetNumberOfParticles () >> 8, 1, 1);
         glMemoryBarrier (GL_SHADER_STORAGE_BARRIER_BIT);
@@ -496,38 +412,23 @@ bool Simulation::Frame (void)
         radixsort.Run (20);
         glEndQuery (GL_TIME_ELAPSED);
 
-        // find grid cells
+        // find neighbour cells
         glBeginQuery (GL_TIME_ELAPSED, queries[3]);
+        neighbourcellfinder.FindNeighbourCells (radixsort.GetBuffer ());
+        glEndQuery (GL_TIME_ELAPSED);
+
+        // restore/set buffer bindings
         glBindBufferBase (GL_SHADER_STORAGE_BUFFER, 0, radixsort.GetBuffer ());
         glBindBufferBase (GL_SHADER_STORAGE_BUFFER, 1, lambdabuffer);
         glBindBufferBase (GL_SHADER_STORAGE_BUFFER, 2, auxbuffer);
-        glBindImageTexture (0, flagtexture, 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_R8I);
-        glBindImageTexture (1, gridtexture, 0, GL_TRUE, 0, GL_WRITE_ONLY, GL_R32I);
-        findcells.Use ();
-        glMemoryBarrier (GL_BUFFER_UPDATE_BARRIER_BIT);
-        glDispatchCompute (GetNumberOfParticles () >> 8, 1, 1);
-        glMemoryBarrier (GL_SHADER_STORAGE_BARRIER_BIT | GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
-
-        // grid and flag textures as input
-        glBindTexture (GL_TEXTURE_3D, gridtexture);
-        glActiveTexture (GL_TEXTURE1);
-        glBindTexture (GL_TEXTURE_BUFFER, flagtexture);
-        glActiveTexture (GL_TEXTURE0);
-
-        // find neighbour cells for each particle
-        glBindImageTexture (0, neighbourcelltexture, 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RG32I);
-        neighbourcells.Use ();
-        glDispatchCompute (GetNumberOfParticles() >> 8, 1, 1);
-        glMemoryBarrier (GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
-        glEndQuery (GL_TIME_ELAPSED);
 
         // use neighbour cell texture as input
-        glBindTexture (GL_TEXTURE_BUFFER, neighbourcelltexture);
+        glBindTexture (GL_TEXTURE_BUFFER, neighbourcellfinder.GetResult ());
 
         // solver iteration
         glBeginQuery (GL_TIME_ELAPSED, queries[4]);
         solver.Use ();
-        for (auto i = 0; i < 3; i++)
+        for (auto i = 0; i < 5; i++)
         {
         	glDispatchCompute (GetNumberOfParticles () >> 8, 1, 1);
         	glMemoryBarrier (GL_SHADER_STORAGE_BARRIER_BIT);

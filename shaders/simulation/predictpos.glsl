@@ -14,11 +14,6 @@ layout (std430, binding = 0) buffer ParticleBuffer
 	ParticleInfo particles[];
 };
 
-layout (std430, binding = 1) writeonly buffer AuxBuffer
-{
-	vec4 auxdata[];
-};
-
 void main (void)
 {
 	uint particleid;

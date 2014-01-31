@@ -9,6 +9,7 @@
 #include "RadixSort.h"
 #include "FullscreenQuad.h"
 #include "PointSprite.h"
+#include "NeighbourCellFinder.h"
 
 /** Simulation class.
  * This is the main class which takes care of the whole simulation.
@@ -122,12 +123,6 @@ private:
     ShaderProgram predictpos;
 
     /** Simulation step shader program.
-     * Shader program for the simulation step that finds grid cells in the
-     * sorted particle array.
-     */
-    ShaderProgram findcells;
-
-    /** Simulation step shader program.
      * Shader program for the simulation step that performs the solver iteration for each particle.
      */
     ShaderProgram solver;
@@ -152,11 +147,6 @@ private:
      */
     ShaderProgram vorticityprog;
 
-    /** Neighbour cell program.
-     * Shader program for finding neighbouring cells for a particle.
-     */
-    ShaderProgram neighbourcells;
-
     /** Depth blur direction uniform location.
      * Uniform location for the uniform variable storing the direction of the depth blur.
      */
@@ -171,6 +161,11 @@ private:
      * Takes care of rendering particles as point sprites.
      */
     PointSprite pointsprite;
+
+    /** Neighbour Cell finder.
+     * Takes care of finding neighbour cells for the particles.
+     */
+    NeighbourCellFinder neighbourcellfinder;
 
     /** Sphere flag.
      * Flag indicating whether to use spheres or icosahedra for
@@ -222,27 +217,12 @@ private:
              */
             GLuint auxbuffer;
 
-            /** Flag buffer.
-             * Buffer in which a flag is stored that indicates the grid cell borders in the particle buffer.
-             */
-            GLuint flagbuffer;
-
-            /** Grid texture clear buffer.
-             * Buffer used to clear the grid texture;
-             */
-            GLuint gridclearbuffer;
-
-            /** Neighbour cell buffer.
-             * Buffer used to store neighbouring cells for each particle.
-             */
-            GLuint neighbourcellbuffer;
-
         };
         /** Buffer objects.
          * The buffer objects are stored in a union, so that it is possible
          * to create/delete all buffer objects with a single OpenGL call.
          */
-        GLuint buffers[7];
+        GLuint buffers[4];
     };
 
     union {
@@ -283,11 +263,6 @@ private:
 
     union {
     	struct {
-    		/** Flag texture.
-    		 * Texture through which the flag buffer is accessed.
-    		 */
-    		GLuint flagtexture;
-
     		/** Selection depth texture.
     		 * Texture for the depth buffer of the selection framebuffer.
     		 */
@@ -302,27 +277,16 @@ private:
     		 * Texture to store temporary steps during blurring.
     		 */
     		GLuint blurtexture;
-
-            /** Grid texture.
-             * Texture in which the starting particle for each grid is stored.
-             */
-            GLuint gridtexture;
-
             /** Thickness texture.
              * Texture in which the water thickness is stored.
              */
             GLuint thicknesstexture;
-
-            /** Neighbour cell texture.
-             * Texture through which the neighbour cell buffer is accessed.
-             */
-            GLuint neighbourcelltexture;
     	};
     	/** Texture objects.
     	 * The texture objects are stored in a union, so that it is possible
     	 * to create/delete all texture objects with a single OpenGL call.
     	 */
-    	GLuint textures[7];
+    	GLuint textures[4];
     };
 
     /** Queries.
