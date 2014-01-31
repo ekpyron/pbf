@@ -58,6 +58,7 @@ void main (void)
 			// if the cell exists
 			if (c != -1)
 			{
+				// lookup its size and update entry count
 				int end = texture (gridendtexture, gridpos + gridoffsets[o] + j * gridxoffset).x;
 				entries += end - c;
 			}
