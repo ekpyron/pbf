@@ -61,8 +61,9 @@ RadixSort::RadixSort (GLuint _numblocks)
 	globalsort_bitshift = globalsort.GetUniformLocation ("bitshift");
 
 	// clear block sum buffers
-	for (int blocksum : blocksums)
+	for (int i = 0; i < blocksums.size (); i++)
 	{
+		int &blocksum = blocksums[i];
 		glBindBuffer (GL_SHADER_STORAGE_BUFFER, blocksum);
 		glClearBufferData (GL_SHADER_STORAGE_BUFFER, GL_RGBA32UI, GL_RGBA, GL_UNSIGNED_INT, NULL);
 	}
