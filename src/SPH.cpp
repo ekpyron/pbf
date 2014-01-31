@@ -130,7 +130,7 @@ void SPH::Run (void)
 
     	// solver iteration
     	solver.Use ();
-    	for (auto i = 0; i < 5; i++)
+    	for (int iteration = 0; iteration < 5; iteration++)
     	{
     		glDispatchCompute (numparticles >> 8, 1, 1);
     		glMemoryBarrier (GL_SHADER_STORAGE_BARRIER_BIT);

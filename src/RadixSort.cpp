@@ -1,5 +1,4 @@
 #include "RadixSort.h"
-#include <random>
 
 RadixSort::RadixSort (GLuint _numblocks)
 	: blocksize (512), numblocks (_numblocks)
@@ -63,7 +62,7 @@ RadixSort::RadixSort (GLuint _numblocks)
 	// clear block sum buffers
 	for (int i = 0; i < blocksums.size (); i++)
 	{
-		int &blocksum = blocksums[i];
+		unsigned int &blocksum = blocksums[i];
 		glBindBuffer (GL_SHADER_STORAGE_BUFFER, blocksum);
 		glClearBufferData (GL_SHADER_STORAGE_BUFFER, GL_RGBA32UI, GL_RGBA, GL_UNSIGNED_INT, NULL);
 	}
