@@ -4,7 +4,7 @@
 #include "common.h"
 
 /** PointSprite class.
- * This class renders point sprite that can be used for rendering particles.
+ * This class renders point sprites that can be used for rendering particles.
  */
 
 class PointSprite
