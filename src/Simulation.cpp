@@ -218,8 +218,8 @@ void Simulation::OnMouseDown (const int &button)
        	glClear (GL_DEPTH_BUFFER_BIT);
        	selectionprogram.Use ();
        	glProgramUniform1i (selectionprogram.get (), selectionprogram.GetUniformLocation ("write"), 0);
-       	glBindBufferBase (GL_SHADER_STORAGE_BUFFER, 0, sph.GetAuxiliaryBuffer ());
-       	glBindBufferBase (GL_SHADER_STORAGE_BUFFER, 1, sph.GetParticleBuffer ());
+       	glBindBufferBase (GL_SHADER_STORAGE_BUFFER, 0, sph.GetParticleBuffer ());
+       	glBindBufferBase (GL_SHADER_STORAGE_BUFFER, 1, sph.GetAuxiliaryBuffer ());
        	pointsprite.Render (GetNumberOfParticles());
 
        	// only render the closest sphere and write the highlighted flag.
