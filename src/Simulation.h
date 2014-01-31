@@ -95,11 +95,6 @@ private:
      */
     Camera camera;
 
-    /** Surrounding shader program.
-     * Shader program for displaying the surrounding scene.
-    */
-    ShaderProgram surroundingprogram;
-
     /** Particle shader program.
      * Shader program for displaying the particles.
     */

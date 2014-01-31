@@ -3,6 +3,7 @@
 
 #include "common.h"
 #include "Texture.h"
+#include "ShaderProgram.h"
 
 /** Scene framing.
  * This class renders a framing for the scene.
@@ -21,6 +22,11 @@ public:
      */
     void Render (void);
 private:
+    /** Shader program.
+     * Shader program for displaying the surrounding scene.
+    */
+    ShaderProgram program;
+
     union {
         struct {
             /** Vertex buffer.

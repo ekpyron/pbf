@@ -7,10 +7,6 @@ Simulation::Simulation (void) : width (0), height (0), font ("textures/font.png"
     sph (GetNumberOfParticles ())
 {
     // load shaders
-    surroundingprogram.CompileShader (GL_VERTEX_SHADER, "shaders/surrounding/vertex.glsl");
-    surroundingprogram.CompileShader (GL_FRAGMENT_SHADER, "shaders/surrounding/fragment.glsl");
-    surroundingprogram.Link ();
-
     particleprogram.CompileShader (GL_VERTEX_SHADER, "shaders/particles/vertex.glsl");
     particleprogram.CompileShader (GL_FRAGMENT_SHADER, "shaders/particles/fragment.glsl");
     particleprogram.Link ();
@@ -351,7 +347,6 @@ bool Simulation::Frame (void)
     glClear (GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
 
     // render the framing
-    surroundingprogram.Use ();
     framing.Render ();
 
     // run simulation step 1

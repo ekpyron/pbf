@@ -2,6 +2,11 @@
 
 Framing::Framing (void)
 {
+	// load shader
+    program.CompileShader (GL_VERTEX_SHADER, "shaders/framing/vertex.glsl");
+    program.CompileShader (GL_FRAGMENT_SHADER, "shaders/framing/fragment.glsl");
+    program.Link ();
+
     // create and bind a vertex array
     glGenVertexArrays (1, &vertexarray);
     glBindVertexArray (vertexarray);
@@ -73,6 +78,8 @@ Framing::~Framing (void)
 
 void Framing::Render (void)
 {
+	// activate shader program
+	program.Use ();
     // bind texture, vertex array and index buffer
     texture.Bind (GL_TEXTURE_2D);
     glBindVertexArray (vertexarray);
