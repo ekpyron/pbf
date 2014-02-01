@@ -42,7 +42,7 @@ Simulation::Simulation (void) : width (0), height (0), font ("textures/font.png"
     // initialize the camera position and rotation and the transformation matrix buffer.
     camera.SetPosition (glm::vec3 (20, 10, 10));
     camera.Rotate (30.0f, 240.0f);
-    glBindBufferBase (GL_UNIFORM_BUFFER, 0, transformationbuffer);
+    glBindBuffer (GL_UNIFORM_BUFFER, transformationbuffer);
     glBufferData (GL_UNIFORM_BUFFER, sizeof (transformationbuffer_t), NULL, GL_DYNAMIC_DRAW);
 
     // specify lighting parameters
@@ -53,9 +53,13 @@ Simulation::Simulation (void) : width (0), height (0), font ("textures/font.png"
         lightparams.spotdir = glm::normalize (glm::vec3 (0.25, -1, 0.25));
         lightparams.spotexponent = 8.0f;
         lightparams.lightintensity = 10000.0f;
-        glBindBufferBase (GL_UNIFORM_BUFFER, 1, lightingbuffer);
+        glBindBuffer (GL_UNIFORM_BUFFER, lightingbuffer);
         glBufferData (GL_UNIFORM_BUFFER, sizeof (lightparams), &lightparams, GL_STATIC_DRAW);
     }
+
+    // bind uniform buffers to their correct binding points
+    glBindBufferBase (GL_UNIFORM_BUFFER, 0, transformationbuffer);
+    glBindBufferBase (GL_UNIFORM_BUFFER, 1, lightingbuffer);
 
     // enable depth testing
     glEnable (GL_DEPTH_TEST);
