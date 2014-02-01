@@ -15,7 +15,15 @@ uniform vec2 blurdir;
 //uniform float falloff;
 const float radius = 12.0f;
 const float scale = 1.0f / 4.0f;
-const float falloff = 100.0f;
+const float falloff = 1000.0f;
+
+float linearizeDepth (in float d)
+{
+	const float f = 1000.0f;
+	const float n = 1.0f;
+	
+	return (2 * n) / (f + n - d * (f - n));
+}
 
 void main (void)
 {
@@ -35,7 +43,7 @@ void main (void)
 		float r = x * scale;
 		float w = exp (-r * r);
 		
-		float r2 = (d - depth) * falloff;
+		float r2 = (linearizeDepth (d) - linearizeDepth (depth)) * falloff;
 		float g = exp (-r2 * r2);
 		
 		sum += d * w * g;
