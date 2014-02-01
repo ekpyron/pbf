@@ -1,5 +1,23 @@
 #include "FullscreenQuad.h"
 
+FullscreenQuad *FullscreenQuad::object = NULL;
+
+const FullscreenQuad &FullscreenQuad::Get (void)
+{
+	if (object == NULL)
+		object = new FullscreenQuad ();
+	return *object;
+}
+
+void FullscreenQuad::Release (void)
+{
+	if (object != NULL)
+	{
+		delete object;
+		object = NULL;
+	}
+}
+
 FullscreenQuad::FullscreenQuad (void)
 {
     // create and bind a vertex array
@@ -38,7 +56,7 @@ FullscreenQuad::~FullscreenQuad (void)
     glDeleteVertexArrays (1, &vertexarray);
 }
 
-void FullscreenQuad::Render (void)
+void FullscreenQuad::Render (void) const
 {
     // bind vertex array and index buffer
     glBindVertexArray (vertexarray);

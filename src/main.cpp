@@ -1,5 +1,6 @@
 #include "common.h"
 #include "Simulation.h"
+#include "FullscreenQuad.h"
 
 /** \file main.cpp
  * Main source file.
@@ -151,8 +152,12 @@ void initialize (void)
  */
 void cleanup (void)
 {
+	// release simulation class
     if (simulation != NULL)
         delete simulation;
+    // release signleton classes
+    FullscreenQuad::Release ();
+    // destroy window and shutdown glfw
     if (window != NULL)
         glfwDestroyWindow (window);
     glfwTerminate ();

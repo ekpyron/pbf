@@ -112,11 +112,6 @@ private:
     	GLuint textures[4];
     };
 
-    /** Fullscreen quad.
-     * Renders a fullscreen quad.
-     */
-    FullscreenQuad fullscreenquad;
-
     /** Offscreen framebuffer width.
      * Width of the offscreen framebuffer.
      */

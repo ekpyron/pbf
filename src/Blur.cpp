@@ -79,5 +79,5 @@ void Blur::Apply (const glm::vec2 &offsetscale, const GLuint &weights)
     glBindBufferBase (GL_SHADER_STORAGE_BUFFER, 0, weights);
     program.Use ();
     glProgramUniform2f (program.get (), offsetscaleloc, offsetscale.x, offsetscale.y);
-    fsquad.Render ();
+    FullscreenQuad::Get ().Render ();
 }

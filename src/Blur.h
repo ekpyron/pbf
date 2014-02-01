@@ -47,11 +47,6 @@ private:
 	 * Uniform location of the offset scale uniform variable.
 	 */
     GLuint offsetscaleloc;
-
-    /** Fullscreen quad.
-     * Fullscreen quad used to output the blur.
-     */
-    FullscreenQuad fsquad;
 };
 
 #endif /* BLUR_H */

@@ -107,6 +107,9 @@ SurfaceReconstruction::~SurfaceReconstruction (void)
 void SurfaceReconstruction::Render (const GLuint &particlebuffer, const GLuint &numparticles,
 		const GLuint &width, const GLuint &height)
 {
+	// get fullscreen quad singleton
+	const FullscreenQuad &fullscreenquad = FullscreenQuad::Get ();
+
 	// pass particle buffer to point sprite class
 	pointsprite.SetPositionBuffer (particlebuffer, sizeof (particleinfo_t), 0);
 
