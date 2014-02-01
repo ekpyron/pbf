@@ -90,6 +90,8 @@ void OnKeyEvent (GLFWwindow *window, int key, int scancode, int action, int mods
     Simulation *simulation = reinterpret_cast<Simulation*> (glfwGetWindowUserPointer (window));
     if (action == GLFW_RELEASE)
         simulation->OnKeyUp (key);
+    else if (action == GLFW_PRESS)
+        simulation->OnKeyDown (key);
 }
 
 /** Window resize callback.

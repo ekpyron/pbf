@@ -51,6 +51,14 @@ public:
 		vorticityconfinement = flag;
 	}
 
+	/** Activate/deactivate an external force.
+	 * Activates or deactivates an external force in negative z direction
+	 * that is applied to all particles with a z-coordinate larger than
+	 * half the grid size.
+	 * \param state true to enable the external force, false to disable it
+	 */
+	void SetExternalForce (bool state);
+
 	/** Run simulation.
 	 * Runs the SPH simulation.
 	 */

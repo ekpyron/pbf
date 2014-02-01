@@ -234,6 +234,17 @@ void Simulation::ResetParticleBuffer (void)
     glClearBufferData (GL_SHADER_STORAGE_BUFFER, GL_RGBA32F, GL_RGBA, GL_FLOAT, &auxdata[0]);
 }
 
+void Simulation::OnKeyDown (int key)
+{
+	switch (key)
+	{
+	// enable external force
+	case GLFW_KEY_F:
+		sph.SetExternalForce (true);
+		break;
+	}
+}
+
 void Simulation::OnKeyUp (int key)
 {
     switch (key)
@@ -267,6 +278,10 @@ void Simulation::OnKeyUp (int key)
     	}
     	break;
     }
+    // disable external force
+    case GLFW_KEY_F:
+    	sph.SetExternalForce (false);
+    	break;
     }
 }
 

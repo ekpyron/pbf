@@ -14,6 +14,8 @@ layout (std430, binding = 0) buffer ParticleBuffer
 	ParticleInfo particles[];
 };
 
+uniform bool extforce;
+
 void main (void)
 {
 	uint particleid;
@@ -22,6 +24,10 @@ void main (void)
 	ParticleInfo particle = particles[particleid];
 	
 	vec3 velocity = (particle.position - particle.oldposition.xyz) / timestep;
+	
+	// optionally apply an additional external force to some particles
+	if (extforce && particle.position.z > GRID_DEPTH/2)
+		velocity += vec3 (0, 0, -20) * timestep;
 	
 	// gravity
 	velocity += gravity * vec3 (0, -1, 0) * timestep;

@@ -54,6 +54,12 @@ public:
      */
     void OnKeyUp (int key);
 
+    /** Key down event.
+     * Handles key press events.
+     * \param key key that was pressed
+     */
+    void OnKeyDown (int key);
+
     /** Resize event.
      * Handles window resize event.
      * \param width new framebuffer width

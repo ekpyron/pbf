@@ -78,6 +78,11 @@ void SPH::OutputTiming (void)
 	}
 }
 
+void SPH::SetExternalForce (bool state)
+{
+	glProgramUniform1i (predictpos.get (), predictpos.GetUniformLocation ("extforce"), state ? 1 : 0);
+}
+
 void SPH::Run (void)
 {
 	glBeginQuery (GL_TIME_ELAPSED, preparationquery);
