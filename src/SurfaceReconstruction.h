@@ -35,10 +35,10 @@ private:
      */
     ShaderProgram thicknessprog;
 
-    /** Depth blur direction uniform location.
-     * Uniform location for the uniform variable storing the direction of the depth blur.
+    /** Depth blur offset scale uniform location.
+     * Uniform location for the uniform variable storing the offset scale for the depth blur.
      */
-    GLuint depthblurdir;
+    GLuint depthbluroffsetscale;
 
     /** Point Sprite.
      * Takes care of rendering particles as point sprites.
@@ -50,10 +50,24 @@ private:
      */
     Blur thicknessblur;
 
-	/** Thickness blur weights.
-	 * Weights used for blurring the thickness texture.
-	 */
-	GLuint thicknessblurweights;
+    union {
+    	struct {
+    		/** Thickness blur weights.
+    		 * Weights used for blurring the thickness texture.
+    		 */
+    		GLuint thicknessblurweights;
+
+    		/** Depth blur weights.
+    		 * Weights used for blurring the depth texture.
+    		 */
+    		GLuint depthblurweights;
+    	};
+        /** Buffer objects.
+         * The buffer objects are stored in a union, so that it is possible
+         * to create/delete all buffer objects with a single OpenGL call.
+         */
+        GLuint buffers[2];
+    };
 
     union {
     	struct {

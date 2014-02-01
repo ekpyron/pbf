@@ -27,8 +27,8 @@ SurfaceReconstruction::SurfaceReconstruction (void)
     fsquadprog.CompileShader (GL_FRAGMENT_SHADER, "shaders/fsquad/fragment.glsl");
     fsquadprog.Link ();
 
-    // get uniform location for the depth blur direction
-    depthblurdir = depthblurprog.GetUniformLocation ("blurdir");
+    // get uniform location for the depth blur offset scale
+    depthbluroffsetscale = depthblurprog.GetUniformLocation ("offsetscale");
 
 	// create framebuffer objects
 	glGenFramebuffers (5, framebuffers);
@@ -70,9 +70,12 @@ SurfaceReconstruction::SurfaceReconstruction (void)
     glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
     glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 
-    glGenBuffers (1, &thicknessblurweights);
+    glGenBuffers (2, buffers);
     glBindBuffer (GL_SHADER_STORAGE_BUFFER, thicknessblurweights);
     Blur::ComputeWeights (GL_SHADER_STORAGE_BUFFER, 10.0f);
+
+    glBindBuffer (GL_SHADER_STORAGE_BUFFER, depthblurweights);
+    Blur::ComputeWeights (GL_SHADER_STORAGE_BUFFER, 3.0f);
 
     // setup depth framebuffer
     glBindFramebuffer (GL_FRAMEBUFFER, depthfb);
@@ -120,23 +123,21 @@ void SurfaceReconstruction::Render (const GLuint &particlebuffer, const GLuint &
 	particledepthprogram.Use ();
 	pointsprite.Render (numparticles);
 
-	// use depth texture as input
-	glBindFramebuffer (GL_FRAMEBUFFER, depthhblurfb);
-	glBindTexture (GL_TEXTURE_2D, depthtexture);
+    glBindBufferBase (GL_SHADER_STORAGE_BUFFER, 0, depthblurweights);
+    // blur depth
 	depthblurprog.Use ();
-
+	for (int i = 0; i < 3; i++) {
+	glBindTexture (GL_TEXTURE_2D, depthtexture);
+	glBindFramebuffer (GL_FRAMEBUFFER, depthhblurfb);
 	glClear (GL_DEPTH_BUFFER_BIT);
-
-	glProgramUniform2f (depthblurprog.get (), depthblurdir, 1.0f / offscreen_width, 0.0f);
+	glProgramUniform2f (depthblurprog.get (), depthbluroffsetscale, 1.0f / offscreen_width, 0.0f);
 	fullscreenquad.Render ();
-
 	glBindFramebuffer (GL_FRAMEBUFFER, depthvblurfb);
 	glBindTexture (GL_TEXTURE_2D, blurtexture);
-
 	glClear (GL_DEPTH_BUFFER_BIT);
-
-	glProgramUniform2f (depthblurprog.get (), depthblurdir, 0.0f, 1.0f / offscreen_height);
+	glProgramUniform2f (depthblurprog.get (), depthbluroffsetscale, 0.0f, 1.0f / offscreen_height);
 	fullscreenquad.Render ();
+	}
 
 	// render point sprites storing thickness
 	glBindFramebuffer (GL_FRAMEBUFFER, thicknessfb);
