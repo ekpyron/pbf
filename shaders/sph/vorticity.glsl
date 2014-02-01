@@ -34,7 +34,7 @@ float Wpoly6 (float r)
 vec3 gradWspiky (vec3 r)
 {
 	float l = length (r);
-	if (l > h)
+	if (l > h || l == 0)
 		return vec3 (0, 0, 0);
 	float tmp = h - l;
 	return (-3 * 4.774648292756860 * tmp * tmp) * r / (l * h*h*h*h*h*h);
