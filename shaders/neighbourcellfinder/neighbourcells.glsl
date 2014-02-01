@@ -17,7 +17,7 @@ layout (std430, binding = 0) readonly buffer ParticleBuffer
 layout (binding = 0) uniform isampler3D gridtexture;
 layout (binding = 1) uniform isampler3D gridendtexture;
 
-layout (binding = 0, rg32i) uniform writeonly iimageBuffer neighbourtexture;
+layout (binding = 0, rgba32i) uniform writeonly iimageBuffer neighbourtexture;
 
 // neighbour grids in y and z direction
 const vec3 gridoffsets[9] = {
@@ -41,6 +41,8 @@ void main (void)
 	particleid = gl_GlobalInvocationID.x;
 
 	vec3 gridpos = floor (particles[particleid].position) / GRID_SIZE;
+	
+	int cells[9];
 
 	// go through all 9 neighbour directions in y/z direction 
 	for (int o = 0; o < 9; o++) {
@@ -63,8 +65,14 @@ void main (void)
 				entries += end - c;
 			}
 		}
-
-		// store everything in the neighbour texture
-		imageStore (neighbourtexture, int (particleid * 9 + o), ivec4 (cell + (entries<<24), 0, 0, 0));
+		
+		cells[o] = cell + (entries<<24);
 	}
+
+	for (int i = 0; i < 3; i++)
+	{
+		// store everything in the neighbour texture
+		imageStore (neighbourtexture, int (particleid * 3 + i), ivec4 (cells[i*3+0], cells[i*3+1], cells[i*3+2], 0));
+	}
+
 }
