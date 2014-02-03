@@ -20,15 +20,15 @@ public:
      * Bind the texture to the specified texturing target.
      * \param target texturing target to which to bind the texture
      */
-    void Bind (GLenum target);
+    void Bind (GLenum target) const;
 
     /** Load a png image.
-     * Loads a png image and stores it in the texture object.
-     * Note that this function internally calls Bind (GL_TEXTURE_2D).
+     * Loads a png image and stores it in the texture bound to the specified target.
+     * \param specifies the texture target
      * \param filename path to the image to load
      * \param internalformat internal format used to store the texture
      */
-    void Load (const std::string &filename, GLuint internalformat = GL_RGBA8);
+    static void Load (const GLenum &target, const std::string &filename, GLuint internalformat = GL_RGBA8);
 
     /** Get the texture object.
      * \returns the OpenGL texture object

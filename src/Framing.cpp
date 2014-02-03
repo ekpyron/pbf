@@ -62,7 +62,8 @@ Framing::Framing (void)
     glBufferData (GL_ELEMENT_ARRAY_BUFFER, sizeof (indices), indices, GL_STATIC_DRAW);
 
     // load the texture
-    texture.Load ("textures/framing.png", GL_COMPRESSED_RGB);
+    texture.Bind (GL_TEXTURE_2D);
+    Texture::Load (GL_TEXTURE_2D, "textures/framing.png", GL_COMPRESSED_RGB);
     // generate a mipmap and enable trilinear filtering
     glGenerateMipmap (GL_TEXTURE_2D);
     glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);

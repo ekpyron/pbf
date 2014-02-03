@@ -11,7 +11,7 @@ Texture::~Texture (void)
     glDeleteTextures (1, &texture);
 }
 
-void Texture::Bind (GLenum target)
+void Texture::Bind (GLenum target) const
 {
     glBindTexture (target, texture);
 }
@@ -31,7 +31,7 @@ void _PngReadFn (png_structp png_ptr, png_bytep data, png_size_t length)
         png_error (png_ptr, "I/O error.");
 }
 
-void Texture::Load (const std::string &filename, GLuint internalformat)
+void Texture::Load (const GLenum &target, const std::string &filename, GLuint internalformat)
 {
     // open the file
     std::ifstream file (filename.c_str (), std::ios_base::in|std::ios_base::binary);
@@ -120,6 +120,5 @@ void Texture::Load (const std::string &filename, GLuint internalformat)
     png_destroy_read_struct (&png_ptr, &info_ptr, NULL);
 
     // pass the image data to OpenGL
-    Bind (GL_TEXTURE_2D);
-    glTexImage2D (GL_TEXTURE_2D, 0, internalformat, width, height, 0, format, type, &data[0]);
+    glTexImage2D (target, 0, internalformat, width, height, 0, format, type, &data[0]);
 }

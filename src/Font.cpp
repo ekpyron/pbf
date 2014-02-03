@@ -32,7 +32,7 @@ Font::Font (const std::string &filename)
 
     // load the texture (only the red channel needs to be stored internally)
     texture.Bind (GL_TEXTURE_2D);
-    texture.Load (filename, GL_COMPRESSED_RED);
+    Texture::Load (GL_TEXTURE_2D, filename, GL_COMPRESSED_RED);
     // generate mipmap and activate trilinear filtering
     glGenerateMipmap (GL_TEXTURE_2D);
     glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);

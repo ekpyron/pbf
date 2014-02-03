@@ -126,7 +126,7 @@ void SPH::Run (void)
     glBeginQuery (GL_TIME_ELAPSED, solverquery);
     {
         // use neighbour cell texture as input
-        glBindTexture (GL_TEXTURE_BUFFER, neighbourcellfinder.GetResult ());
+    	neighbourcellfinder.GetResult ().Bind (GL_TEXTURE_BUFFER);
 
         // set buffer bindings
         glBindBufferBase (GL_SHADER_STORAGE_BUFFER, 0, radixsort.GetBuffer ());

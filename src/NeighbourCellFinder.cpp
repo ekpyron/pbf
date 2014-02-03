@@ -13,9 +13,6 @@ NeighbourCellFinder::NeighbourCellFinder (const GLuint &_numparticles) : numpart
 	// create buffer objects
 	glGenBuffers (2, buffers);
 
-	// create texture objects
-	glGenTextures (3, textures);
-
     // allocate grid clear buffer
 	// (only needed if GL_ARB_clear_texture is not available)
     if (!GL_ARB_clear_texture)
@@ -29,7 +26,7 @@ NeighbourCellFinder::NeighbourCellFinder (const GLuint &_numparticles) : numpart
     }
 
     // allocate grid texture
-    glBindTexture (GL_TEXTURE_3D, gridtexture);
+    gridtexture.Bind (GL_TEXTURE_3D);
     glTexImage3D (GL_TEXTURE_3D, 0, GL_R32I, 128, 64, 128, 0, GL_RED_INTEGER, GL_INT, NULL);
     glTexParameteri (GL_TEXTURE_3D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
     glTexParameteri (GL_TEXTURE_3D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
@@ -49,11 +46,11 @@ NeighbourCellFinder::NeighbourCellFinder (const GLuint &_numparticles) : numpart
     else
     {
     	GLint v = -1;
-    	glClearTexImage (gridtexture, 0, GL_RED_INTEGER, GL_INT, &v);
+    	glClearTexImage (gridtexture.get (), 0, GL_RED_INTEGER, GL_INT, &v);
     }
 
     // allocate grid end texture
-    glBindTexture (GL_TEXTURE_3D, gridendtexture);
+    gridendtexture.Bind (GL_TEXTURE_3D);
     glTexImage3D (GL_TEXTURE_3D, 0, GL_R32I, 128, 64, 128, 0, GL_RED_INTEGER, GL_INT, NULL);
     glTexParameteri (GL_TEXTURE_3D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
     glTexParameteri (GL_TEXTURE_3D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
@@ -66,7 +63,7 @@ NeighbourCellFinder::NeighbourCellFinder (const GLuint &_numparticles) : numpart
     glBufferData (GL_SHADER_STORAGE_BUFFER, sizeof (GLuint) * 12 * numparticles, NULL, GL_DYNAMIC_DRAW);
 
     // create neighbour cell texture
-    glBindTexture (GL_TEXTURE_BUFFER, neighbourcelltexture);
+    neighbourcelltexture.Bind (GL_TEXTURE_BUFFER);
     glTexBuffer (GL_TEXTURE_BUFFER, GL_RGBA32I, neighbourcellbuffer);
 
 }
@@ -74,11 +71,10 @@ NeighbourCellFinder::NeighbourCellFinder (const GLuint &_numparticles) : numpart
 NeighbourCellFinder::~NeighbourCellFinder (void)
 {
 	// cleanup
-	glDeleteTextures (3, textures);
 	glDeleteBuffers (2, buffers);
 }
 
-const GLuint &NeighbourCellFinder::GetResult (void) const
+const Texture &NeighbourCellFinder::GetResult (void) const
 {
 	return neighbourcelltexture;
 }
@@ -89,11 +85,11 @@ void NeighbourCellFinder::FindNeighbourCells (const GLuint &particlebuffer)
 	if (GL_ARB_clear_texture)
 	{
 		GLint v = -1;
-		glClearTexImage (gridtexture, 0, GL_RED_INTEGER, GL_INT, &v);
+		glClearTexImage (gridtexture.get (), 0, GL_RED_INTEGER, GL_INT, &v);
 	}
 	else
 	{
-    	glBindTexture (GL_TEXTURE_3D, gridtexture);
+		gridtexture.Bind (GL_TEXTURE_3D);
 		glBindBuffer (GL_PIXEL_UNPACK_BUFFER, gridclearbuffer);
 		glTexSubImage3D (GL_TEXTURE_3D, 0, 0, 0, 0, 128, 64, 128, GL_RED_INTEGER, GL_INT, NULL);
 		glBindBuffer (GL_PIXEL_UNPACK_BUFFER, 0);
@@ -102,21 +98,21 @@ void NeighbourCellFinder::FindNeighbourCells (const GLuint &particlebuffer)
     glBindBufferBase (GL_SHADER_STORAGE_BUFFER, 0, particlebuffer);
 
     // find grid cells
-    glBindImageTexture (0, gridtexture, 0, GL_TRUE, 0, GL_WRITE_ONLY, GL_R32I);
-    glBindImageTexture (1, gridendtexture, 0, GL_TRUE, 0, GL_WRITE_ONLY, GL_R32I);
+    glBindImageTexture (0, gridtexture.get (), 0, GL_TRUE, 0, GL_WRITE_ONLY, GL_R32I);
+    glBindImageTexture (1, gridendtexture.get (), 0, GL_TRUE, 0, GL_WRITE_ONLY, GL_R32I);
     findcells.Use ();
     glMemoryBarrier (GL_BUFFER_UPDATE_BARRIER_BIT);
     glDispatchCompute (numparticles >> 8, 1, 1);
     glMemoryBarrier (GL_SHADER_STORAGE_BARRIER_BIT | GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
 
     // grid and flag textures as input
-    glBindTexture (GL_TEXTURE_3D, gridtexture);
+    gridtexture.Bind (GL_TEXTURE_3D);
     glActiveTexture (GL_TEXTURE1);
-    glBindTexture (GL_TEXTURE_3D, gridendtexture);
+    gridendtexture.Bind (GL_TEXTURE_3D);
     glActiveTexture (GL_TEXTURE0);
 
     // find neighbour cells for each particle
-    glBindImageTexture (0, neighbourcelltexture, 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RGBA32I);
+    glBindImageTexture (0, neighbourcelltexture.get (), 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RGBA32I);
     neighbourcells.Use ();
     glDispatchCompute (numparticles >> 8, 1, 1);
     glMemoryBarrier (GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);

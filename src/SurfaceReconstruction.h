@@ -99,32 +99,23 @@ private:
     	GLuint framebuffers[5];
     };
 
-    union {
-    	struct {
-    		/** Particle depth texture.
-    		 * Texture to store the particle depths.
-    		 */
-    		GLuint depthtexture;
+    /** Particle depth texture.
+     * Texture to store the particle depths.
+     */
+    Texture depthtexture;
 
-    		/** Temporary blur texture.
-    		 * Texture to store temporary steps during blurring.
-    		 */
-    		GLuint blurtexture;
-            /** Thickness texture.
-             * Texture in which the water thickness is stored.
-             */
-            GLuint thicknesstexture;
-            /** Thickness blur texture.
-             * Temporary texture used for blurring the water thickness.
-             */
-            GLuint thicknessblurtexture;
-    	};
-    	/** Texture objects.
-    	 * The texture objects are stored in a union, so that it is possible
-    	 * to create/delete all texture objects with a single OpenGL call.
-    	 */
-    	GLuint textures[4];
-    };
+    /** Temporary blur texture.
+     * Texture to store temporary steps during blurring.
+     */
+    Texture blurtexture;
+    /** Thickness texture.
+     * Texture in which the water thickness is stored.
+     */
+    Texture thicknesstexture;
+    /** Thickness blur texture.
+     * Temporary texture used for blurring the water thickness.
+     */
+    Texture thicknessblurtexture;
 
     /** Offscreen framebuffer width.
      * Width of the offscreen framebuffer.

@@ -24,11 +24,8 @@ Simulation::Simulation (void) : width (0), height (0), font ("textures/font.png"
     // create query objects
     glGenQueries (1, &renderingquery);
 
-    // create texture objects
-    glGenTextures (1, textures);
-
     // create selection depth texture
-    glBindTexture (GL_TEXTURE_2D, selectiondepthtexture);
+    selectiondepthtexture.Bind (GL_TEXTURE_2D);
     glTexImage2D (GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT32F, 1, 1, 0, GL_DEPTH_COMPONENT, GL_FLOAT, NULL);
 
     // create framebuffer objects
@@ -36,7 +33,7 @@ Simulation::Simulation (void) : width (0), height (0), font ("textures/font.png"
 
     // setup selection framebuffer
     glBindFramebuffer (GL_FRAMEBUFFER, selectionfb);
-    glFramebufferTexture2D (GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, selectiondepthtexture, 0);
+    glFramebufferTexture2D (GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, selectiondepthtexture.get (), 0);
     glBindFramebuffer (GL_FRAMEBUFFER, 0);
 
     // initialize the camera position and rotation and the transformation matrix buffer.
@@ -88,7 +85,6 @@ Simulation::Simulation (void) : width (0), height (0), font ("textures/font.png"
 Simulation::~Simulation (void)
 {
     // cleanup
-	glDeleteTextures (1, textures);
 	glDeleteFramebuffers (1, framebuffers);
 	glDeleteQueries (1, &renderingquery);
     glDeleteBuffers (2, buffers);
@@ -128,6 +124,9 @@ void Simulation::OnMouseMove (const double &x, const double &y)
     // handle mouse events and pass them to the camera class
     if (glfwGetMouseButton (window, GLFW_MOUSE_BUTTON_LEFT))
     {
+    	// ignore mouse movement, when in highlighting mode
+    	if (glfwGetKey (window, GLFW_KEY_H)) return;
+
         if (glfwGetKey (window, GLFW_KEY_LEFT_CONTROL))
         {
             camera.Zoom (x + y);

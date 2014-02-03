@@ -4,6 +4,7 @@
 #include "common.h"
 #include "ShaderProgram.h"
 #include "RadixSort.h"
+#include "Texture.h"
 
 /** Neighbour cell finder class.
  * This class is responsible for finding the grid cell id of the neighbouring
@@ -32,7 +33,7 @@ public:
 	 * of the neighbour cell id and the number of entries in the cell.
 	 * \returns the buffer texture containing the found neighbour cells
 	 */
-	const GLuint &GetResult (void) const;
+	const Texture &GetResult (void) const;
 private:
     /** Simulation step shader program.
      * Shader program for the simulation step that finds grid cells in the
@@ -65,29 +66,20 @@ private:
         GLuint buffers[2];
     };
 
-    union {
-    	struct {
-    		/** Grid texture.
-             * Texture in which the offset of the first particle for each grid is stored.
-             */
-            GLuint gridtexture;
+    /** Grid texture.
+     * Texture in which the offset of the first particle for each grid is stored.
+     */
+    Texture gridtexture;
 
-    		/** Grid end texture.
-             * Texture in which the offset of the last particle for each grid is stored.
-             */
-    		GLuint gridendtexture;
+    /** Grid end texture.
+     * Texture in which the offset of the last particle for each grid is stored.
+     */
+    Texture gridendtexture;
 
-            /** Neighbour cell texture.
-             * Texture through which the neighbour cell buffer is accessed.
-             */
-            GLuint neighbourcelltexture;
-    	};
-    	/** Texture objects.
-    	 * The texture objects are stored in a union, so that it is possible
-    	 * to create/delete all texture objects with a single OpenGL call.
-    	 */
-    	GLuint textures[3];
-    };
+    /** Neighbour cell texture.
+     * Texture through which the neighbour cell buffer is accessed.
+     */
+    Texture neighbourcelltexture;
 
     /** Number of particles.
      * Stores the number of particles in the simulation.

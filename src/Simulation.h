@@ -188,19 +188,10 @@ private:
      */
     Font font;
 
-    union {
-    	struct {
-    		/** Selection depth texture.
-    		 * Texture for the depth buffer of the selection framebuffer.
-    		 */
-    		GLuint selectiondepthtexture;
-    	};
-    	/** Texture objects.
-    	 * The texture objects are stored in a union, so that it is possible
-    	 * to create/delete all texture objects with a single OpenGL call.
-    	 */
-    	GLuint textures[1];
-    };
+    /** Selection depth texture.
+     * Texture for the depth buffer of the selection framebuffer.
+     */
+    Texture selectiondepthtexture;
 
 	/** Rendering query object.
 	 * Query object to record the time spent in the rendering phase.
