@@ -18,6 +18,7 @@ layout (binding = 0, std140) uniform TransformationBlock {
 
 layout (binding = 0) uniform sampler2D depthtex;
 layout (binding = 1) uniform sampler2D thicknesstex;
+layout (binding = 2) uniform samplerCube envmap;
 
 // lighting parameters
 layout (binding = 1, std140) uniform LightingBuffer
@@ -37,6 +38,8 @@ vec3 getpos (in vec3 p)
 	pos = inverse (viewmat) * pos;
 	return pos.xyz / pos.w;
 }
+
+uniform bool useenvmap;
 
 void main (void)
 {
@@ -91,15 +94,36 @@ void main (void)
 	k = pow (k, 8);
 	
 	// Schlick's approximation for the fresnel term
-	float cos_theta = dot (viewdir, lightdir);
-	k *= 0.7 + (1 - 0.7) * pow (1 - cos_theta, 5);
+	float cos_theta = dot (viewdir, normal);
+	float fresnel = 0.75 + (1 - 0.75) * pow (1 - cos_theta, 5); 
+	k *= fresnel;	
 	
 	// Beer-Lambert law for coloring
 	float thickness = texture (thicknesstex, fTexcoord).x * 1000;
 	vec3 c = vec3 (exp (-0.5 * thickness),
 				   exp (-0.02 * thickness),
 				   exp (-0.005 * thickness));
-	// apply diffuse and specular light to the color value
-	color.xyz = clamp (intensity, 0, 1) * c + k * min (c + 0.5, 1);
-	color.w = min (dot (c, c), 0.8);
+	
+	// calculate specular color
+	vec3 specular = k * min (c + 0.5, 1);
+	
+	// calculate alpha
+	float alpha = min (dot (c, c), 0.8);
+	
+	// calculate diffuse color
+	vec3 diffuse;
+	if (useenvmap)
+	{
+		vec3 dir = normalize (reflect (-viewdir, normal.xyz));
+        vec3 reflection = texture (envmap, dir).xyz;
+        diffuse = mix (c, reflection, 1 - cos_theta);
+	}
+	else
+	{
+		diffuse = c;
+	}
+	diffuse *= clamp (intensity, 0, 1);
+	
+	// combine diffuse and specular light and alpha to the final color value
+	color = vec4 (diffuse + specular, alpha);
 }

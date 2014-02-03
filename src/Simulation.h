@@ -10,6 +10,7 @@
 #include "PointSprite.h"
 #include "SPH.h"
 #include "SurfaceReconstruction.h"
+#include "Skybox.h"
 
 /** Simulation class.
  * This is the main class which takes care of the whole simulation.
@@ -117,6 +118,11 @@ private:
      */
     ShaderProgram selectiondepthprogram;
 
+    /** Skybox.
+     * Takes care of rendering a sky box for the scene.
+     */
+    Skybox skybox;
+
     /** Framing.
      * Takes care of rendering a framing for the scene.
      */
@@ -131,6 +137,16 @@ private:
      * Takes care of the SPH simulation.
      */
     SPH sph;
+
+    /** Environment map.
+     * Optional environment map containing a texture for the sky box.
+     */
+    Texture *envmap;
+
+    /** Sky box flag.
+     * Flag indicating whether to use a sky box.
+     */
+    bool useskybox;
 
     /** Surface reconstruction class.
      * Takes care of surface reconstruction and rendering.

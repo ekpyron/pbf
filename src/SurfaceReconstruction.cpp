@@ -8,7 +8,7 @@
 #include "SurfaceReconstruction.h"
 
 SurfaceReconstruction::SurfaceReconstruction (void)
-	: offscreen_width (1280), offscreen_height (720)
+	: offscreen_width (1280), offscreen_height (720), envmap (NULL)
 {
 	// load shaders
     particledepthprogram.CompileShader (GL_VERTEX_SHADER, "shaders/particledepth/vertex.glsl");
@@ -103,6 +103,19 @@ SurfaceReconstruction::~SurfaceReconstruction (void)
 	glDeleteFramebuffers (4, framebuffers);
 }
 
+void SurfaceReconstruction::SetEnvironmentMap (const Texture *_envmap)
+{
+	envmap = _envmap;
+	if (envmap != NULL)
+	{
+		glProgramUniform1i (fsquadprog.get (), fsquadprog.GetUniformLocation ("useenvmap"), 1);
+	}
+	else
+	{
+		glProgramUniform1i (fsquadprog.get (), fsquadprog.GetUniformLocation ("useenvmap"), 0);
+	}
+}
+
 void SurfaceReconstruction::Render (const GLuint &particlebuffer, const GLuint &numparticles,
 		const GLuint &width, const GLuint &height)
 {
@@ -169,6 +182,12 @@ void SurfaceReconstruction::Render (const GLuint &particlebuffer, const GLuint &
 	glActiveTexture (GL_TEXTURE1);
 	thicknesstexture.Bind (GL_TEXTURE_2D);
 	glGenerateMipmap (GL_TEXTURE_2D);
+	// use environment map as input
+	if (envmap)
+	{
+		glActiveTexture (GL_TEXTURE2);
+		envmap->Bind (GL_TEXTURE_CUBE_MAP);
+	}
 	glActiveTexture (GL_TEXTURE0);
 
 	// enable alpha blending

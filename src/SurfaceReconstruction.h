@@ -13,6 +13,7 @@ public:
 	SurfaceReconstruction (void);
 	~SurfaceReconstruction (void);
 	void Render (const GLuint &particlebuffer, const GLuint &numparticles, const GLuint &width, const GLuint &height);
+	void SetEnvironmentMap (const Texture *envmap);
 private:
 
     /** Particle depth shader program.
@@ -116,6 +117,10 @@ private:
      * Temporary texture used for blurring the water thickness.
      */
     Texture thicknessblurtexture;
+    /** Environment map.
+     * Pointer to an environment map texture.
+     */
+    const Texture *envmap;
 
     /** Offscreen framebuffer width.
      * Width of the offscreen framebuffer.

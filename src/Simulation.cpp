@@ -3,7 +3,8 @@
 
 Simulation::Simulation (void) : width (0), height (0), font ("textures/font.png"),
     last_fps_time (glfwGetTime ()), framecount (0), fps (0), running (false),
-    usesurfacereconstruction (false), sph (GetNumberOfParticles ())
+    usesurfacereconstruction (false), sph (GetNumberOfParticles ()), useskybox (false),
+    envmap (NULL)
 {
     // load shaders
     particleprogram.CompileShader (GL_VERTEX_SHADER, "shaders/particles/vertex.glsl");
@@ -85,6 +86,7 @@ Simulation::Simulation (void) : width (0), height (0), font ("textures/font.png"
 Simulation::~Simulation (void)
 {
     // cleanup
+	if (envmap) delete envmap;
 	glDeleteFramebuffers (1, framebuffers);
 	glDeleteQueries (1, &renderingquery);
     glDeleteBuffers (2, buffers);
@@ -281,6 +283,34 @@ void Simulation::OnKeyUp (int key)
     	}
     	break;
     }
+    // toggle environment map
+    case GLFW_KEY_S:
+    	useskybox = !useskybox;
+    	if (useskybox)
+    	{
+    		if (envmap == NULL)
+    		{
+    			// load environment map
+    			envmap = new Texture ();
+    			envmap->Bind (GL_TEXTURE_CUBE_MAP);
+    			Texture::Load (GL_TEXTURE_CUBE_MAP_POSITIVE_X, "textures/sky/skybox_posx.png", GL_COMPRESSED_RGB);
+    			Texture::Load (GL_TEXTURE_CUBE_MAP_NEGATIVE_X, "textures/sky/skybox_negx.png", GL_COMPRESSED_RGB);
+    			Texture::Load (GL_TEXTURE_CUBE_MAP_POSITIVE_Y, "textures/sky/skybox_posy.png", GL_COMPRESSED_RGB);
+    			Texture::Load (GL_TEXTURE_CUBE_MAP_NEGATIVE_Y, "textures/sky/skybox_negy.png", GL_COMPRESSED_RGB);
+    			Texture::Load (GL_TEXTURE_CUBE_MAP_POSITIVE_Z, "textures/sky/skybox_posz.png", GL_COMPRESSED_RGB);
+    			Texture::Load (GL_TEXTURE_CUBE_MAP_NEGATIVE_Z, "textures/sky/skybox_negz.png", GL_COMPRESSED_RGB);
+    			glGenerateMipmap (GL_TEXTURE_CUBE_MAP);
+    			glTexParameteri (GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    			glTexParameteri (GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+    			glEnable (GL_TEXTURE_CUBE_MAP_SEAMLESS);
+    		}
+    		surfacereconstruction.SetEnvironmentMap (envmap);
+    	}
+    	else
+    	{
+    		surfacereconstruction.SetEnvironmentMap (NULL);
+    	}
+    	break;
     // disable external force
     case GLFW_KEY_F:
     	sph.SetExternalForce (false);
@@ -305,6 +335,14 @@ bool Simulation::Frame (void)
 
     // clear the color and depth buffer
     glClear (GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
+
+    // render sky box
+    if (useskybox && envmap != NULL)
+    {
+    	glDisable (GL_DEPTH_TEST);
+    	skybox.Render (*envmap);
+    	glEnable (GL_DEPTH_TEST);
+    }
 
     // render the framing
     framing.Render ();
