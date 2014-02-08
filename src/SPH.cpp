@@ -17,9 +17,9 @@ SPH::SPH (const GLuint &_numparticles)
     		"shaders/simulation/include.glsl");
     vorticityprog.Link ();
 
-    velocityprog.CompileShader (GL_COMPUTE_SHADER, "shaders/sph/velocity.glsl",
+    updateprog.CompileShader (GL_COMPUTE_SHADER, "shaders/sph/update.glsl",
     		"shaders/simulation/include.glsl");
-    velocityprog.Link ();
+    updateprog.Link ();
 
     // create query objects
     glGenQueries (6, queries);
@@ -156,7 +156,7 @@ void SPH::Run (void)
     	else
     	{
     		// update positions and velocities
-    		velocityprog.Use ();
+    		updateprog.Use ();
     		glDispatchCompute (numparticles >> 8, 1, 1);
     	}
     }

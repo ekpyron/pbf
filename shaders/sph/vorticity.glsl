@@ -82,6 +82,7 @@ void main (void)
 	// vorticity confinement & XSPH viscosity
 	vec3 v = vec3 (0, 0, 0);
 	vec3 vorticity = vec3 (0, 0, 0);
+	float rho = 0;
 	FOR_EACH_NEIGHBOUR(j)
 	{
 		if (particles[particleid].highlighted)
@@ -90,7 +91,9 @@ void main (void)
 		vec3 p_j = particlekeys[j].position;
 		vec3 v_ij = (p_j - particles[particlekeys[j].id].position) / timestep - velocity;
 		vec3 p_ij = position - p_j;
-		v += v_ij * Wpoly6 (length (p_ij));
+		float tmp = Wpoly6 (length (p_ij));
+		rho += tmp;
+		v += v_ij * tmp;
 		vorticity += cross (v_ij, gradWspiky (p_ij));
 	}
 	END_FOR_EACH_NEIGHBOUR(j)
@@ -119,7 +122,8 @@ void main (void)
 	
 	barrier ();
 	
-	// update position and velocity
+	// update particle information
 	particles[particleid].velocity = velocity;
 	particles[particleid].position = position;
-	}
+	particles[particleid].density = rho;
+}

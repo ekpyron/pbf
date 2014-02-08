@@ -79,11 +79,11 @@ private:
      */
     ShaderProgram vorticityprog;
 
-    /** Velocity program.
-     * Shader program for updating particle velocties and positions.
+    /** Update program.
+     * Shader program for updating particle information.
      * This is done by the vorticity program, if vorticity confinement is enabled.
      */
-    ShaderProgram velocityprog;
+    ShaderProgram updateprog;
 
 
     /** Neighbour Cell finder.
