@@ -8,7 +8,7 @@
 #include "SurfaceReconstruction.h"
 
 SurfaceReconstruction::SurfaceReconstruction (void)
-	: offscreen_width (1280), offscreen_height (720), envmap (NULL)
+	: offscreen_width (1280), offscreen_height (720), envmap (NULL), usenoise (false)
 {
 	// load shaders
     particledepthprogram.CompileShader (GL_VERTEX_SHADER, "shaders/particledepth/vertex.glsl");
@@ -55,7 +55,15 @@ SurfaceReconstruction::SurfaceReconstruction (void)
     thicknesstexture.Bind (GL_TEXTURE_2D);
     glTexImage2D (GL_TEXTURE_2D, 0, GL_R32F, 512, 512, 0, GL_RED, GL_FLOAT, NULL);
     glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-    glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+    glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+
+    // create noise texture
+    noisetexture.Bind (GL_TEXTURE_2D);
+    glTexImage2D (GL_TEXTURE_2D, 0, GL_RGB16F, 512, 512, 0, GL_RGB, GL_FLOAT, NULL);
+    glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
     glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
     glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 
@@ -81,6 +89,7 @@ SurfaceReconstruction::SurfaceReconstruction (void)
     // setup thickness framebuffer
     glBindFramebuffer (GL_FRAMEBUFFER, thicknessfb);
     glFramebufferTexture2D (GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, thicknesstexture.get (), 0);
+    glFramebufferTexture2D (GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT1, GL_TEXTURE_2D, noisetexture.get (), 0);
 
     // setup thickness blur framebuffer
     glBindFramebuffer (GL_FRAMEBUFFER, thicknessblurfb);
@@ -100,7 +109,21 @@ SurfaceReconstruction::SurfaceReconstruction (void)
 SurfaceReconstruction::~SurfaceReconstruction (void)
 {
 	// cleanup
-	glDeleteFramebuffers (4, framebuffers);
+	glDeleteFramebuffers (5, framebuffers);
+}
+
+void SurfaceReconstruction::EnableNoise (void)
+{
+	usenoise = true;
+	glProgramUniform1i (fsquadprog.get (), fsquadprog.GetUniformLocation ("usenoise"), 1);
+	glProgramUniform1i (thicknessprog.get (), thicknessprog.GetUniformLocation ("usenoise"), 1);
+}
+
+void SurfaceReconstruction::DisableNoise (void)
+{
+	usenoise = false;
+	glProgramUniform1i (fsquadprog.get (), fsquadprog.GetUniformLocation ("usenoise"), 0);
+	glProgramUniform1i (thicknessprog.get (), thicknessprog.GetUniformLocation ("usenoise"), 0);
 }
 
 void SurfaceReconstruction::SetEnvironmentMap (const Texture *_envmap)
@@ -151,14 +174,27 @@ void SurfaceReconstruction::Render (const GLuint &particlebuffer, const GLuint &
 
 	// render point sprites storing thickness
 	glBindFramebuffer (GL_FRAMEBUFFER, thicknessfb);
+	if (usenoise)
 	{
+		GLuint buffers[] = { GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1 };
+		glDrawBuffers (2, buffers);
 		float c[] = { 0, 0, 0, 0 };
-    	glClearBufferfv (GL_COLOR, 0, c);
+		glClearBufferfv (GL_COLOR, 0, c);
+		glClearBufferfv (GL_COLOR, 1, c);
+	}
+	else
+	{
+		GLuint buffers[] = { GL_COLOR_ATTACHMENT0 };
+		glDrawBuffers (1, buffers);
+		float c[] = { 0, 0, 0, 0 };
+		glClearBufferfv (GL_COLOR, 0, c);
 	}
 	// enable additive blending
 	glEnable (GL_BLEND);
 	glBlendFunc (GL_ONE, GL_ONE);
 	glDisable (GL_DEPTH_TEST);
+	// use depth texture as input
+	depthtexture.Bind (GL_TEXTURE_2D);
 	thicknessprog.Use ();
 	glViewport (0, 0, 512, 512);
 	pointsprite.Render (numparticles);
@@ -169,15 +205,20 @@ void SurfaceReconstruction::Render (const GLuint &particlebuffer, const GLuint &
 	thicknesstexture.Bind (GL_TEXTURE_2D);
 	thicknessblur.Apply (glm::vec2 (1.0f / 512.0f, 0), thicknessblurweights);
 	glBindFramebuffer (GL_FRAMEBUFFER, thicknessfb);
+	{
+		GLuint buffers[] = { GL_COLOR_ATTACHMENT0 };
+		glDrawBuffers (1, buffers);
+	}
 	thicknessblurtexture.Bind (GL_TEXTURE_2D);
 	thicknessblur.Apply (glm::vec2 (0, 1.0f / 512.0f), thicknessblurweights);
-	glEnable (GL_BLEND);
-	glBindFramebuffer (GL_FRAMEBUFFER, 0);
-
-	glEnable (GL_DEPTH_TEST);
 
 	// use depth texture as input
 	depthtexture.Bind (GL_TEXTURE_2D);
+	glEnable (GL_BLEND);
+	glEnable (GL_DEPTH_TEST);
+
+	glBindFramebuffer (GL_FRAMEBUFFER, 0);
+
 	// use thickness texture as input
 	glActiveTexture (GL_TEXTURE1);
 	thicknesstexture.Bind (GL_TEXTURE_2D);
@@ -187,6 +228,13 @@ void SurfaceReconstruction::Render (const GLuint &particlebuffer, const GLuint &
 	{
 		glActiveTexture (GL_TEXTURE2);
 		envmap->Bind (GL_TEXTURE_CUBE_MAP);
+	}
+	// use noise texture as input
+	if (usenoise)
+	{
+		glActiveTexture (GL_TEXTURE3);
+		noisetexture.Bind (GL_TEXTURE_2D);
+		glGenerateMipmap (GL_TEXTURE_2D);
 	}
 	glActiveTexture (GL_TEXTURE0);
 

@@ -46,7 +46,7 @@ void PointSprite::SetPositionBuffer (GLuint buffer, GLsizei stride, GLintptr off
     glBindVertexArray (vertexarray);
     glBindBuffer (GL_ARRAY_BUFFER, buffer);
     // define the per-instance vertex attribute
-    glVertexAttribPointer (1, 3, GL_FLOAT, GL_FALSE, stride, (const GLvoid*) offset);
+    glVertexAttribPointer (1, 4, GL_FLOAT, GL_FALSE, stride, (const GLvoid*) offset);
     glEnableVertexAttribArray (1);
     glVertexAttribDivisor (1, 1);
 }

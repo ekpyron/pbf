@@ -148,6 +148,11 @@ private:
      */
     bool useskybox;
 
+    /** Noise flag.
+     * Flag indicating whether to use noise.
+     */
+    bool usenoise;
+
     /** Surface reconstruction class.
      * Takes care of surface reconstruction and rendering.
      */

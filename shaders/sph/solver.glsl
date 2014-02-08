@@ -6,7 +6,7 @@ layout (local_size_x = 256) in;
 struct ParticleInfo
 {
 	vec3 position;
-	float vorticity;
+	uint id;
 	vec3 oldposition;
 	float highlighted;
 };

@@ -19,6 +19,7 @@ layout (binding = 0, std140) uniform TransformationBlock {
 layout (binding = 0) uniform sampler2D depthtex;
 layout (binding = 1) uniform sampler2D thicknesstex;
 layout (binding = 2) uniform samplerCube envmap;
+layout (binding = 3) uniform sampler2D noisetex;
 
 // lighting parameters
 layout (binding = 1, std140) uniform LightingBuffer
@@ -40,6 +41,7 @@ vec3 getpos (in vec3 p)
 }
 
 uniform bool useenvmap;
+uniform bool usenoise;
 
 void main (void)
 {
@@ -64,6 +66,19 @@ void main (void)
 	if (abs (ddy.z) < abs (ddy2.z)) ddy = ddy2;
 	
 	vec3 normal = normalize (cross (ddx, ddy));
+	
+	// fetch thickness
+	float thickness = texture (thicknesstex, fTexcoord).x * 10;
+
+	vec3 N;
+	if (usenoise) {
+		// fetch noise
+		N = texture (noisetex, fTexcoord).xyz;
+		
+		// normalize noise
+		normal += N * 0.02;
+		normal = normalize (normal);
+	}
 	
 	// lighting calculations
 	
@@ -99,7 +114,6 @@ void main (void)
 	k *= fresnel;	
 	
 	// Beer-Lambert law for coloring
-	float thickness = texture (thicknesstex, fTexcoord).x * 1000;
 	vec3 c = vec3 (exp (-0.5 * thickness),
 				   exp (-0.02 * thickness),
 				   exp (-0.005 * thickness));
@@ -116,7 +130,7 @@ void main (void)
 	{
 		vec3 dir = normalize (reflect (-viewdir, normal.xyz));
         vec3 reflection = texture (envmap, dir).xyz;
-        diffuse = mix (c, reflection, 1 - cos_theta);
+        diffuse += reflection * fresnel;
 	}
 	else
 	{

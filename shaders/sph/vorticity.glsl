@@ -6,7 +6,7 @@ layout (local_size_x = 256) in;
 struct ParticleInfo
 {
 	vec3 position;
-	float vorticity;
+	uint id;
 	vec3 oldposition;
 	float highlighted;
 };
@@ -19,6 +19,11 @@ layout (std430, binding = 0) buffer ParticleBuffer
 layout (std430, binding = 1) writeonly buffer AuxBuffer
 {
 	vec4 auxdata[];
+};
+
+layout (std430, binding = 2) buffer VorticityBuffer
+{
+	float vorticities[];
 };
 
 layout (binding = 0) uniform isamplerBuffer neighbourcelltexture;
@@ -75,7 +80,7 @@ void main (void)
 	END_FOR_EACH_NEIGHBOUR(j)
 	velocity += xsph_viscosity_c * v;
 	
-	particles[particleid].vorticity = length (vorticity);
+	vorticities[particleid] = length (vorticity);
 	
 	barrier ();
 	memoryBarrierBuffer ();
@@ -84,7 +89,7 @@ void main (void)
 	FOR_EACH_NEIGHBOUR(j)
 	{
 		vec3 p_ij = particle.position - particles[j].position;
-		gradVorticity += particles[j].vorticity * gradWspiky (p_ij);
+		gradVorticity += vorticities[j] * gradWspiky (p_ij);
 	}
 	END_FOR_EACH_NEIGHBOUR(j)
 	

@@ -37,9 +37,9 @@ typedef struct particleinfo {
     /** Particle position.
      */
     glm::vec3 position;
-    /** Vorticity of the particle.
+    /** ID of the particle.
      */
-    float vorticity;
+    GLuint id;
     /** Old particle position.
      */
     glm::vec3 oldposition;

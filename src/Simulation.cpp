@@ -4,7 +4,7 @@
 Simulation::Simulation (void) : width (0), height (0), font ("textures/font.png"),
     last_fps_time (glfwGetTime ()), framecount (0), fps (0), running (false),
     usesurfacereconstruction (false), sph (GetNumberOfParticles ()), useskybox (false),
-    envmap (NULL)
+    envmap (NULL), usenoise (false)
 {
     // load shaders
     particleprogram.CompileShader (GL_VERTEX_SHADER, "shaders/particles/vertex.glsl");
@@ -194,6 +194,7 @@ void Simulation::ResetParticleBuffer (void)
     particles.reserve (GetNumberOfParticles ());
 
     const float scale = 0.94f;
+    int id = 0;
 
     srand (time (NULL));
     for (int x = 0; x < 32; x++)
@@ -208,7 +209,7 @@ void Simulation::ResetParticleBuffer (void)
                 		float (rand ()) / float (RAND_MAX) - 0.5f, float (rand ()) / float (RAND_MAX) - 0.5f);
                 particle.oldposition = particle.position;
                 particle.highlighted = 0;
-                particle.vorticity = 0;
+                particle.id = (id++) << 8;
                 particles.push_back (particle);
             }
         }
@@ -225,7 +226,7 @@ void Simulation::ResetParticleBuffer (void)
                 		float (rand ()) / float (RAND_MAX) - 0.5f, float (rand ()) / float (RAND_MAX) - 0.5f);
                 particle.oldposition = particle.position;
                 particle.highlighted = 0;
-                particle.vorticity = 0;
+                particle.id = (id++) << 8;
                 particles.push_back (particle);
             }
         }
@@ -310,6 +311,14 @@ void Simulation::OnKeyUp (int key)
     	{
     		surfacereconstruction.SetEnvironmentMap (NULL);
     	}
+    	break;
+    // toggle noise
+    case GLFW_KEY_N:
+    	usenoise = !usenoise;
+    	if (usenoise)
+    		surfacereconstruction.EnableNoise ();
+    	else
+    		surfacereconstruction.DisableNoise ();
     	break;
     // disable external force
     case GLFW_KEY_F:

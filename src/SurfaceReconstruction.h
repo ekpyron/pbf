@@ -14,6 +14,8 @@ public:
 	~SurfaceReconstruction (void);
 	void Render (const GLuint &particlebuffer, const GLuint &numparticles, const GLuint &width, const GLuint &height);
 	void SetEnvironmentMap (const Texture *envmap);
+	void EnableNoise (void);
+	void DisableNoise (void);
 private:
 
     /** Particle depth shader program.
@@ -50,6 +52,11 @@ private:
      * Takes care of blurring the thickness image.
      */
     Blur thicknessblur;
+
+    /** Noise flag.
+     * Flag indicating whether to use noise.
+     */
+    bool usenoise;
 
     union {
     	struct {
@@ -117,6 +124,12 @@ private:
      * Temporary texture used for blurring the water thickness.
      */
     Texture thicknessblurtexture;
+
+    /** Noise texture.
+     * Texture used to store the generated noise.
+     */
+    Texture noisetexture;
+
     /** Environment map.
      * Pointer to an environment map texture.
      */

@@ -118,12 +118,16 @@ private:
              */
             GLuint auxbuffer;
 
+            /** Vorticity buffer.
+             * Buffer in which the vorticity of each particle is stored.
+             */
+            GLuint vorticitybuffer;
         };
         /** Buffer objects.
          * The buffer objects are stored in a union, so that it is possible
          * to create/delete all buffer objects with a single OpenGL call.
          */
-        GLuint buffers[2];
+        GLuint buffers[3];
     };
 
     union {

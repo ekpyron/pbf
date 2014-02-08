@@ -1,23 +1,3 @@
-#version 430 core
-
-// input from vertex shader
-in vec2 fTexcoord;
-in vec3 fPosition;
-flat in uint id;
-
-layout (location = 0) out float thickness;
-layout (location = 1) out vec3 noise;
-
-layout (binding = 0) uniform sampler2D depthtex;
-
-uniform bool usenoise;
-
-// projection and view matrix
-layout (binding = 0, std140) uniform TransformationBlock {
-	mat4 viewmat;
-	mat4 projmat;
-};
-
 //
 // Description : Array and textureless GLSL 2D simplex noise function.
 //      Author : Ian McEwan, Ashima Arts.
@@ -87,33 +67,4 @@ float snoise(vec2 v)
   g.x  = a0.x  * x0.x  + h.x  * x0.y;
   g.yz = a0.yz * x12.xz + h.yz * x12.yw;
   return 130.0 * dot(m, g);
-}
-
-// linearize a depth value in order to determine a meaningful difference
-float linearizeDepth (in float d)
-{
-	const float f = 1000.0f;
-	const float n = 1.0f;
-	return (2 * n) / (f + n - d * (f - n));
-}
-
-void main (void)
-{
-	float r = dot (fTexcoord, fTexcoord);
-	if (r > 1)
-		discard;	
-	thickness = 1;
-	if (usenoise)
-	{
-		vec3 normal = vec3 (fTexcoord, -sqrt (1 - r));
-		vec4 fPos = vec4 (fPosition - 0.1 * normal, 1.0);
-		vec4 clipPos = projmat * fPos;
-		float depth = linearizeDepth (clipPos.z / clipPos.w);
-
-		vec2 tmp = fTexcoord * fTexcoord;
-		float dd = depth - linearizeDepth (texture (depthtex, fTexcoord).x);
-		noise = exp (-tmp.x - tmp.y + dd * dd) * vec3 (snoise ((fTexcoord + 1 + 16.0 * float (id)) * 0.75),
-				  								   	   snoise ((fTexcoord + 3 + 16.0 * float (id)) * 0.75),
-				  								   	   snoise ((fTexcoord + 5 + 16.0 * float (id)) * 0.75));
-	}
 }

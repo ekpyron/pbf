@@ -21,10 +21,14 @@ SPH::SPH (const GLuint &_numparticles)
     glGenQueries (6, queries);
 
 	// create buffer objects
-	glGenBuffers (2, buffers);
+	glGenBuffers (3, buffers);
 
     // allocate lambda buffer
     glBindBuffer (GL_SHADER_STORAGE_BUFFER, lambdabuffer);
+    glBufferData (GL_SHADER_STORAGE_BUFFER, sizeof (float) * numparticles, NULL, GL_DYNAMIC_DRAW);
+
+    // allocate vorticity buffer
+    glBindBuffer (GL_SHADER_STORAGE_BUFFER, vorticitybuffer);
     glBufferData (GL_SHADER_STORAGE_BUFFER, sizeof (float) * numparticles, NULL, GL_DYNAMIC_DRAW);
 
     // allocate auxillary buffer
@@ -39,7 +43,7 @@ SPH::SPH (const GLuint &_numparticles)
 SPH::~SPH (void)
 {
 	// cleanup
-	glDeleteBuffers (2, buffers);
+	glDeleteBuffers (3, buffers);
 	glDeleteQueries (6, queries);
 }
 
@@ -148,6 +152,7 @@ void SPH::Run (void)
     	// calculate vorticity
     	if (vorticityconfinement)
     	{
+            glBindBufferBase (GL_SHADER_STORAGE_BUFFER, 3, vorticitybuffer);
     		vorticityprog.Use ();
     		glDispatchCompute (numparticles >> 8, 1, 1);
     	}
