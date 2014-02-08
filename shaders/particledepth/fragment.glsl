@@ -20,12 +20,6 @@ void main (void)
 	
 	vec4 fPos = vec4 (fPosition - 0.1 * normal, 1.0);
 	vec4 clipPos = projmat * fPos;
-
-	/*
-	//linear depth buffer
-	float f = 200.0f;	
-	gl_FragDepth = clipPos.z / f;
-	*/
 	
 	// non-linear depth buffer
 	gl_FragDepth = clipPos.z / clipPos.w;

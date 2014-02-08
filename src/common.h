@@ -30,6 +30,18 @@
 
 extern GLFWwindow *window;
 
+/** Particle key.
+ * Structure representing key information for each particle.
+ */
+typedef struct particlekey {
+	/** Particle position.
+	 */
+	glm::vec3 position;
+	/** Particle ID.
+	 */
+	GLuint id;
+} particlekey_t;
+
 /** Particle information.
  * Structure representing the information stored for each particle.
  */
@@ -37,15 +49,28 @@ typedef struct particleinfo {
     /** Particle position.
      */
     glm::vec3 position;
-    /** ID of the particle.
-     */
-    GLuint id;
-    /** Old particle position.
-     */
-    glm::vec3 oldposition;
     /** Highlighted flag.
      */
-    float highlighted;
+    GLuint highlighted;
+    /** Particle velocity.
+     */
+    glm::vec3 velocity;
+    /** Particle density.
+     */
+    float density
+    /** Particle color.
+     */;
+    glm::vec3 color;
+    /** Particle vorticity.
+     */
+    float vorticity;
 } particleinfo_t;
+
+/** Check for OpenGL extension.
+ * Checks whether an OpenGL extension is supported.
+ * \param name Name of the extension.
+ * \returns True, if the extension is supported, false, if not.
+ */
+bool IsExtensionSupported (const std::string &name);
 
 #endif /* !defined COMMON_H */

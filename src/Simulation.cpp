@@ -73,8 +73,9 @@ Simulation::Simulation (void) : width (0), height (0), font ("textures/font.png"
     // Initialize particle buffer
     ResetParticleBuffer ();
 
-    // pass the auxiliary buffer as color buffer to the point sprite class
-    pointsprite.SetColorBuffer (sph.GetAuxiliaryBuffer (), sizeof (float) * 4, 0);
+    // pass position and color to the point sprite class
+    pointsprite.SetPositionBuffer (sph.GetParticleBuffer (), sizeof (particleinfo_t), offsetof (particleinfo_t, position));
+    pointsprite.SetColorBuffer (sph.GetParticleBuffer (), sizeof (particleinfo_t), offsetof (particleinfo_t, color));
 
     // update view matrix
     UpdateViewMatrix ();
@@ -169,7 +170,6 @@ void Simulation::OnMouseDown (const int &button)
        	glClear (GL_DEPTH_BUFFER_BIT);
        	selectiondepthprogram.Use ();
        	glBindBufferBase (GL_SHADER_STORAGE_BUFFER, 0, sph.GetParticleBuffer ());
-       	glBindBufferBase (GL_SHADER_STORAGE_BUFFER, 1, sph.GetAuxiliaryBuffer ());
        	pointsprite.Render (GetNumberOfParticles());
 
        	// only render the closest sphere and write the highlighted flag.
@@ -207,9 +207,9 @@ void Simulation::ResetParticleBuffer (void)
                 particle.position = glm::vec3 (32.5f, 0.5f, 32.5f) + scale * glm::vec3 (x, y, z);
                 particle.position += 0.01f * glm::vec3 (float (rand ()) / float (RAND_MAX) - 0.5f,
                 		float (rand ()) / float (RAND_MAX) - 0.5f, float (rand ()) / float (RAND_MAX) - 0.5f);
-                particle.oldposition = particle.position;
+                particle.velocity = glm::vec3 (0, 0, 0);
                 particle.highlighted = 0;
-                particle.id = (id++) << 8;
+                particle.color = glm::vec3 (0.25, 0, 1);
                 particles.push_back (particle);
             }
         }
@@ -224,9 +224,9 @@ void Simulation::ResetParticleBuffer (void)
                 particle.position = glm::vec3 (32.5f + 63.0f, 0.5f, 32.5f + 63.0f) + scale * glm::vec3 (-x, y, -z);
                 particle.position += 0.01f * glm::vec3 (float (rand ()) / float (RAND_MAX) - 0.5f,
                 		float (rand ()) / float (RAND_MAX) - 0.5f, float (rand ()) / float (RAND_MAX) - 0.5f);
-                particle.oldposition = particle.position;
+                particle.velocity = glm::vec3 (0, 0, 0);
                 particle.highlighted = 0;
-                particle.id = (id++) << 8;
+                particle.color = glm::vec3 (0.25, 0, 1);
                 particles.push_back (particle);
             }
         }
@@ -234,10 +234,6 @@ void Simulation::ResetParticleBuffer (void)
     //  update the particle buffer
     glBindBuffer (GL_SHADER_STORAGE_BUFFER, sph.GetParticleBuffer ());
     glBufferSubData (GL_SHADER_STORAGE_BUFFER, 0, sizeof (particleinfo_t) * particles.size (), &particles[0]);
-    // clear auxiliary buffer
-    glBindBuffer (GL_SHADER_STORAGE_BUFFER, sph.GetAuxiliaryBuffer ());
-    const float auxdata[] = { 0.25, 0, 1, 1 };
-    glClearBufferData (GL_SHADER_STORAGE_BUFFER, GL_RGBA32F, GL_RGBA, GL_FLOAT, &auxdata[0]);
 }
 
 void Simulation::OnKeyDown (int key)

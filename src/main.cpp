@@ -165,6 +165,19 @@ void cleanup (void)
     glfwTerminate ();
 }
 
+bool IsExtensionSupported (const std::string &name)
+{
+	GLint n = 0;
+	glGetIntegerv (GL_NUM_EXTENSIONS, &n);
+	for (int i = 0; i < n; i++)
+	{
+		const char *ext = reinterpret_cast<const char*> (glGetStringi (GL_EXTENSIONS, i));
+		if (ext != NULL && !name.compare (ext))
+			return true;
+	}
+	return false;
+}
+
 /** Main.
  * Main entry point.
  * \param argc number of arguments

@@ -17,6 +17,10 @@ SPH::SPH (const GLuint &_numparticles)
     		"shaders/simulation/include.glsl");
     vorticityprog.Link ();
 
+    velocityprog.CompileShader (GL_COMPUTE_SHADER, "shaders/sph/velocity.glsl",
+    		"shaders/simulation/include.glsl");
+    velocityprog.Link ();
+
     // create query objects
     glGenQueries (6, queries);
 
@@ -31,12 +35,9 @@ SPH::SPH (const GLuint &_numparticles)
     glBindBuffer (GL_SHADER_STORAGE_BUFFER, vorticitybuffer);
     glBufferData (GL_SHADER_STORAGE_BUFFER, sizeof (float) * numparticles, NULL, GL_DYNAMIC_DRAW);
 
-    // allocate auxillary buffer
-    glBindBuffer (GL_SHADER_STORAGE_BUFFER, auxbuffer);
-    glBufferData (GL_SHADER_STORAGE_BUFFER, sizeof (float) * 4 * numparticles, NULL, GL_DYNAMIC_DRAW);
-    // clear auxiliary buffer
-    const float auxdata[] = { 0.25, 0, 1, 1 };
-    glClearBufferData (GL_SHADER_STORAGE_BUFFER, GL_RGBA32F, GL_RGBA, GL_FLOAT, &auxdata[0]);
+    // allocate particle buffer
+    glBindBuffer (GL_SHADER_STORAGE_BUFFER, particlebuffer);
+    glBufferData (GL_SHADER_STORAGE_BUFFER, sizeof (particleinfo_t) * numparticles, NULL, GL_DYNAMIC_DRAW);
 
 }
 
@@ -94,11 +95,6 @@ void SPH::Run (void)
 		// clear lambda buffer
 		glBindBuffer (GL_SHADER_STORAGE_BUFFER, lambdabuffer);
 		glClearBufferData (GL_SHADER_STORAGE_BUFFER, GL_R32F, GL_RED, GL_FLOAT, NULL);
-
-		// clear auxiliary buffer
-		glBindBuffer (GL_SHADER_STORAGE_BUFFER, auxbuffer);
-		const float auxdata[] = { 0.25, 0, 1, 1 };
-		glClearBufferData (GL_SHADER_STORAGE_BUFFER, GL_RGBA32F, GL_RGBA, GL_FLOAT, &auxdata[0]);
 		glMemoryBarrier (GL_BUFFER_UPDATE_BARRIER_BIT);
 	}
 	glEndQuery (GL_TIME_ELAPSED);
@@ -107,6 +103,7 @@ void SPH::Run (void)
     {
     	// predict positions
     	glBindBufferBase (GL_SHADER_STORAGE_BUFFER, 0, radixsort.GetBuffer ());
+    	glBindBufferBase (GL_SHADER_STORAGE_BUFFER, 1, particlebuffer);
     	predictpos.Use ();
     	glDispatchCompute (numparticles >> 8, 1, 1);
     	glMemoryBarrier (GL_SHADER_STORAGE_BARRIER_BIT);
@@ -134,8 +131,8 @@ void SPH::Run (void)
 
         // set buffer bindings
         glBindBufferBase (GL_SHADER_STORAGE_BUFFER, 0, radixsort.GetBuffer ());
-        glBindBufferBase (GL_SHADER_STORAGE_BUFFER, 1, lambdabuffer);
-        glBindBufferBase (GL_SHADER_STORAGE_BUFFER, 2, auxbuffer);
+        glBindBufferBase (GL_SHADER_STORAGE_BUFFER, 1, particlebuffer);
+        glBindBufferBase (GL_SHADER_STORAGE_BUFFER, 2, lambdabuffer);
 
     	// solver iteration
     	solver.Use ();
@@ -149,11 +146,17 @@ void SPH::Run (void)
 
     glBeginQuery (GL_TIME_ELAPSED, vorticityquery);
     {
-    	// calculate vorticity
     	if (vorticityconfinement)
     	{
-            glBindBufferBase (GL_SHADER_STORAGE_BUFFER, 3, vorticitybuffer);
+    		// calculate vorticity
+    		glBindBufferBase (GL_SHADER_STORAGE_BUFFER, 3, vorticitybuffer);
     		vorticityprog.Use ();
+    		glDispatchCompute (numparticles >> 8, 1, 1);
+    	}
+    	else
+    	{
+    		// update positions and velocities
+    		velocityprog.Use ();
     		glDispatchCompute (numparticles >> 8, 1, 1);
     	}
     }

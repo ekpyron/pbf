@@ -10,17 +10,16 @@ in vec2 fTexcoord;
 struct ParticleInfo
 {
 	vec3 position;
-	vec4 oldposition;
+	bool highlighted;
+	vec3 velocity;
+	float density;
+	vec3 color;
+	float vorticity;	
 };
 
 layout (std430, binding = 0) buffer ParticleBuffer
 {
 	ParticleInfo particles[];
-};
-
-layout (std430, binding = 1) writeonly buffer AuxBuffer
-{
-	vec4 auxdata[];
 };
 
 void main (void)
@@ -32,17 +31,14 @@ void main (void)
 		return;
 	}
 
-	if (particleid != -1)
+	if (particles[particleid].highlighted)
 	{
-		if (particles[particleid].oldposition.w == 0)
-		{
-			particles[particleid].oldposition.w = 1;
-			auxdata[particleid] = vec4 (1, 0, 0, 1);
-		}
-		else
-		{
-			particles[particleid].oldposition.w = 0;
-			auxdata[particleid] = vec4 (0.25, 0, 1, 1);
-		}
+		particles[particleid].highlighted = false;
+		particles[particleid].color = vec3 (0.25, 0, 1);
+	}
+	else
+	{
+		particles[particleid].highlighted = true;
+		particles[particleid].color = vec3 (1, 0, 0);
 	}
 }

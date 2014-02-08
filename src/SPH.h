@@ -25,15 +25,7 @@ public:
 	 * \returns the particle buffer
 	 */
 	GLuint GetParticleBuffer (void) const {
-		return radixsort.GetBuffer ();
-	}
-	/** Get auxiliary buffer.
-	 * Returns a buffer object containing auxiliary information for the
-	 * particles coded as 4 component color values.
-	 * \returns the auxiliary buffer
-	 */
-	const GLuint &GetAuxiliaryBuffer (void) const {
-		return auxbuffer;
+		return particlebuffer;
 	}
 
 	/** Check vorticity confinement.
@@ -87,6 +79,12 @@ private:
      */
     ShaderProgram vorticityprog;
 
+    /** Velocity program.
+     * Shader program for updating particle velocties and positions.
+     * This is done by the vorticity program, if vorticity confinement is enabled.
+     */
+    ShaderProgram velocityprog;
+
 
     /** Neighbour Cell finder.
      * Takes care of finding neighbour cells for the particles.
@@ -113,10 +111,10 @@ private:
              */
             GLuint lambdabuffer;
 
-            /** Auxiliary buffer.
-             * Buffer in which auxiliary data used for debugging purposes can be stored.
+            /** Particle buffer.
+             * Buffer in which information about each particle is stored.
              */
-            GLuint auxbuffer;
+            GLuint particlebuffer;
 
             /** Vorticity buffer.
              * Buffer in which the vorticity of each particle is stored.

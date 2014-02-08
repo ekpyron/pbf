@@ -6,10 +6,25 @@ layout (local_size_x = 256) in;
 struct ParticleInfo
 {
 	vec3 position;
-	vec4 oldposition;
+	bool highlighted;
+	vec3 velocity;
+	float density;
+	vec3 color;
+	float vorticity;	
 };
 
-layout (std430, binding = 0) buffer ParticleBuffer
+struct ParticleKey
+{
+	vec3 position;
+	uint id;
+};
+
+layout (std430, binding = 0) writeonly buffer ParticleKeys
+{
+	ParticleKey particlekeys[];
+};
+
+layout (std430, binding = 1) buffer ParticleBuffer
 {
 	ParticleInfo particles[];
 };
@@ -23,7 +38,7 @@ void main (void)
 
 	ParticleInfo particle = particles[particleid];
 	
-	vec3 velocity = (particle.position - particle.oldposition.xyz) / timestep;
+	vec3 velocity = particle.velocity;
 	
 	// optionally apply an additional external force to some particles
 	if (extforce && particle.position.z > GRID_DEPTH/2)
@@ -32,8 +47,9 @@ void main (void)
 	// gravity
 	velocity += gravity * vec3 (0, -1, 0) * timestep;
 	
-	// save old position and predict new position
-	particle.oldposition.xyz = particle.position;
-	particle.position += timestep * velocity;
-	particles[particleid]  = particle;
+	// predict new position
+	particlekeys[particleid].position = particle.position + timestep * velocity;
+	particlekeys[particleid].id = particleid;
+	// set color
+	particles[particleid].color = vec3 (0.25, 0, 1);
 }

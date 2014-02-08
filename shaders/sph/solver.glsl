@@ -6,24 +6,32 @@ layout (local_size_x = 256) in;
 struct ParticleInfo
 {
 	vec3 position;
-	uint id;
-	vec3 oldposition;
-	float highlighted;
+	bool highlighted;
+	vec3 velocity;
+	float density;
+	vec3 color;
+	float vorticity;	
 };
 
-layout (std430, binding = 0) buffer ParticleBuffer
+struct ParticleKey
+{
+	vec3 position;
+	uint id;
+};
+
+layout (std430, binding = 0) buffer ParticleKeys
+{
+	ParticleKey particlekeys[];
+};
+
+layout (std430, binding = 1) readonly buffer ParticleBuffer
 {
 	ParticleInfo particles[];
 };
 
-layout (std430, binding = 1) buffer LambdaBuffer
+layout (std430, binding = 2) buffer LambdaBuffer
 {
 	float lambdas[];
-};
-
-layout (std430, binding = 2) writeonly buffer AuxBuffer
-{
-	vec4 auxdata[];
 };
 
 layout (binding = 0) uniform isamplerBuffer neighbourcelltexture;
@@ -54,50 +62,38 @@ vec3 gradWspiky (vec3 r)
 }
 
 #define FOR_EACH_NEIGHBOUR(var) for (int o = 0; o < 3; o++) {\
-		ivec3 datav = texelFetch (neighbourcelltexture, int (particleid * 3 + o)).xyz;\
+		ivec3 datav = texelFetch (neighbourcelltexture, int (gl_GlobalInvocationID.x * 3 + o)).xyz;\
 		for (int comp = 0; comp < 3; comp++) {\
 		int data = datav[comp];\
 		int entries = data >> 24;\
 		data = data & 0xFFFFFF;\
 		if (data == 0) continue;\
 		for (int var = data; var < data + entries; var++) {\
-		if (var != particleid) {
+		if (var != gl_GlobalInvocationID.x) {
 #define END_FOR_EACH_NEIGHBOUR(var)	}}}}
 
 void main (void)
 {
-	uint particleid;
-	particleid = gl_GlobalInvocationID.x;
-
-	ParticleInfo particle = particles[particleid];
+	vec3 position = particlekeys[gl_GlobalInvocationID.x].position;
 
 	float sum_k_grad_Ci = 0;
 	float rho = 0;
 
-	if (particle.highlighted == 1)
-		auxdata[particleid] = vec4 (1, 0, 0, 1);
-		
 	vec3 grad_pi_Ci = vec3 (0, 0, 0);
 	
 	FOR_EACH_NEIGHBOUR(j)
 	{
-		vec3 position_j = particles[j].position;
+		vec3 position_j = particlekeys[j].position;
 		
-		// highlight neighbours of the highlighted particle
-		if (particle.highlighted == 1)
-		{
-			auxdata[j] = vec4 (0, 1, 0, 1);
-		}
-	
 		// compute rho_i (equation 2)
-		float len = distance (particle.position, position_j);
+		float len = distance (position, position_j);
 		float tmp = Wpoly6 (len);
 		rho += tmp;
 	
 		// sum gradients of Ci (equation 8 and parts of equation 9)
 		// use j as k so that we can stay in the same loop
 		vec3 grad_pk_Ci = vec3 (0, 0, 0);
-		grad_pk_Ci = gradWspiky (particle.position - position_j);
+		grad_pk_Ci = gradWspiky (position - position_j);
 		grad_pk_Ci /= rho_0;
 		sum_k_grad_Ci += dot (grad_pk_Ci, grad_pk_Ci);
 		
@@ -112,7 +108,7 @@ void main (void)
 	// compute lambda_i (equations 1 and 9)
 	float C_i = rho / rho_0 - 1;
 	float lambda = -C_i / (sum_k_grad_Ci + epsilon);
-	lambdas[particleid] = lambda;
+	lambdas[gl_GlobalInvocationID.x] = lambda;
 	
 	barrier ();
 	memoryBarrierBuffer ();
@@ -121,24 +117,24 @@ void main (void)
 			
 	FOR_EACH_NEIGHBOUR(j)
 	{
-		vec3 position_j = particles[j].position;
+		vec3 position_j = particlekeys[j].position;
 		
-		float scorr = (Wpoly6 (distance (particle.position, position_j)) / Wpoly6 (tensile_instability_h));
+		float scorr = (Wpoly6 (distance (position, position_j)) / Wpoly6 (tensile_instability_h));
 		scorr *= scorr;
 		scorr *= scorr;
 		scorr = -tensile_instability_k * scorr;  
 	
 		// accumulate position corrections (part of equation 12)
-		deltap += (lambda + lambdas[j] + scorr) * gradWspiky (particle.position - position_j);
+		deltap += (lambda + lambdas[j] + scorr) * gradWspiky (position - position_j);
 	}
 	END_FOR_EACH_NEIGHBOUR(j)
 
-	particle.position += deltap / rho_0;
+	position += deltap / rho_0;
 
 	// collision detection begin
 	vec3 wall = vec3 (16, 0, 16);
-	particle.position = clamp (particle.position, vec3 (0, 0, 0) + wall, GRID_SIZE - wall);
+	position = clamp (position, vec3 (0, 0, 0) + wall, GRID_SIZE - wall);
 	// collision detection end
 	
-	particles[particleid].position = particle.position;
+	particlekeys[gl_GlobalInvocationID.x].position = position;
 }

@@ -2,7 +2,9 @@
 
 NeighbourCellFinder::NeighbourCellFinder (const GLuint &_numparticles) : numparticles (_numparticles)
 {
-    findcells.CompileShader (GL_COMPUTE_SHADER, "shaders/neighbourcellfinder/findcells.glsl",
+	ARB_clear_texture_supported = IsExtensionSupported ("GL_ARB_clear_texture");
+
+	findcells.CompileShader (GL_COMPUTE_SHADER, "shaders/neighbourcellfinder/findcells.glsl",
     		"shaders/simulation/include.glsl");
     findcells.Link ();
 
@@ -15,7 +17,7 @@ NeighbourCellFinder::NeighbourCellFinder (const GLuint &_numparticles) : numpart
 
     // allocate grid clear buffer
 	// (only needed if GL_ARB_clear_texture is not available)
-    if (!GL_ARB_clear_texture)
+    if (!ARB_clear_texture_supported)
     {
     	glBindBuffer (GL_PIXEL_UNPACK_BUFFER, gridclearbuffer);
     	glBufferData (GL_PIXEL_UNPACK_BUFFER, sizeof (GLint) * 128 * 64 * 128, NULL, GL_DYNAMIC_DRAW);
@@ -39,7 +41,7 @@ NeighbourCellFinder::NeighbourCellFinder (const GLuint &_numparticles) : numpart
     }
 
     // clear grid texture
-    if (!GL_ARB_clear_texture)
+    if (!ARB_clear_texture_supported)
     {
     	glBindBuffer (GL_PIXEL_UNPACK_BUFFER, 0);
     }
@@ -82,7 +84,7 @@ const Texture &NeighbourCellFinder::GetResult (void) const
 void NeighbourCellFinder::FindNeighbourCells (const GLuint &particlebuffer)
 {
     // clear grid buffer
-	if (GL_ARB_clear_texture)
+	if (ARB_clear_texture_supported)
 	{
 		GLint v = -1;
 		glClearTexImage (gridtexture.get (), 0, GL_RED_INTEGER, GL_INT, &v);
