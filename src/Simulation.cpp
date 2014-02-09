@@ -12,7 +12,8 @@ Simulation::Simulation (void) : width (0), height (0), font ("textures/font.png"
     particleprogram.Link ();
 
     selectionprogram.CompileShader (GL_VERTEX_SHADER, "shaders/selection/vertex.glsl");
-    selectionprogram.CompileShader (GL_FRAGMENT_SHADER, "shaders/selection/fragment.glsl");
+    selectionprogram.CompileShader (GL_FRAGMENT_SHADER, "shaders/selection/fragment.glsl",
+    		"shaders/simulation/include.glsl");
     selectionprogram.Link ();
 
     selectiondepthprogram.CompileShader (GL_VERTEX_SHADER, "shaders/selection/vertex.glsl");

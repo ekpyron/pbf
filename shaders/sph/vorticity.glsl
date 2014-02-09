@@ -3,22 +3,6 @@
 
 layout (local_size_x = 256) in;
 
-struct ParticleInfo
-{
-	vec3 position;
-	bool highlighted;
-	vec3 velocity;
-	float density;
-	vec3 color;
-	float vorticity;	
-};
-
-struct ParticleKey
-{
-	vec3 position;
-	uint id;
-};
-
 layout (std430, binding = 0) buffer ParticleKeys
 {
 	ParticleKey particlekeys[];

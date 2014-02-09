@@ -3,15 +3,9 @@
 
 layout (local_size_x = 256) in;
 
-struct ParticleInfo
+layout (std430, binding = 0) readonly buffer ParticleKeys
 {
-	vec3 position;
-	uint id;
-};
-
-layout (std430, binding = 0) readonly buffer ParticleBuffer
-{
-	ParticleInfo particles[];
+	ParticleKey particlekeys[];
 };
 
 layout (binding = 0) uniform isampler3D gridtexture;
@@ -40,7 +34,7 @@ void main (void)
 	uint particleid;
 	particleid = gl_GlobalInvocationID.x;
 
-	vec3 gridpos = floor (particles[particleid].position) / GRID_SIZE;
+	vec3 gridpos = floor (particlekeys[particleid].position) / GRID_SIZE;
 	
 	int cells[9];
 

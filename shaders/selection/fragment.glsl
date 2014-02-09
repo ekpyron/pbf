@@ -1,4 +1,4 @@
-#version 430 core
+// header is included here
 
 // enable early z culling
 layout (early_fragment_tests) in;
@@ -6,16 +6,6 @@ layout (early_fragment_tests) in;
 // input from vertex shader
 flat in int particleid;
 in vec2 fTexcoord;
-
-struct ParticleInfo
-{
-	vec3 position;
-	bool highlighted;
-	vec3 velocity;
-	float density;
-	vec3 color;
-	float vorticity;	
-};
 
 layout (std430, binding = 0) buffer ParticleBuffer
 {

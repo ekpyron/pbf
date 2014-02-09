@@ -5,14 +5,9 @@
 
 layout (local_size_x = BLOCKSIZE) in;
 
-struct ParticleInfo
-{
-	vec4 position;
-};
-
 layout (std430, binding = 0) readonly buffer Data
 {
-	ParticleInfo data[];
+	vec4 data[];
 };
 
 layout (std430, binding = 1) readonly buffer PrefixSum
@@ -27,7 +22,7 @@ layout (std430, binding = 2) readonly buffer BlockSum
 
 layout (std430, binding = 3) writeonly buffer Result
 {
-	ParticleInfo result[];
+	vec4 result[];
 };
 
 uniform uvec4 blocksumoffsets;
@@ -36,7 +31,7 @@ uniform int bitshift;
 
 uint GetHash (int id)
 {
-	vec3 pos = data[id].position.xyz;
+	vec3 pos = data[id].xyz;
 	ivec3 grid = ivec3 (clamp (pos, vec3 (0, 0, 0), GRID_SIZE));
 	return grid.y * GRID_WIDTH * GRID_DEPTH + grid.z * GRID_WIDTH + grid.x;
 }

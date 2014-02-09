@@ -5,14 +5,9 @@
 
 layout (local_size_x = HALFBLOCKSIZE) in;
 
-struct ParticleInfo
-{
-	vec4 position;
-};
-
 layout (std430, binding = 0) buffer Data
 {
-	ParticleInfo data[];
+	vec4 data[];
 };
 
 layout (std430, binding = 1) writeonly buffer PrefixSum
@@ -54,8 +49,8 @@ void main (void)
 	int bankOffsetA = CONFLICT_FREE_OFFSET(ai);
 	int bankOffsetB = CONFLICT_FREE_OFFSET(bi);
 	
-	uint bits1 = bitfieldExtract (GetHash (data[gl_WorkGroupID.x * BLOCKSIZE + lid].position.xyz), bitshift, 2);
-	uint bits2 = bitfieldExtract (GetHash (data[gl_WorkGroupID.x * BLOCKSIZE + lid + (n/2)].position.xyz), bitshift, 2);
+	uint bits1 = bitfieldExtract (GetHash (data[gl_WorkGroupID.x * BLOCKSIZE + lid].xyz), bitshift, 2);
+	uint bits2 = bitfieldExtract (GetHash (data[gl_WorkGroupID.x * BLOCKSIZE + lid + (n/2)].xyz), bitshift, 2);
 	mask[ai + bankOffsetA] = uvec4 (equal (bits1 * uvec4 (1, 1, 1, 1), uvec4 (0, 1, 2, 3)));
 	mask[bi + bankOffsetB] = uvec4 (equal (bits2 * uvec4 (1, 1, 1, 1), uvec4 (0, 1, 2, 3)));
 

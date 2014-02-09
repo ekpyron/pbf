@@ -21,3 +21,19 @@ const float tensile_instability_h = 0.2;
 
 const float xsph_viscosity_c = 0.01;
 const float vorticity_epsilon = 7.0;
+
+struct ParticleInfo
+{
+	vec3 position;
+	bool highlighted;
+	vec3 velocity;
+	float density;
+	vec3 color;
+	float vorticity;	
+};
+
+struct ParticleKey
+{
+	vec3 position;
+	uint id;
+};
