@@ -75,8 +75,8 @@ void main (void)
 		// fetch noise
 		N = texture (noisetex, fTexcoord).xyz;
 		
-		// normalize noise
-		normal += N * 0.02;
+		// perturb normal with scaled noise
+		normal += N * 0.075;
 		normal = normalize (normal);
 	}
 	
