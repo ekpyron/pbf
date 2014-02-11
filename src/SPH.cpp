@@ -146,17 +146,14 @@ void SPH::Run (void)
 
     glBeginQuery (GL_TIME_ELAPSED, vorticityquery);
     {
+		// update positions and velocities
+		updateprog.Use ();
+		glDispatchCompute (numparticles >> 8, 1, 1);
     	if (vorticityconfinement)
     	{
     		// calculate vorticity
     		glBindBufferBase (GL_SHADER_STORAGE_BUFFER, 3, vorticitybuffer);
     		vorticityprog.Use ();
-    		glDispatchCompute (numparticles >> 8, 1, 1);
-    	}
-    	else
-    	{
-    		// update positions and velocities
-    		updateprog.Use ();
     		glDispatchCompute (numparticles >> 8, 1, 1);
     	}
     }

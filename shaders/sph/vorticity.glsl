@@ -13,7 +13,7 @@ layout (std430, binding = 1) buffer ParticleBuffer
 	ParticleInfo particles[];
 };
 
-layout (std430, binding = 3) buffer VorticityBuffer
+layout (std430, binding = 3) coherent buffer VorticityBuffer
 {
 	float vorticities[];
 };
@@ -53,28 +53,18 @@ void main (void)
 	uint particleid = particlekeys[gl_GlobalInvocationID.x].id;
 	vec3 position = particlekeys[gl_GlobalInvocationID.x].position;
 
-	ParticleInfo particle = particles[particleid];
+	// fetch velocity	
+	vec3 velocity = particles[particleid].velocity;
 	
-	// calculate velocity	
-	vec3 velocity = (position - particle.position) / timestep;
-	
-	if (particles[particleid].highlighted)
-		particles[particleid].color = vec3 (1, 0, 0);
-	
-	
-
-	// vorticity confinement & XSPH viscosity
+	// calculate vorticity & apply XSPH viscosity
 	vec3 v = vec3 (0, 0, 0);
 	vec3 vorticity = vec3 (0, 0, 0);
 	float rho = 0;
 	FOR_EACH_NEIGHBOUR(j)
 	{
-		if (particles[particleid].highlighted)
-			particles[particlekeys[j].id].color = vec3 (0, 1, 0);
-	
-		vec3 p_j = particlekeys[j].position;
-		vec3 v_ij = (p_j - particles[particlekeys[j].id].position) / timestep - velocity;
-		vec3 p_ij = position - p_j;
+		ParticleKey key_j = particlekeys[j];
+		vec3 v_ij = particles[key_j.id].velocity - velocity;
+		vec3 p_ij = position - key_j.position;
 		float tmp = Wpoly6 (length (p_ij));
 		rho += tmp;
 		v += v_ij * tmp;
@@ -88,6 +78,7 @@ void main (void)
 	barrier ();
 	memoryBarrierBuffer ();
 	
+	// vorticity confinement
 	vec3 gradVorticity = vec3 (0, 0, 0);
 	FOR_EACH_NEIGHBOUR(j)
 	{
@@ -101,13 +92,9 @@ void main (void)
 		gradVorticity /= l;
 	vec3 N = gradVorticity;
 	
-	// vorticity force
+	// apply vorticity force
 	velocity += timestep * vorticity_epsilon * cross (N, vorticity);
-	
-	barrier ();
 	
 	// update particle information
 	particles[particleid].velocity = velocity;
-	particles[particleid].position = position;
-	particles[particleid].density = rho;
 }
