@@ -50,8 +50,9 @@ vec3 gradWspiky (vec3 r)
 
 void main (void)
 {
-	uint particleid = particlekeys[gl_GlobalInvocationID.x].id;
-	vec3 position = particlekeys[gl_GlobalInvocationID.x].position;
+	ParticleKey key = particlekeys[gl_GlobalInvocationID.x];
+	uint particleid = key.id;
+	vec3 position = key.position;
 
 	// fetch velocity	
 	vec3 velocity = particles[particleid].velocity;
@@ -73,7 +74,7 @@ void main (void)
 	END_FOR_EACH_NEIGHBOUR(j)
 	velocity += xsph_viscosity_c * v;
 	
-	vorticities[particleid] = length (vorticity);
+	vorticities[gl_GlobalInvocationID.x] = length (vorticity);
 	
 	barrier ();
 	memoryBarrierBuffer ();
@@ -83,6 +84,8 @@ void main (void)
 	FOR_EACH_NEIGHBOUR(j)
 	{
 		vec3 p_ij = position - particlekeys[j].position;
+		// There is no real guarantee that vorticities[] contains the correct
+		// values at this point, but there seem to be no issues in practice.
 		gradVorticity += vorticities[j] * gradWspiky (p_ij);
 	}
 	END_FOR_EACH_NEIGHBOUR(j)

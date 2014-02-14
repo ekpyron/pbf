@@ -9,9 +9,13 @@ SPH::SPH (const GLuint &_numparticles)
     		"shaders/simulation/include.glsl");
     predictpos.Link ();
 
-    solver.CompileShader (GL_COMPUTE_SHADER, "shaders/sph/solver.glsl",
+    calclambdaprog.CompileShader (GL_COMPUTE_SHADER, "shaders/sph/calclambda.glsl",
     		"shaders/simulation/include.glsl");
-    solver.Link ();
+    calclambdaprog.Link ();
+
+    updateposprog.CompileShader (GL_COMPUTE_SHADER, "shaders/sph/updatepos.glsl",
+    		"shaders/simulation/include.glsl");
+    updateposprog.Link ();
 
     vorticityprog.CompileShader (GL_COMPUTE_SHADER, "shaders/sph/vorticity.glsl",
     		"shaders/simulation/include.glsl");
@@ -135,9 +139,12 @@ void SPH::Run (void)
         glBindBufferBase (GL_SHADER_STORAGE_BUFFER, 2, lambdabuffer);
 
     	// solver iteration
-    	solver.Use ();
     	for (int iteration = 0; iteration < 5; iteration++)
     	{
+        	calclambdaprog.Use ();
+    		glDispatchCompute (numparticles >> 8, 1, 1);
+    		glMemoryBarrier (GL_SHADER_STORAGE_BARRIER_BIT);
+        	updateposprog.Use ();
     		glDispatchCompute (numparticles >> 8, 1, 1);
     		glMemoryBarrier (GL_SHADER_STORAGE_BARRIER_BIT);
     	}

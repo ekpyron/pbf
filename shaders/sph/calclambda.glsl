@@ -13,7 +13,7 @@ layout (std430, binding = 1) readonly buffer ParticleBuffer
 	ParticleInfo particles[];
 };
 
-layout (std430, binding = 2) buffer LambdaBuffer
+layout (std430, binding = 2) writeonly buffer LambdaBuffer
 {
 	float lambdas[];
 };
@@ -93,32 +93,4 @@ void main (void)
 	float C_i = rho / rho_0 - 1;
 	float lambda = -C_i / (sum_k_grad_Ci + epsilon);
 	lambdas[gl_GlobalInvocationID.x] = lambda;
-	
-	barrier ();
-	memoryBarrierBuffer ();
-	
-	vec3 deltap = vec3 (0, 0, 0);
-			
-	FOR_EACH_NEIGHBOUR(j)
-	{
-		vec3 position_j = particlekeys[j].position;
-		
-		float scorr = (Wpoly6 (distance (position, position_j)) / Wpoly6 (tensile_instability_h));
-		scorr *= scorr;
-		scorr *= scorr;
-		scorr = -tensile_instability_k * scorr;  
-	
-		// accumulate position corrections (part of equation 12)
-		deltap += (lambda + lambdas[j] + scorr) * gradWspiky (position - position_j);
-	}
-	END_FOR_EACH_NEIGHBOUR(j)
-
-	position += deltap / rho_0;
-
-	// collision detection begin
-	vec3 wall = vec3 (16, 0, 16);
-	position = clamp (position, vec3 (0, 0, 0) + wall, GRID_SIZE - wall);
-	// collision detection end
-	
-	particlekeys[gl_GlobalInvocationID.x].position = position;
 }

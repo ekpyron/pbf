@@ -70,9 +70,15 @@ private:
     ShaderProgram predictpos;
 
     /** Simulation step shader program.
-     * Shader program for the simulation step that performs the solver iteration for each particle.
+     * Shader program for the simulation step that calculates lambda_i for each particle.
      */
-    ShaderProgram solver;
+    ShaderProgram calclambdaprog;
+
+    /** Simulation step shader program.
+     * Shader program for the simulation step that updates the position of each particle
+     * according to the calculated lambdas.
+     */
+    ShaderProgram updateposprog;
 
     /** Vorticity program.
      * Shader program for calculating particle vorticity.

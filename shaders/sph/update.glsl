@@ -29,13 +29,12 @@ layout (binding = 0) uniform isamplerBuffer neighbourcelltexture;
 
 void main (void)
 {
-	uint particleid = particlekeys[gl_GlobalInvocationID.x].id;
-	vec3 position = particlekeys[gl_GlobalInvocationID.x].position;
+	ParticleKey key = particlekeys[gl_GlobalInvocationID.x];
+	uint particleid = key.id;
+	vec3 position = key.position;
 
-	ParticleInfo particle = particles[particleid];
-	
 	// calculate velocity	
-	vec3 velocity = (position - particle.position) / timestep;
+	vec3 velocity = (position - particles[particleid].position) / timestep;
 
 	// update position and velocity
 	particles[particleid].velocity = velocity;
