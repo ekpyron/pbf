@@ -73,7 +73,7 @@ void main (void)
 		float len = distance (position, position_j);
 		float tmp = Wpoly6 (len);
 		rho += tmp;
-	
+
 		// sum gradients of Ci (equation 8 and parts of equation 9)
 		// use j as k so that we can stay in the same loop
 		vec3 grad_pk_Ci = vec3 (0, 0, 0);

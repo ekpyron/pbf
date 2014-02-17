@@ -33,10 +33,13 @@ void main (void)
 	uint particleid = key.id;
 	vec3 position = key.position;
 
-	// calculate velocity	
-	vec3 velocity = (position - particles[particleid].position) / timestep;
-
-	// update position and velocity
-	particles[particleid].velocity = velocity;
-	particles[particleid].position = position;
+	if (particles[particleid].highlighted > 0)
+	{
+		particles[particleid].color = vec3 (1, 0, 0);
+		FOR_EACH_NEIGHBOUR(j)
+		{
+			particles[particlekeys[j].id].color = vec3 (0, 1, 0);
+		}
+		END_FOR_EACH_NEIGHBOUR(j)
+	}
 }

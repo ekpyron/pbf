@@ -21,14 +21,14 @@ void main (void)
 		return;
 	}
 
-	if (particles[particleid].highlighted)
+	if (particles[particleid].highlighted > 0)
 	{
-		particles[particleid].highlighted = false;
+		particles[particleid].highlighted = 0;
 		particles[particleid].color = vec3 (0.25, 0, 1);
 	}
 	else
 	{
-		particles[particleid].highlighted = true;
+		particles[particleid].highlighted = 1;
 		particles[particleid].color = vec3 (1, 0, 0);
 	}
 }

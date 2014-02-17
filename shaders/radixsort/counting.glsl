@@ -79,7 +79,7 @@ void main (void)
 	{
 		for (int i = 0; i < 4; i++)
 		{
-			blocksum[blocksumoffsets[i] + gl_WorkGroupID.x] = mask[n - 1 + CONFLICT_FREE_OFFSET(n - 1)][i];
+			blocksum[blocksumoffsets[i] + gl_WorkGroupID.x] = uvec4 (mask[n - 1 + CONFLICT_FREE_OFFSET(n - 1)])[i];
 		}
 
 		mask[n - 1 + CONFLICT_FREE_OFFSET(n - 1)] = uvec4 (0, 0, 0, 0);
@@ -108,6 +108,6 @@ void main (void)
 	barrier ();
 	memoryBarrierShared ();
 	
-	prefixsum[gl_WorkGroupID.x * BLOCKSIZE + lid] = mask[ai + bankOffsetA][bits1];
-	prefixsum[gl_WorkGroupID.x * BLOCKSIZE + lid + (n/2)] = mask[bi + bankOffsetB][bits2];
+	prefixsum[gl_WorkGroupID.x * BLOCKSIZE + lid] = uvec4 (mask[ai + bankOffsetA])[bits1];
+	prefixsum[gl_WorkGroupID.x * BLOCKSIZE + lid + (n/2)] = uvec4 (mask[bi + bankOffsetB])[bits2];
 }

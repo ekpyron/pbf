@@ -1,6 +1,6 @@
 #version 430 core
 
-layout (binding = 0) uniform sampler2D input;
+layout (binding = 0) uniform sampler2D inputtex;
 layout (location = 0) out vec4 color;
 
 // input from vertex shader
@@ -18,11 +18,11 @@ void main(void)
 {
 	vec4 c;
 	// sum weighted data
-	c = texture (input, fTexcoord) * weights[0].r;
+	c = texture (inputtex, fTexcoord) * weights[0].r;
 	for (int i = 1; i < weights.length (); i++)
 	{
-		c += texture (input, fTexcoord + weights[i].g * offsetscale) * weights[i].r;
-		c += texture (input, fTexcoord - weights[i].g * offsetscale) * weights[i].r;
+		c += texture (inputtex, fTexcoord + weights[i].g * offsetscale) * weights[i].r;
+		c += texture (inputtex, fTexcoord - weights[i].g * offsetscale) * weights[i].r;
 	}
 	
 	// output resulting color

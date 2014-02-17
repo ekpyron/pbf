@@ -91,6 +91,12 @@ private:
      */
     ShaderProgram updateprog;
 
+    /** Dummy program.
+     * Dummy shader program.
+     * This is done to workaround an inexplicable bug in certain graphics drivers.
+     */
+    ShaderProgram dummyprog;
+
 
     /** Neighbour Cell finder.
      * Takes care of finding neighbour cells for the particles.

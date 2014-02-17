@@ -25,7 +25,7 @@ const float vorticity_epsilon = 5;
 struct ParticleInfo
 {
 	vec3 position;
-	bool highlighted;
+	int highlighted;
 	vec3 velocity;
 	float density;
 	vec3 color;
