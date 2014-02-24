@@ -30,7 +30,7 @@ SPH::SPH (const GLuint &_numparticles)
     dummyprog.Link ();
 
     // create query objects
-    glGenQueries (6, queries);
+    glGenQueries (5, queries);
 
 	// create buffer objects
 	glGenBuffers (3, buffers);
@@ -53,17 +53,12 @@ SPH::~SPH (void)
 {
 	// cleanup
 	glDeleteBuffers (3, buffers);
-	glDeleteQueries (6, queries);
+	glDeleteQueries (5, queries);
 }
 
 void SPH::OutputTiming (void)
 {
 	GLint64 v;
-	if (glIsQuery (preparationquery))
-	{
-		glGetQueryObjecti64v (preparationquery, GL_QUERY_RESULT, &v);
-		std::cout << "Preparation: " << double (v) / 1000000.0 << " ms" << std::endl;
-	}
 	if (glIsQuery (predictposquery))
 	{
 		glGetQueryObjecti64v (predictposquery, GL_QUERY_RESULT, &v);
@@ -98,15 +93,6 @@ void SPH::SetExternalForce (bool state)
 
 void SPH::Run (void)
 {
-	glBeginQuery (GL_TIME_ELAPSED, preparationquery);
-	{
-		// clear lambda buffer
-		glBindBuffer (GL_SHADER_STORAGE_BUFFER, lambdabuffer);
-		glClearBufferData (GL_SHADER_STORAGE_BUFFER, GL_R32F, GL_RED, GL_FLOAT, NULL);
-		glMemoryBarrier (GL_BUFFER_UPDATE_BARRIER_BIT);
-	}
-	glEndQuery (GL_TIME_ELAPSED);
-
     glBeginQuery (GL_TIME_ELAPSED, predictposquery);
     {
     	// predict positions

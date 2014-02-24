@@ -116,8 +116,6 @@ private:
 
     union {
         struct {
-        	/* The buffer object in radixsort is used as particle buffer*/
-
             /** Lambda buffer.
              * Buffer in which the specific scalar values are stored during the simulation steps.
              */
@@ -142,10 +140,6 @@ private:
 
     union {
     	struct {
-    		/** Preparation query object.
-    		 * Query object to record the time spent in the preparation phase.
-    		 */
-    		GLuint preparationquery;
     		/** Predict position query object.
     		 * Query object to record the time spent in the predict position phase.
     		 */
@@ -171,7 +165,7 @@ private:
          * The query objects are stored in a union, so that it is possible
          * to create/delete all buffer objects with a single OpenGL call.
          */
-        GLuint queries[6];
+        GLuint queries[5];
     };
 
 
