@@ -257,7 +257,7 @@ void Simulation::OnKeyUp (int key)
     	break;
     }
     // toggle environment map
-    case GLFW_KEY_S:
+    case GLFW_KEY_E:
     	useskybox = !useskybox;
     	if (useskybox)
     	{
@@ -283,6 +283,10 @@ void Simulation::OnKeyUp (int key)
     	{
     		surfacereconstruction.SetEnvironmentMap (NULL);
     	}
+    	break;
+    // single simulation step
+    case GLFW_KEY_S:
+    	sph.Run ();
     	break;
     // toggle noise
     case GLFW_KEY_N:
