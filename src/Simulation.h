@@ -11,6 +11,7 @@
 #include "SPH.h"
 #include "SurfaceReconstruction.h"
 #include "Skybox.h"
+#include "Selection.h"
 
 /** Simulation class.
  * This is the main class which takes care of the whole simulation.
@@ -108,16 +109,6 @@ private:
     */
     ShaderProgram particleprogram;
 
-    /** Selection shader program.
-     * Shader program for selecting particles.
-     */
-    ShaderProgram selectionprogram;
-
-    /** Selection depth shader program.
-     * Shader program for determining particle depths for selecting particles.
-     */
-    ShaderProgram selectiondepthprogram;
-
     /** Skybox.
      * Takes care of rendering a sky box for the scene.
      */
@@ -189,30 +180,15 @@ private:
         GLuint buffers[2];
     };
 
-    union {
-    	struct {
-    		/** Selection framebuffer.
-    		 * Framebuffer object used to determine which object resides at a specific screen
-    		 * space position.
-    		 */
-    		GLuint selectionfb;
-    	};
-    	/** Framebuffer objects.
-    	 * The framebuffer objects are stored in a union, so that it is possible
-    	 * to create/delete all texture objects with a single OpenGL call.
-    	 */
-    	GLuint framebuffers[1];
-    };
+    /** Selection subsystem.
+     * Takes care of determining particle ids from screen positions. Used for particle highlighting.
+     */
+    Selection selection;
 
     /** Font subsystem.
      * Takes care of displaying text.
      */
     Font font;
-
-    /** Selection depth texture.
-     * Texture for the depth buffer of the selection framebuffer.
-     */
-    Texture selectiondepthtexture;
 
 	/** Rendering query object.
 	 * Query object to record the time spent in the rendering phase.

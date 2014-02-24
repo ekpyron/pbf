@@ -144,8 +144,7 @@ void SPH::Run (void)
 
     	// solver iteration
         dummyprog.Use ();
-        glDispatchCompute (1,1,1);//numparticles >> 8, 1, 1);
-        glMemoryBarrier (GL_ALL_BARRIER_BITS);
+        glDispatchCompute (numparticles >> 8, 1, 1);
 
     	for (int iteration = 0; iteration < 5; iteration++)
     	{

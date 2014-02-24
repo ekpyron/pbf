@@ -11,32 +11,11 @@ Simulation::Simulation (void) : width (0), height (0), font ("textures/font.png"
     particleprogram.CompileShader (GL_FRAGMENT_SHADER, "shaders/particles/fragment.glsl");
     particleprogram.Link ();
 
-    selectionprogram.CompileShader (GL_VERTEX_SHADER, "shaders/selection/vertex.glsl");
-    selectionprogram.CompileShader (GL_FRAGMENT_SHADER, "shaders/selection/fragment.glsl",
-    		"shaders/simulation/include.glsl");
-    selectionprogram.Link ();
-
-    selectiondepthprogram.CompileShader (GL_VERTEX_SHADER, "shaders/selection/vertex.glsl");
-    selectiondepthprogram.CompileShader (GL_FRAGMENT_SHADER, "shaders/selection/depth.glsl");
-    selectiondepthprogram.Link ();
-
     // create buffer objects
     glGenBuffers (2, buffers);
 
     // create query objects
     glGenQueries (1, &renderingquery);
-
-    // create selection depth texture
-    selectiondepthtexture.Bind (GL_TEXTURE_2D);
-    glTexImage2D (GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT32F, 1, 1, 0, GL_DEPTH_COMPONENT, GL_FLOAT, NULL);
-
-    // create framebuffer objects
-    glGenFramebuffers (1, framebuffers);
-
-    // setup selection framebuffer
-    glBindFramebuffer (GL_FRAMEBUFFER, selectionfb);
-    glFramebufferTexture2D (GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, selectiondepthtexture.get (), 0);
-    glBindFramebuffer (GL_FRAMEBUFFER, 0);
 
     // initialize the camera position and rotation and the transformation matrix buffer.
     camera.SetPosition (glm::vec3 (20, 10, 10));
@@ -89,7 +68,6 @@ Simulation::~Simulation (void)
 {
     // cleanup
 	if (envmap) delete envmap;
-	glDeleteFramebuffers (1, framebuffers);
 	glDeleteQueries (1, &renderingquery);
     glDeleteBuffers (2, buffers);
 }
@@ -156,30 +134,26 @@ void Simulation::OnMouseDown (const int &button)
 {
 	if (glfwGetKey (window, GLFW_KEY_H))
 	{
-		// setup viewport according to cursor position
 		double xpos, ypos;
-		int width, height;
 		glfwGetCursorPos (window, &xpos, &ypos);
-		glfwGetFramebufferSize (window, &width, &height);
-		glBindFramebuffer (GL_FRAMEBUFFER, selectionfb);
-        glViewport (-xpos, ypos - height, width, height);
-
-        // pass the position buffer to the point sprite class
-        pointsprite.SetPositionBuffer (sph.GetParticleBuffer (), sizeof (particleinfo_t), 0);
-
-        // clear and fill depth buffer
-       	glClear (GL_DEPTH_BUFFER_BIT);
-       	selectiondepthprogram.Use ();
-       	glBindBufferBase (GL_SHADER_STORAGE_BUFFER, 0, sph.GetParticleBuffer ());
-       	pointsprite.Render (GetNumberOfParticles());
-
-       	// only render the closest sphere and write the highlighted flag.
-       	selectionprogram.Use ();
-       	glDepthFunc (GL_EQUAL);
-       	pointsprite.Render (GetNumberOfParticles());
-       	glDepthFunc (GL_LESS);
-		glBindFramebuffer (GL_FRAMEBUFFER, 0);
-		glMemoryBarrier (GL_SHADER_STORAGE_BARRIER_BIT);
+		GLint id = selection.GetParticle (sph.GetParticleBuffer (), GetNumberOfParticles (), xpos, ypos);
+		if (id >= 0)
+		{
+			glBindBuffer (GL_SHADER_STORAGE_BUFFER, sph.GetParticleBuffer ());
+			particleinfo_t info;
+			glGetBufferSubData (GL_SHADER_STORAGE_BUFFER, id * sizeof (particleinfo_t), sizeof (particleinfo_t), &info);
+			if (info.highlighted > 0)
+			{
+				info.highlighted = 0;
+				info.color = glm::vec3 (0.25, 0, 1);
+			}
+			else
+			{
+				info.highlighted = 1;
+				info.color = glm::vec3 (1, 0, 0);
+			}
+			glBufferSubData (GL_SHADER_STORAGE_BUFFER, id * sizeof (particleinfo_t), sizeof (particleinfo_t), &info);
+		}
 	}
 }
 
