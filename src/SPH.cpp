@@ -114,7 +114,6 @@ void SPH::Run (void)
     	glBindBufferBase (GL_SHADER_STORAGE_BUFFER, 1, particlebuffer);
     	predictpos.Use ();
     	glDispatchCompute (numparticles >> 8, 1, 1);
-    	glFlush ();
     	glMemoryBarrier (GL_SHADER_STORAGE_BARRIER_BIT);
     }
     glEndQuery (GL_TIME_ELAPSED);
@@ -146,18 +145,15 @@ void SPH::Run (void)
     	// solver iteration
         dummyprog.Use ();
         glDispatchCompute (1,1,1);//numparticles >> 8, 1, 1);
-        glFlush ();
         glMemoryBarrier (GL_ALL_BARRIER_BITS);
 
     	for (int iteration = 0; iteration < 5; iteration++)
     	{
     		calclambdaprog.Use ();
     		glDispatchCompute (numparticles >> 8, 1, 1);
-    		glFlush ();
     		glMemoryBarrier (GL_SHADER_STORAGE_BARRIER_BIT);
         	updateposprog.Use ();
     		glDispatchCompute (numparticles >> 8, 1, 1);
-    		glFlush ();
     		glMemoryBarrier (GL_SHADER_STORAGE_BARRIER_BIT);
     	}
     }
@@ -168,7 +164,6 @@ void SPH::Run (void)
 		// update positions and velocities
 		updateprog.Use ();
 		glDispatchCompute (numparticles >> 8, 1, 1);
-		glFlush ();
 		glMemoryBarrier (GL_SHADER_STORAGE_BARRIER_BIT);
     	if (vorticityconfinement)
     	{
@@ -176,7 +171,6 @@ void SPH::Run (void)
     		glBindBufferBase (GL_SHADER_STORAGE_BUFFER, 3, vorticitybuffer);
     		vorticityprog.Use ();
     		glDispatchCompute (numparticles >> 8, 1, 1);
-    		glFlush ();
     		glMemoryBarrier (GL_SHADER_STORAGE_BARRIER_BIT);
     	}
     }

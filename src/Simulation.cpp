@@ -179,7 +179,6 @@ void Simulation::OnMouseDown (const int &button)
        	pointsprite.Render (GetNumberOfParticles());
        	glDepthFunc (GL_LESS);
 		glBindFramebuffer (GL_FRAMEBUFFER, 0);
-		glFlush ();
 		glMemoryBarrier (GL_SHADER_STORAGE_BARRIER_BIT);
 	}
 }

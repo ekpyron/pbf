@@ -127,7 +127,6 @@ void RadixSort::SortBits (int bits)
 	// counting
 	counting.Use ();
 	glDispatchCompute (numblocks, 1, 1);
-	glFlush ();
 	glMemoryBarrier (GL_SHADER_STORAGE_BARRIER_BIT);
 
 	// create block sums level by level
@@ -139,7 +138,6 @@ void RadixSort::SortBits (int bits)
 		glBindBufferBase (GL_SHADER_STORAGE_BUFFER, 1, blocksums[i + 1]);
 		glDispatchCompute (numblocksums > 0 ? numblocksums : 1, 1, 1);
 		numblocksums /= blocksize;
-		glFlush ();
 		glMemoryBarrier (GL_SHADER_STORAGE_BARRIER_BIT);
 	}
 
@@ -151,7 +149,6 @@ void RadixSort::SortBits (int bits)
 		glBindBufferBase (GL_SHADER_STORAGE_BUFFER, 0, blocksums[i]);
 		glBindBufferBase (GL_SHADER_STORAGE_BUFFER, 1, blocksums[i + 1]);
 		glDispatchCompute (numblocksums > 0 ? numblocksums : 1, 1, 1);
-		glFlush ();
 		glMemoryBarrier (GL_SHADER_STORAGE_BARRIER_BIT);
 	}
 
@@ -160,6 +157,5 @@ void RadixSort::SortBits (int bits)
 	glBindBufferBase (GL_SHADER_STORAGE_BUFFER, 1, prefixsums);
 	globalsort.Use ();
 	glDispatchCompute (numblocks, 1, 1);
-	glFlush ();
 	glMemoryBarrier (GL_SHADER_STORAGE_BARRIER_BIT);
 }

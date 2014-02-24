@@ -106,6 +106,25 @@ void OnResize (GLFWwindow *window, int width, int height)
     simulation->Resize (width, height);
 }
 
+/** Broken ATI glMemoryBarrier entry point.
+ * This stores the non functional glMemoryBarrier entry point provided by ATI drivers.
+ */
+PFNGLMEMORYBARRIERPROC _glMemoryBarrier_BROKEN_ATIHACK = 0;
+
+/** Workaround for broken glMemoryBarrier provided by ATI drivers.
+ * This is used as a hack to work around the broken implementation
+ * of glMemoryBarrier provided by ATI drivers. It calls the non functional
+ * entry point provided by the driver preceded by a call of glFlush
+ * which seems to have the correct effect (although this clearly violates
+ * both the specification of glMemoryBarrier and of glFlush).
+ * \param bitfield Specifies the barriers to insert.
+ */
+void _glMemoryBarrier_ATIHACK (GLbitfield bitfield)
+{
+	glFlush ();
+	_glMemoryBarrier_BROKEN_ATIHACK (bitfield);
+}
+
 /** Inialization.
  * Perform general initialization tasks.
  */
@@ -129,6 +148,14 @@ void initialize (void)
 
     // get OpenGL entry points
     glcorewInit ((glcorewGetProcAddressCallback) glfwGetProcAddress);
+
+    std::string vendor (reinterpret_cast<const char*> (glGetString (GL_VENDOR)));
+    if (!vendor.compare ("ATI Technologies Inc."))
+    {
+    	std::cout << "Enable ATI workarounds." << std::endl;
+    	_glMemoryBarrier_BROKEN_ATIHACK = glMemoryBarrier;
+    	glMemoryBarrier = _glMemoryBarrier_ATIHACK;
+    }
 
     glDebugMessageCallback (glDebugCallback, NULL);
     glEnable (GL_DEBUG_OUTPUT);
