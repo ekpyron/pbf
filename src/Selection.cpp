@@ -8,20 +8,20 @@ Selection::Selection (void)
     		"shaders/simulation/include.glsl");
     selectionprogram.Link ();
 
-    // create selection depth texture
-    selectiondepthtexture.Bind (GL_TEXTURE_2D);
+    // create depth texture
+    depthtexture.Bind (GL_TEXTURE_2D);
     glTexImage2D (GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT32F, 1, 1, 0, GL_DEPTH_COMPONENT, GL_FLOAT, NULL);
 
     // create selection texture
     selectiontexture.Bind (GL_TEXTURE_2D);
     glTexImage2D (GL_TEXTURE_2D, 0, GL_R32I, 1, 1, 0, GL_RED_INTEGER, GL_INT, NULL);
 
-    // create framebuffer objects
+    // create framebuffer object
     glGenFramebuffers (1, framebuffers);
 
-    // setup selection framebuffer
+    // setup framebuffer
     glBindFramebuffer (GL_FRAMEBUFFER, selectionfb);
-    glFramebufferTexture2D (GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, selectiondepthtexture.get (), 0);
+    glFramebufferTexture2D (GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, depthtexture.get (), 0);
     glFramebufferTexture2D (GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, selectiontexture.get (), 0);
     glBindFramebuffer (GL_FRAMEBUFFER, 0);
 }
@@ -51,12 +51,13 @@ GLint Selection::GetParticle (GLuint particlebuffer, GLuint numparticles, float 
     // clear depth buffer
    	glClear (GL_DEPTH_BUFFER_BIT);
 
-   	// only render the closest sphere and write the highlighted flag.
+   	//  render the spheres and write the particle id to the texture.
    	selectionprogram.Use ();
    	pointsprite.Render (numparticles);
 	glBindFramebuffer (GL_FRAMEBUFFER, 0);
 	glMemoryBarrier (GL_SHADER_STORAGE_BARRIER_BIT);
 
+	// query and return the result
 	selectiontexture.Bind (GL_TEXTURE_2D);
 	GLint id;
 	glGetTexImage (GL_TEXTURE_2D, 0, GL_RED_INTEGER, GL_INT, &id);

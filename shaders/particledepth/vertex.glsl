@@ -17,7 +17,7 @@ void main (void)
 {
 
 	// pass data to the fragment shader
-	vec4 pos = viewmat * vec4 (0.2 * particlePosition + 0.2 * vec3 (-64, 1, -64), 1.0)  + vec4 (vPosition, 0, 1) * 0.1;
+	vec4 pos = viewmat * vec4 (0.2 * particlePosition + 0.2 * vec3 (-64, 1, -64), 1.0)  + vec4 (0.1 * vPosition, 0, 1);
 	fPosition = pos.xyz;
 	fTexcoord = vPosition;
 	// compute and output the vertex position

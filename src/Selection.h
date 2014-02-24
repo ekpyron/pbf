@@ -31,10 +31,10 @@ private:
      */
     ShaderProgram selectionprogram;
 
-    /** Selection depth texture.
+    /** Depth texture.
      * Texture for the depth buffer of the selection framebuffer.
      */
-    Texture selectiondepthtexture;
+    Texture depthtexture;
 
     /** Selection texture.
      * Texture for the selection framebuffer.
