@@ -28,6 +28,7 @@ Selection::Selection (void)
 
 Selection::~Selection (void)
 {
+	// cleanup
 	glDeleteFramebuffers (1, framebuffers);
 }
 
@@ -55,7 +56,6 @@ GLint Selection::GetParticle (GLuint particlebuffer, GLuint numparticles, float 
    	selectionprogram.Use ();
    	pointsprite.Render (numparticles);
 	glBindFramebuffer (GL_FRAMEBUFFER, 0);
-	glMemoryBarrier (GL_SHADER_STORAGE_BARRIER_BIT);
 
 	// query and return the result
 	selectiontexture.Bind (GL_TEXTURE_2D);

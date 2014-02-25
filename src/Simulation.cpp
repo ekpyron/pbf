@@ -139,20 +139,45 @@ void Simulation::OnMouseDown (const int &button)
 		GLint id = selection.GetParticle (sph.GetParticleBuffer (), GetNumberOfParticles (), xpos, ypos);
 		if (id >= 0)
 		{
-			glBindBuffer (GL_SHADER_STORAGE_BUFFER, sph.GetParticleBuffer ());
-			particleinfo_t info;
-			glGetBufferSubData (GL_SHADER_STORAGE_BUFFER, id * sizeof (particleinfo_t), sizeof (particleinfo_t), &info);
-			if (info.highlighted > 0)
+			// create a temporary buffer
+			GLuint tmpbuffer;
+			glGenBuffers (1, &tmpbuffer);
+			glBindBuffer (GL_COPY_WRITE_BUFFER, tmpbuffer);
+			glBufferData (GL_COPY_WRITE_BUFFER, sizeof (particleinfo_t), NULL, GL_DYNAMIC_READ);
+
+			// copy the particle information to the temporary buffer
+			// a temporary buffer is used, so that drivers (in particular the NVIDIA driver)
+			// are not tempted to move the whole particle buffer from GPU to host/DMA memory
+			glBindBuffer (GL_COPY_READ_BUFFER, sph.GetParticleBuffer ());
+			glCopyBufferSubData (GL_COPY_READ_BUFFER, GL_COPY_WRITE_BUFFER,
+					id * sizeof (particleinfo_t), 0, sizeof (particleinfo_t));
+
+			// map the temporary buffer to CPU address space
+			particleinfo_t *info = reinterpret_cast<particleinfo_t*> (glMapBuffer (GL_COPY_WRITE_BUFFER, GL_READ_WRITE));
+			if (info == NULL)
+				throw std::runtime_error ("A GPU buffer could not be mapped to CPU address space.");
+
+			// modify the particle information i order to highlight/unhighlight the particle
+			if (info->highlighted > 0)
 			{
-				info.highlighted = 0;
-				info.color = glm::vec3 (0.25, 0, 1);
+				info->highlighted = 0;
+				info->color = glm::vec3 (0.25, 0, 1);
 			}
 			else
 			{
-				info.highlighted = 1;
-				info.color = glm::vec3 (1, 0, 0);
+				info->highlighted = 1;
+				info->color = glm::vec3 (1, 0, 0);
 			}
-			glBufferSubData (GL_SHADER_STORAGE_BUFFER, id * sizeof (particleinfo_t), sizeof (particleinfo_t), &info);
+
+			// unmap the temporary buffer
+			glUnmapBuffer (GL_COPY_WRITE_BUFFER);
+
+			// copy back to the particle buffer
+			glCopyBufferSubData (GL_COPY_WRITE_BUFFER, GL_COPY_READ_BUFFER,
+					0, id * sizeof (particleinfo_t), sizeof (particleinfo_t));
+
+			// delete the temporary buffer
+			glDeleteBuffers (1, &tmpbuffer);
 		}
 	}
 }
