@@ -4,7 +4,6 @@ set (CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake/Modules")
 project (pbf)
 
 add_subdirectory (src)
-add_subdirectory (test)
 add_subdirectory (glcorew)
 
 find_package (Doxygen QUIET)
