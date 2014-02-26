@@ -130,7 +130,7 @@ void _glMemoryBarrier_ATIHACK (GLbitfield bitfield)
 	_glMemoryBarrier_BROKEN_ATIHACK (bitfield);
 }
 
-/** Inialization.
+/** Initialization.
  * Perform general initialization tasks.
  */
 void initialize (void)
