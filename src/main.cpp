@@ -113,15 +113,20 @@ PFNGLMEMORYBARRIERPROC _glMemoryBarrier_BROKEN_ATIHACK = 0;
 
 /** Workaround for broken glMemoryBarrier provided by ATI drivers.
  * This is used as a hack to work around the broken implementation
- * of glMemoryBarrier provided by ATI drivers. It calls the non functional
- * entry point provided by the driver preceded by a call of glFlush
- * which seems to have the correct effect (although this clearly violates
- * both the specification of glMemoryBarrier and of glFlush).
+ * of glMemoryBarrier provided by ATI drivers. It synchronizes
+ * the GPU command queue using a sync object before calling the
+ * apparently non functional entry point provided by the driver.
+ * It is not clear whether this actually results in the desired
+ * behavior, but it seems to produce much better results than
+ * just calling glMemoryBarrier (which seems to have no effect
+ * at all).
  * \param bitfield Specifies the barriers to insert.
  */
 void _glMemoryBarrier_ATIHACK (GLbitfield bitfield)
 {
-	glFlush ();
+	GLsync syncobj = glFenceSync (GL_SYNC_GPU_COMMANDS_COMPLETE, 0);
+	glWaitSync (syncobj, 0, GL_TIMEOUT_IGNORED);
+	glDeleteSync (syncobj);
 	_glMemoryBarrier_BROKEN_ATIHACK (bitfield);
 }
 
