@@ -3,7 +3,7 @@
 // input vertex attributes
 layout (location = 0) in vec2 vPosition;
 layout (location = 1) in vec3 particlePosition;
-layout (location = 2) in vec3 vColor;
+layout (location = 2) in uint highlight;
 
 // projection and view matrix
 layout (binding = 0, std140) uniform TransformationBlock {
@@ -24,7 +24,12 @@ void main (void)
 	pos.xy += vPosition * 0.1;
 	fPosition = pos.xyz;
 	fTexcoord = vPosition;
-	fColor = vColor;
+	if (highlight == 0)
+		fColor = vec3 (0.25, 0, 1);
+	else if (highlight == 1)
+		fColor = vec3 (1, 0, 0);
+	else
+		fColor = vec3 (0, 1, 0);
 	// compute and output the vertex position
 	// after view transformation and projection
 	pos = projmat * pos;

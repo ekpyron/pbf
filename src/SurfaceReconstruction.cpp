@@ -139,14 +139,14 @@ void SurfaceReconstruction::SetEnvironmentMap (const Texture *_envmap)
 	}
 }
 
-void SurfaceReconstruction::Render (const GLuint &particlebuffer, const GLuint &numparticles,
+void SurfaceReconstruction::Render (const GLuint &positionbuffer, const GLuint &numparticles,
 		const GLuint &width, const GLuint &height)
 {
 	// get fullscreen quad singleton
 	const FullscreenQuad &fullscreenquad = FullscreenQuad::Get ();
 
 	// pass particle buffer to point sprite class
-	pointsprite.SetPositionBuffer (particlebuffer, sizeof (particleinfo_t), 0);
+	pointsprite.SetPositionBuffer (positionbuffer, 4 * sizeof (float), 0);
 
 	// render point sprites, storing depth
 	glBindFramebuffer (GL_FRAMEBUFFER, depthfb);

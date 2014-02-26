@@ -23,13 +23,7 @@ public:
      */
     void SetPositionBuffer (GLuint buffer, GLsizei stride = 0, GLintptr offset = 0);
 
-    /** Specify a color buffer.
-     * Specifies a buffer containing the colors for the point sprites.
-     * \param buffer the buffer object containing the color data
-     * \param stride byte offset between consecutive colors
-     * \param offset offset of the first component of the first color
-     */
-    void SetColorBuffer (GLuint buffer, GLsizei stride = 0, GLintptr offset = 0);
+    void SetHighlightBuffer (GLuint buffer, GLsizei stride = 0, GLintptr offset = 0);
 
     /** Render the point sprites.
      * \param instances number of instances to render.

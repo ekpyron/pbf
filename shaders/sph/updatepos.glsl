@@ -8,17 +8,8 @@ layout (std430, binding = 0) buffer ParticleKeys
 	ParticleKey particlekeys[];
 };
 
-layout (std430, binding = 1) readonly buffer ParticleBuffer
-{
-	ParticleInfo particles[];
-};
-
-layout (std430, binding = 2) readonly buffer LambdaBuffer
-{
-	float lambdas[];
-};
-
-layout (binding = 0) uniform isamplerBuffer neighbourcelltexture;
+layout (binding = 2) uniform isamplerBuffer neighbourcelltexture;
+layout (binding = 3) uniform samplerBuffer lambdatexture;
 
 float Wpoly6 (float r)
 {
@@ -62,7 +53,8 @@ void main (void)
 
 	vec3 deltap = vec3 (0, 0, 0);
 	
-	float lambda = lambdas[gl_GlobalInvocationID.x];
+	//float lambda = lambdas[gl_GlobalInvocationID.x];
+	float lambda = texelFetch (lambdatexture, int (gl_GlobalInvocationID.x)).x;
 			
 	FOR_EACH_NEIGHBOUR(j)
 	{
@@ -73,10 +65,12 @@ void main (void)
 		float scorr = (Wpoly6 (distance (position, position_j)) / Wpoly6 (tensile_instability_h));
 		scorr *= scorr;
 		scorr *= scorr;
-		scorr = -tensile_instability_k * scorr;  
+		scorr = -tensile_instability_k * scorr;
+		
+		float lambda_j = texelFetch (lambdatexture, j).x;  
 	
 		// accumulate position corrections (part of equation 12)
-		deltap += (lambda + lambdas[j] + scorr) * gradWspiky (position - position_j);
+		deltap += (lambda + lambda_j + scorr) * gradWspiky (position - position_j);
 	}
 	END_FOR_EACH_NEIGHBOUR(j)
 

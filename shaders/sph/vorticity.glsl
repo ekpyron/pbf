@@ -8,17 +8,14 @@ layout (std430, binding = 0) buffer ParticleKeys
 	ParticleKey particlekeys[];
 };
 
-layout (std430, binding = 1) buffer ParticleBuffer
-{
-	ParticleInfo particles[];
-};
-
 layout (std430, binding = 3) coherent buffer VorticityBuffer
 {
 	float vorticities[];
 };
 
-layout (binding = 0) uniform isamplerBuffer neighbourcelltexture;
+layout (binding = 2) uniform isamplerBuffer neighbourcelltexture;
+
+layout (binding = 1, rgba32f) uniform imageBuffer velocitytexture;
 
 float Wpoly6 (float r)
 {
@@ -55,7 +52,7 @@ void main (void)
 	vec3 position = key.position;
 
 	// fetch velocity	
-	vec3 velocity = particles[particleid].velocity;
+	vec3 velocity = imageLoad (velocitytexture, int (particleid)).xyz;
 	
 	// calculate vorticity & apply XSPH viscosity
 	vec3 v = vec3 (0, 0, 0);
@@ -64,7 +61,7 @@ void main (void)
 	FOR_EACH_NEIGHBOUR(j)
 	{
 		ParticleKey key_j = particlekeys[j];
-		vec3 v_ij = particles[key_j.id].velocity - velocity;
+		vec3 v_ij = imageLoad (velocitytexture, int (key_j.id)).xyz - velocity;
 		vec3 p_ij = position - key_j.position;
 		float tmp = Wpoly6 (length (p_ij));
 		rho += tmp;
@@ -77,7 +74,7 @@ void main (void)
 	vorticities[gl_GlobalInvocationID.x] = length (vorticity);
 	
 	barrier ();
-	memoryBarrierBuffer ();
+	memoryBarrier ();
 	
 	// vorticity confinement
 	vec3 gradVorticity = vec3 (0, 0, 0);
@@ -99,5 +96,5 @@ void main (void)
 	velocity += timestep * vorticity_epsilon * cross (N, vorticity);
 	
 	// update particle information
-	particles[particleid].velocity = velocity;
+	imageStore (velocitytexture, int (particleid), vec4 (velocity, 0));
 }

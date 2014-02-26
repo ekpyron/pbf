@@ -51,13 +51,13 @@ void PointSprite::SetPositionBuffer (GLuint buffer, GLsizei stride, GLintptr off
     glVertexAttribDivisor (1, 1);
 }
 
-void PointSprite::SetColorBuffer (GLuint buffer, GLsizei stride, GLintptr offset)
+void PointSprite::SetHighlightBuffer (GLuint buffer, GLsizei stride, GLintptr offset)
 {
-    // bind the vertex array and the color buffer
+    // bind the vertex array and the position buffer
     glBindVertexArray (vertexarray);
     glBindBuffer (GL_ARRAY_BUFFER, buffer);
     // define the per-instance vertex attribute
-    glVertexAttribPointer (2, 3, GL_FLOAT, GL_FALSE, stride, (const GLvoid*) offset);
+    glVertexAttribIPointer (2, 1, GL_UNSIGNED_BYTE, stride, (const GLvoid*) offset);
     glEnableVertexAttribArray (2);
     glVertexAttribDivisor (2, 1);
 }

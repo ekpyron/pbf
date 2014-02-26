@@ -6,11 +6,6 @@ in vec2 fTexcoord;
 in vec3 fPosition;
 layout (location = 0) out int outputid;
 
-layout (std430, binding = 0) buffer ParticleBuffer
-{
-	ParticleInfo particles[];
-};
-
 // projection and view matrix
 layout (binding = 0, std140) uniform TransformationBlock {
 	mat4 viewmat;

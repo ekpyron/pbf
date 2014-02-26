@@ -6,7 +6,7 @@ Simulation::Simulation (void) : width (0), height (0), font ("textures/font.png"
     usesurfacereconstruction (false), sph (GetNumberOfParticles ()), useskybox (false),
     envmap (NULL), usenoise (false)
 {
-    // load shaders
+	// load shaders
     particleprogram.CompileShader (GL_VERTEX_SHADER, "shaders/particles/vertex.glsl");
     particleprogram.CompileShader (GL_FRAGMENT_SHADER, "shaders/particles/fragment.glsl");
     particleprogram.Link ();
@@ -54,8 +54,8 @@ Simulation::Simulation (void) : width (0), height (0), font ("textures/font.png"
     ResetParticleBuffer ();
 
     // pass position and color to the point sprite class
-    pointsprite.SetPositionBuffer (sph.GetParticleBuffer (), sizeof (particleinfo_t), offsetof (particleinfo_t, position));
-    pointsprite.SetColorBuffer (sph.GetParticleBuffer (), sizeof (particleinfo_t), offsetof (particleinfo_t, color));
+    pointsprite.SetPositionBuffer (sph.GetPositionBuffer (), 4 * sizeof (float), 0);
+    pointsprite.SetHighlightBuffer (sph.GetHighlightBuffer (), 1, 0);
 
     // update view matrix
     UpdateViewMatrix ();
@@ -136,37 +136,38 @@ void Simulation::OnMouseDown (const int &button)
 	{
 		double xpos, ypos;
 		glfwGetCursorPos (window, &xpos, &ypos);
-		GLint id = selection.GetParticle (sph.GetParticleBuffer (), GetNumberOfParticles (), xpos, ypos);
+		GLint id = selection.GetParticle (sph.GetPositionBuffer (), GetNumberOfParticles (), xpos, ypos);
 		if (id >= 0)
 		{
+			// TODO
+			GLuint highlightbuffer = sph.GetHighlightBuffer ();
+
 			// create a temporary buffer
 			GLuint tmpbuffer;
 			glGenBuffers (1, &tmpbuffer);
 			glBindBuffer (GL_COPY_WRITE_BUFFER, tmpbuffer);
-			glBufferData (GL_COPY_WRITE_BUFFER, sizeof (particleinfo_t), NULL, GL_DYNAMIC_READ);
+			glBufferData (GL_COPY_WRITE_BUFFER, sizeof (GLubyte), NULL, GL_DYNAMIC_READ);
 
 			// copy the particle information to the temporary buffer
 			// a temporary buffer is used, so that drivers (in particular the NVIDIA driver)
 			// are not tempted to move the whole particle buffer from GPU to host/DMA memory
-			glBindBuffer (GL_COPY_READ_BUFFER, sph.GetParticleBuffer ());
+			glBindBuffer (GL_COPY_READ_BUFFER, sph.GetHighlightBuffer ());
 			glCopyBufferSubData (GL_COPY_READ_BUFFER, GL_COPY_WRITE_BUFFER,
-					id * sizeof (particleinfo_t), 0, sizeof (particleinfo_t));
+					id * sizeof (GLubyte), 0, sizeof (GLubyte));
 
 			// map the temporary buffer to CPU address space
-			particleinfo_t *info = reinterpret_cast<particleinfo_t*> (glMapBuffer (GL_COPY_WRITE_BUFFER, GL_READ_WRITE));
+			GLubyte *info = reinterpret_cast<GLubyte*> (glMapBuffer (GL_COPY_WRITE_BUFFER, GL_READ_WRITE));
 			if (info == NULL)
 				throw std::runtime_error ("A GPU buffer could not be mapped to CPU address space.");
 
 			// modify the particle information i order to highlight/unhighlight the particle
-			if (info->highlighted > 0)
+			if (*info > 0)
 			{
-				info->highlighted = 0;
-				info->color = glm::vec3 (0.25, 0, 1);
+				*info = 0;
 			}
 			else
 			{
-				info->highlighted = 1;
-				info->color = glm::vec3 (1, 0, 0);
+				*info = 1;
 			}
 
 			// unmap the temporary buffer
@@ -174,7 +175,7 @@ void Simulation::OnMouseDown (const int &button)
 
 			// copy back to the particle buffer
 			glCopyBufferSubData (GL_COPY_WRITE_BUFFER, GL_COPY_READ_BUFFER,
-					0, id * sizeof (particleinfo_t), sizeof (particleinfo_t));
+					0, id * sizeof (GLubyte), sizeof (GLubyte));
 
 			// delete the temporary buffer
 			glDeleteBuffers (1, &tmpbuffer);
@@ -191,8 +192,8 @@ const unsigned int Simulation::GetNumberOfParticles (void) const
 void Simulation::ResetParticleBuffer (void)
 {
     // regenerate particle information
-    std::vector<particleinfo_t> particles;
-    particles.reserve (GetNumberOfParticles ());
+	std::vector<glm::vec4> positions;
+	std::vector<glm::vec4> velocities;
 
     const float scale = 0.94f;
     int id = 0;
@@ -204,14 +205,12 @@ void Simulation::ResetParticleBuffer (void)
         {
             for (int y = 0; y < 32; y++)
             {
-                particleinfo_t particle;
-                particle.position = glm::vec3 (32.5f, 0.5f, 32.5f) + scale * glm::vec3 (x, y, z);
-                particle.position += 0.01f * glm::vec3 (float (rand ()) / float (RAND_MAX) - 0.5f,
-                		float (rand ()) / float (RAND_MAX) - 0.5f, float (rand ()) / float (RAND_MAX) - 0.5f);
-                particle.velocity = glm::vec3 (0, 0, 0);
-                particle.highlighted = 0;
-                particle.color = glm::vec3 (0.25, 0, 1);
-                particles.push_back (particle);
+                glm::vec4 position = glm::vec4 (32.5f, 0.5f, 32.5f, 0.0f) + scale * glm::vec4 (x, y, z, 0.0f);
+                position += 0.01f * glm::vec4 (float (rand ()) / float (RAND_MAX) - 0.5f,
+                		float (rand ()) / float (RAND_MAX) - 0.5f, float (rand ()) / float (RAND_MAX) - 0.5f, 0);
+                glm::vec4 velocity = glm::vec4 (0, 0, 0, 0);
+                positions.push_back (position);
+                velocities.push_back (velocity);
             }
         }
     }
@@ -221,20 +220,25 @@ void Simulation::ResetParticleBuffer (void)
         {
             for (int y = 0; y < 32; y++)
             {
-                particleinfo_t particle;
-                particle.position = glm::vec3 (32.5f + 63.0f, 0.5f, 32.5f + 63.0f) + scale * glm::vec3 (-x, y, -z);
-                particle.position += 0.01f * glm::vec3 (float (rand ()) / float (RAND_MAX) - 0.5f,
-                		float (rand ()) / float (RAND_MAX) - 0.5f, float (rand ()) / float (RAND_MAX) - 0.5f);
-                particle.velocity = glm::vec3 (0, 0, 0);
-                particle.highlighted = 0;
-                particle.color = glm::vec3 (0.25, 0, 1);
-                particles.push_back (particle);
+                glm::vec4 position = glm::vec4 (32.5f + 63.0f, 0.5f, 32.5f + 63.0f, 0.0f)
+                	+ scale * glm::vec4 (-x, y, -z, 0.0f);
+                position += 0.01f * glm::vec4 (float (rand ()) / float (RAND_MAX) - 0.5f,
+                		float (rand ()) / float (RAND_MAX) - 0.5f, float (rand ()) / float (RAND_MAX) - 0.5f, 0);
+                glm::vec4 velocity = glm::vec4 (0, 0, 0, 0);
+                positions.push_back (position);
+                velocities.push_back (velocity);
             }
         }
     }
     //  update the particle buffer
-    glBindBuffer (GL_SHADER_STORAGE_BUFFER, sph.GetParticleBuffer ());
-    glBufferSubData (GL_SHADER_STORAGE_BUFFER, 0, sizeof (particleinfo_t) * particles.size (), &particles[0]);
+    glBindBuffer (GL_SHADER_STORAGE_BUFFER, sph.GetPositionBuffer ());
+    glBufferSubData (GL_SHADER_STORAGE_BUFFER, 0, 4 * sizeof (float) * positions.size (), &positions[0]);
+
+    glBindBuffer (GL_SHADER_STORAGE_BUFFER, sph.GetVelocityBuffer ());
+    glBufferSubData (GL_SHADER_STORAGE_BUFFER, 0, 4 * sizeof (float) * velocities.size (), &velocities[0]);
+
+    glBindBuffer (GL_SHADER_STORAGE_BUFFER, sph.GetHighlightBuffer ());
+    glClearBufferData (GL_SHADER_STORAGE_BUFFER, GL_R8UI, GL_RED, GL_UNSIGNED_INT, NULL);
 }
 
 void Simulation::OnKeyDown (int key)
@@ -367,16 +371,15 @@ bool Simulation::Frame (void)
     	// render icosahedra/spheres
     	particleprogram.Use ();
         // pass the position buffer to the point sprite class
-        pointsprite.SetPositionBuffer (sph.GetParticleBuffer (), sizeof (particleinfo_t), 0);
+        pointsprite.SetPositionBuffer (sph.GetPositionBuffer (), 4 * sizeof (float), 0);
     	pointsprite.Render (GetNumberOfParticles ());
     }
     else
     {
     	// render reconstructed surface
-    	surfacereconstruction.Render (sph.GetParticleBuffer (), GetNumberOfParticles (), width, height);
+    	surfacereconstruction.Render (sph.GetPositionBuffer (), GetNumberOfParticles (), width, height);
     }
 	glEndQuery (GL_TIME_ELAPSED);
-
 
     // determine the framerate every second
     framecount++;

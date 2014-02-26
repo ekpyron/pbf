@@ -20,12 +20,36 @@ public:
 	 */
 	~SPH (void);
 
-	/** Get particle buffer.
-	 * Returns a buffer object containing the particle information.
-	 * \returns the particle buffer
+	/** Get position buffer.
+	 * Returns a buffer object containing the particle positions.
+	 * \returns the position buffer
 	 */
-	GLuint GetParticleBuffer (void) const {
-		return particlebuffer;
+	GLuint GetPositionBuffer (void) const {
+		return positionbuffer;
+	}
+
+	/** Get velocity buffer.
+	 * Returns a buffer object containing the particle velocities.
+	 * \returns the velocity buffer
+	 */
+	GLuint GetVelocityBuffer (void) const {
+		return velocitybuffer;
+	}
+
+	/** Get highlight buffer.
+	 * Returns a buffer object containing the particle highlighting information.
+	 * \returns the highlight buffer
+	 */
+	GLuint GetHighlightBuffer (void) const {
+		return highlightbuffer;
+	}
+
+	/** Get highlight texture.
+	 * Returns a texture containing the particle highlighting information.
+	 * \returns the highlight texture
+	 */
+	Texture &GetHighlightTexture (void) {
+		return highlighttexture;
 	}
 
 	/** Check vorticity confinement.
@@ -114,17 +138,47 @@ private:
      */
     RadixSort radixsort;
 
+    /** Lambda texture.
+     * Texture used to access the lambda buffer.
+     */
+    Texture lambdatexture;
+
+    /** Position texture.
+     * Texture used to access the position buffer.
+     */
+    Texture positiontexture;
+
+    /** Velocity texture.
+     * Texture used to access the velocity buffer.
+     */
+    Texture velocitytexture;
+
+    /** Highlight texture
+     * Texture used to access the highlight buffer
+     */
+    Texture highlighttexture;
+
     union {
         struct {
+            /** Position buffer.
+             * Buffer in which the position of each particle is stored.
+             */
+            GLuint positionbuffer;
+
+            /** Velocity buffer.
+             * Buffer in which the velocity of each particle is stored.
+             */
+            GLuint velocitybuffer;
+
+            /** Highlight buffer.
+             * Buffer in which particle highlighting information is stored
+             */
+            GLuint highlightbuffer;
+
             /** Lambda buffer.
              * Buffer in which the specific scalar values are stored during the simulation steps.
              */
             GLuint lambdabuffer;
-
-            /** Particle buffer.
-             * Buffer in which information about each particle is stored.
-             */
-            GLuint particlebuffer;
 
             /** Vorticity buffer.
              * Buffer in which the vorticity of each particle is stored.
@@ -135,7 +189,7 @@ private:
          * The buffer objects are stored in a union, so that it is possible
          * to create/delete all buffer objects with a single OpenGL call.
          */
-        GLuint buffers[3];
+        GLuint buffers[5];
     };
 
     union {

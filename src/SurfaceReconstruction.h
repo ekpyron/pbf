@@ -12,7 +12,7 @@ class SurfaceReconstruction
 public:
 	SurfaceReconstruction (void);
 	~SurfaceReconstruction (void);
-	void Render (const GLuint &particlebuffer, const GLuint &numparticles, const GLuint &width, const GLuint &height);
+	void Render (const GLuint &positionbuffer, const GLuint &numparticles, const GLuint &width, const GLuint &height);
 	void SetEnvironmentMap (const Texture *envmap);
 	void EnableNoise (void);
 	void DisableNoise (void);

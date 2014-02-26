@@ -18,13 +18,13 @@ public:
 
 	/** Get particle from screen position.
 	 * Determines the particle at the given screen coordinates, if any.
-	 * \param particlebuffer buffer object storing the particle information
+	 * \param positionbuffer buffer object storing the particle positions
 	 * \param numparticles number of particles in the buffer
 	 * \param x x coordinate
 	 * \param y y coordinate
 	 * \returns the particle id or -1 if there is no particle at the given position
 	 */
-	GLint GetParticle (GLuint particlebuffer, GLuint numparticles, float x, float y);
+	GLint GetParticle (GLuint positionbuffer, GLuint numparticles, float x, float y);
 private:
     /** Selection shader program.
      * Shader program for selecting particles.

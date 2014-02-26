@@ -8,13 +8,8 @@ layout (std430, binding = 0) buffer ParticleKeys
 	ParticleKey particlekeys[];
 };
 
-layout (std430, binding = 1) buffer ParticleBuffer
-{
-	ParticleInfo particles[];
-};
-
-
-layout (binding = 0) uniform isamplerBuffer neighbourcelltexture;
+layout (binding = 2) uniform isamplerBuffer neighbourcelltexture;
+layout (binding = 0, r8ui) uniform uimageBuffer highlighttexture;
 
 #define FOR_EACH_NEIGHBOUR(var) for (int o = 0; o < 3; o++) {\
 		ivec3 datav = texelFetch (neighbourcelltexture, int (gl_GlobalInvocationID.x * 3 + o)).xyz;\
@@ -29,17 +24,17 @@ layout (binding = 0) uniform isamplerBuffer neighbourcelltexture;
 
 void main (void)
 {
-	ParticleKey key = particlekeys[gl_GlobalInvocationID.x];
-	uint particleid = key.id;
-	vec3 position = key.position;
-
-	if (particles[particleid].highlighted > 0)
+	int id = int (particlekeys[gl_GlobalInvocationID.x].id);
+	
+	uint flag = imageLoad (highlighttexture, id).x;
+	
+	if (flag == 1)
 	{
-		particles[particleid].color = vec3 (1, 0, 0);
 		FOR_EACH_NEIGHBOUR(j)
 		{
-			particles[particlekeys[j].id].color = vec3 (0, 1, 0);
+			// TODO
+			imageStore (highlighttexture, int (particlekeys[j].id), uvec4(2, 0, 0, 0));
 		}
 		END_FOR_EACH_NEIGHBOUR(j)
-	}
+	}	
 }

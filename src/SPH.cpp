@@ -33,26 +33,50 @@ SPH::SPH (const GLuint &_numparticles)
     glGenQueries (5, queries);
 
 	// create buffer objects
-	glGenBuffers (3, buffers);
+	glGenBuffers (5, buffers);
 
     // allocate lambda buffer
     glBindBuffer (GL_SHADER_STORAGE_BUFFER, lambdabuffer);
     glBufferData (GL_SHADER_STORAGE_BUFFER, sizeof (float) * numparticles, NULL, GL_DYNAMIC_DRAW);
 
+    // create lambda texture
+    lambdatexture.Bind (GL_TEXTURE_BUFFER);
+    glTexBuffer (GL_TEXTURE_BUFFER, GL_R32F, lambdabuffer);
+
+    // allocate highlight buffer
+    glBindBuffer (GL_SHADER_STORAGE_BUFFER, highlightbuffer);
+    glBufferData (GL_SHADER_STORAGE_BUFFER, sizeof (GLubyte) * numparticles, NULL, GL_DYNAMIC_DRAW);
+    glClearBufferData (GL_SHADER_STORAGE_BUFFER, GL_R8UI, GL_RED, GL_UNSIGNED_INT, NULL);
+
+    // create highlight buffer
+    highlighttexture.Bind (GL_TEXTURE_BUFFER);
+    glTexBuffer (GL_TEXTURE_BUFFER, GL_R8UI, highlightbuffer);
+
     // allocate vorticity buffer
     glBindBuffer (GL_SHADER_STORAGE_BUFFER, vorticitybuffer);
     glBufferData (GL_SHADER_STORAGE_BUFFER, sizeof (float) * numparticles, NULL, GL_DYNAMIC_DRAW);
 
-    // allocate particle buffer
-    glBindBuffer (GL_SHADER_STORAGE_BUFFER, particlebuffer);
-    glBufferData (GL_SHADER_STORAGE_BUFFER, sizeof (particleinfo_t) * numparticles, NULL, GL_DYNAMIC_DRAW);
+    // allocate position buffer
+    glBindBuffer (GL_SHADER_STORAGE_BUFFER, positionbuffer);
+    glBufferData (GL_SHADER_STORAGE_BUFFER, 4 * sizeof (float) * numparticles, NULL, GL_DYNAMIC_DRAW);
 
+    // create position texture
+    positiontexture.Bind (GL_TEXTURE_BUFFER);
+    glTexBuffer (GL_TEXTURE_BUFFER, GL_RGBA32F, positionbuffer);
+
+    // allocate velocity buffer
+    glBindBuffer (GL_SHADER_STORAGE_BUFFER, velocitybuffer);
+    glBufferData (GL_SHADER_STORAGE_BUFFER, 4 * sizeof (float) * numparticles, NULL, GL_DYNAMIC_DRAW);
+
+    // create velocity texture
+    velocitytexture.Bind (GL_TEXTURE_BUFFER);
+    glTexBuffer (GL_TEXTURE_BUFFER, GL_RGBA32F, velocitybuffer);
 }
 
 SPH::~SPH (void)
 {
 	// cleanup
-	glDeleteBuffers (3, buffers);
+	glDeleteBuffers (5, buffers);
 	glDeleteQueries (5, queries);
 }
 
@@ -97,7 +121,12 @@ void SPH::Run (void)
     {
     	// predict positions
     	glBindBufferBase (GL_SHADER_STORAGE_BUFFER, 0, radixsort.GetBuffer ());
-    	glBindBufferBase (GL_SHADER_STORAGE_BUFFER, 1, particlebuffer);
+
+    	positiontexture.Bind (GL_TEXTURE_BUFFER);
+    	glActiveTexture (GL_TEXTURE1);
+    	velocitytexture.Bind (GL_TEXTURE_BUFFER);
+    	glActiveTexture (GL_TEXTURE0);
+
     	predictpos.Use ();
     	glDispatchCompute (numparticles >> 8, 1, 1);
     	glMemoryBarrier (GL_SHADER_STORAGE_BARRIER_BIT);
@@ -120,23 +149,32 @@ void SPH::Run (void)
 
     glBeginQuery (GL_TIME_ELAPSED, solverquery);
     {
-        // use neighbour cell texture as input
-    	neighbourcellfinder.GetResult ().Bind (GL_TEXTURE_BUFFER);
 
         // set buffer bindings
         glBindBufferBase (GL_SHADER_STORAGE_BUFFER, 0, radixsort.GetBuffer ());
-        glBindBufferBase (GL_SHADER_STORAGE_BUFFER, 1, particlebuffer);
-        glBindBufferBase (GL_SHADER_STORAGE_BUFFER, 2, lambdabuffer);
 
-    	// solver iteration
+        glActiveTexture (GL_TEXTURE2);
+    	neighbourcellfinder.GetResult ().Bind (GL_TEXTURE_BUFFER);
+        glActiveTexture (GL_TEXTURE3);
+        lambdatexture.Bind (GL_TEXTURE_BUFFER);
+        glActiveTexture (GL_TEXTURE0);
+
+        glBindImageTexture (0, highlighttexture.get (), 0, GL_FALSE, 0, GL_READ_WRITE, GL_R8UI);
+
         dummyprog.Use ();
         glDispatchCompute (numparticles >> 8, 1, 1);
+
+        glBindImageTexture (0, lambdatexture.get (), 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_R32F);
+
+
+    	// solver iteration
 
     	for (int iteration = 0; iteration < 5; iteration++)
     	{
     		calclambdaprog.Use ();
     		glDispatchCompute (numparticles >> 8, 1, 1);
-    		glMemoryBarrier (GL_SHADER_STORAGE_BARRIER_BIT);
+    		glMemoryBarrier (GL_SHADER_STORAGE_BARRIER_BIT|GL_TEXTURE_FETCH_BARRIER_BIT
+    				|GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
         	updateposprog.Use ();
     		glDispatchCompute (numparticles >> 8, 1, 1);
     		glMemoryBarrier (GL_SHADER_STORAGE_BARRIER_BIT);
@@ -148,8 +186,12 @@ void SPH::Run (void)
     {
 		// update positions and velocities
 		updateprog.Use ();
+		glBindImageTexture (0, positiontexture.get (), 0, GL_FALSE, 0, GL_READ_WRITE, GL_RGBA32F);
+		glBindImageTexture (1, velocitytexture.get (), 0, GL_FALSE, 0, GL_READ_WRITE, GL_RGBA32F);
+
 		glDispatchCompute (numparticles >> 8, 1, 1);
-		glMemoryBarrier (GL_SHADER_STORAGE_BARRIER_BIT);
+		glMemoryBarrier (GL_SHADER_STORAGE_BARRIER_BIT|GL_TEXTURE_FETCH_BARRIER_BIT
+				|GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
     	if (vorticityconfinement)
     	{
     		// calculate vorticity

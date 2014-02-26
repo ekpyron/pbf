@@ -42,30 +42,6 @@ typedef struct particlekey {
 	GLuint id;
 } particlekey_t;
 
-/** Particle information.
- * Structure representing the information stored for each particle.
- */
-typedef struct particleinfo {
-    /** Particle position.
-     */
-    glm::vec3 position;
-    /** Highlighted flag.
-     */
-    GLuint highlighted;
-    /** Particle velocity.
-     */
-    glm::vec3 velocity;
-    /** Particle density.
-     */
-    float density
-    /** Particle color.
-     */;
-    glm::vec3 color;
-    /** Particle vorticity.
-     */
-    float vorticity;
-} particleinfo_t;
-
 /** Check for OpenGL extension.
  * Checks whether an OpenGL extension is supported.
  * \param name Name of the extension.

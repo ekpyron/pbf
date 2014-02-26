@@ -8,17 +8,9 @@ layout (std430, binding = 0) buffer ParticleKeys
 	ParticleKey particlekeys[];
 };
 
-layout (std430, binding = 1) readonly buffer ParticleBuffer
-{
-	ParticleInfo particles[];
-};
+layout (binding = 2) uniform isamplerBuffer neighbourcelltexture;
+layout (binding = 0, r32f) uniform writeonly imageBuffer lambdatexture;
 
-layout (std430, binding = 2) writeonly buffer LambdaBuffer
-{
-	float lambdas[];
-};
-
-layout (binding = 0) uniform isamplerBuffer neighbourcelltexture;
 
 float Wpoly6 (float r)
 {
@@ -92,5 +84,5 @@ void main (void)
 	// compute lambda_i (equations 1 and 9)
 	float C_i = rho / rho_0 - 1;
 	float lambda = -C_i / (sum_k_grad_Ci + epsilon);
-	lambdas[gl_GlobalInvocationID.x] = lambda;
+	imageStore (lambdatexture, int (gl_GlobalInvocationID.x), vec4 (lambda, 0, 0, 0));
 }

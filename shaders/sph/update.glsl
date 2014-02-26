@@ -8,13 +8,10 @@ layout (std430, binding = 0) buffer ParticleKeys
 	ParticleKey particlekeys[];
 };
 
-layout (std430, binding = 1) buffer ParticleBuffer
-{
-	ParticleInfo particles[];
-};
+layout (binding = 0, rgba32f) uniform imageBuffer positiontexture;
+layout (binding = 1, rgba32f) uniform imageBuffer velocitytexture;
 
-
-layout (binding = 0) uniform isamplerBuffer neighbourcelltexture;
+layout (binding = 2) uniform isamplerBuffer neighbourcelltexture;
 
 #define FOR_EACH_NEIGHBOUR(var) for (int o = 0; o < 3; o++) {\
 		ivec3 datav = texelFetch (neighbourcelltexture, int (gl_GlobalInvocationID.x * 3 + o)).xyz;\
@@ -32,11 +29,13 @@ void main (void)
 	ParticleKey key = particlekeys[gl_GlobalInvocationID.x];
 	uint particleid = key.id;
 	vec3 position = key.position;
+	
+	vec3 oldposition = imageLoad (positiontexture, int (particleid)).xyz;
 
 	// calculate velocity	
-	vec3 velocity = (position - particles[particleid].position) / timestep;
-
+	vec3 velocity = (position - oldposition) / timestep;
+	
 	// update position and velocity
-	particles[particleid].velocity = velocity;
-	particles[particleid].position = position;
+	imageStore (positiontexture, int (particleid), vec4 (position, 0));
+	imageStore (velocitytexture, int (particleid), vec4 (velocity, 0));
 }

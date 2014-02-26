@@ -32,7 +32,7 @@ Selection::~Selection (void)
 	glDeleteFramebuffers (1, framebuffers);
 }
 
-GLint Selection::GetParticle (GLuint particlebuffer, GLuint numparticles, float xpos, float ypos)
+GLint Selection::GetParticle (GLuint positionbuffer, GLuint numparticles, float xpos, float ypos)
 {
 	// setup viewport according to the specified position
 	int width, height;
@@ -47,7 +47,7 @@ GLint Selection::GetParticle (GLuint particlebuffer, GLuint numparticles, float 
     glViewport (-xpos, ypos - height, width, height);
 
     // pass the position buffer to the point sprite class
-    pointsprite.SetPositionBuffer (particlebuffer, sizeof (particleinfo_t), 0);
+    pointsprite.SetPositionBuffer (positionbuffer, 4 * sizeof (float), 0);
 
     // clear depth buffer
    	glClear (GL_DEPTH_BUFFER_BIT);
