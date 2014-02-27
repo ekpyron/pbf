@@ -28,7 +28,7 @@ void main (void)
 	
 	uint flag = imageLoad (highlighttexture, id).x;
 	
-	if (flag & 1)
+	if ((flag & 1) == 1)
 	{
 		FOR_EACH_NEIGHBOUR(j)
 		{
