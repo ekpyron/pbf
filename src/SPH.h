@@ -44,14 +44,6 @@ public:
 		return highlightbuffer;
 	}
 
-	/** Get highlight texture.
-	 * Returns a texture containing the particle highlighting information.
-	 * \returns the highlight texture
-	 */
-	Texture &GetHighlightTexture (void) {
-		return highlighttexture;
-	}
-
 	/** Check vorticity confinement.
 	 * Checks the state of the vorticity confinement.
 	 * \returns True, if vorticity confinement is enabled, false, if not.
@@ -115,11 +107,15 @@ private:
      */
     ShaderProgram updateprog;
 
-    /** Dummy program.
-     * Dummy shader program.
-     * This is done to workaround an inexplicable bug in certain graphics drivers.
+    /** Highlight program.
+     * Shader program for highlighing neighbours of highlighted particles.
      */
-    ShaderProgram dummyprog;
+    ShaderProgram highlightprog;
+
+    /** Clear highlight program.
+     * Shader program for clearing the neighbour highlights.
+     */
+    ShaderProgram clearhighlightprog;
 
 
     /** Neighbour Cell finder.

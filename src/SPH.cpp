@@ -25,9 +25,13 @@ SPH::SPH (const GLuint &_numparticles)
     		"shaders/simulation/include.glsl");
     updateprog.Link ();
 
-    dummyprog.CompileShader (GL_COMPUTE_SHADER, "shaders/sph/dummy.glsl",
+    highlightprog.CompileShader (GL_COMPUTE_SHADER, "shaders/sph/highlight.glsl",
     		"shaders/simulation/include.glsl");
-    dummyprog.Link ();
+    highlightprog.Link ();
+
+    clearhighlightprog.CompileShader (GL_COMPUTE_SHADER, "shaders/sph/clearhighlight.glsl",
+    		"shaders/simulation/include.glsl");
+    clearhighlightprog.Link ();
 
     // create query objects
     glGenQueries (5, queries);
@@ -45,12 +49,12 @@ SPH::SPH (const GLuint &_numparticles)
 
     // allocate highlight buffer
     glBindBuffer (GL_SHADER_STORAGE_BUFFER, highlightbuffer);
-    glBufferData (GL_SHADER_STORAGE_BUFFER, sizeof (GLubyte) * numparticles, NULL, GL_DYNAMIC_DRAW);
-    glClearBufferData (GL_SHADER_STORAGE_BUFFER, GL_R8UI, GL_RED, GL_UNSIGNED_INT, NULL);
+    glBufferData (GL_SHADER_STORAGE_BUFFER, sizeof (GLuint) * numparticles, NULL, GL_DYNAMIC_DRAW);
+    glClearBufferData (GL_SHADER_STORAGE_BUFFER, GL_R32UI, GL_RED, GL_UNSIGNED_INT, NULL);
 
     // create highlight buffer
     highlighttexture.Bind (GL_TEXTURE_BUFFER);
-    glTexBuffer (GL_TEXTURE_BUFFER, GL_R8UI, highlightbuffer);
+    glTexBuffer (GL_TEXTURE_BUFFER, GL_R32UI, highlightbuffer);
 
     // allocate vorticity buffer
     glBindBuffer (GL_SHADER_STORAGE_BUFFER, vorticitybuffer);
@@ -149,7 +153,6 @@ void SPH::Run (void)
 
     glBeginQuery (GL_TIME_ELAPSED, solverquery);
     {
-
         // set buffer bindings
         glBindBufferBase (GL_SHADER_STORAGE_BUFFER, 0, radixsort.GetBuffer ());
 
@@ -159,9 +162,14 @@ void SPH::Run (void)
         lambdatexture.Bind (GL_TEXTURE_BUFFER);
         glActiveTexture (GL_TEXTURE0);
 
-        glBindImageTexture (0, highlighttexture.get (), 0, GL_FALSE, 0, GL_READ_WRITE, GL_R8UI);
-
-        dummyprog.Use ();
+        // particle highlighting
+        glBindImageTexture (0, highlighttexture.get (), 0, GL_FALSE, 0, GL_READ_WRITE, GL_R32UI);
+        // clear previously highlighted neighbours
+        clearhighlightprog.Use ();
+        glDispatchCompute (numparticles >> 8, 1, 1);
+        glMemoryBarrier (GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
+        // highlight current neighbours
+        highlightprog.Use ();
         glDispatchCompute (numparticles >> 8, 1, 1);
 
         glBindImageTexture (0, lambdatexture.get (), 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_R32F);

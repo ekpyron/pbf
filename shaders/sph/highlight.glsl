@@ -9,7 +9,7 @@ layout (std430, binding = 0) buffer ParticleKeys
 };
 
 layout (binding = 2) uniform isamplerBuffer neighbourcelltexture;
-layout (binding = 0, r8ui) uniform uimageBuffer highlighttexture;
+layout (binding = 0, r32ui) uniform uimageBuffer highlighttexture;
 
 #define FOR_EACH_NEIGHBOUR(var) for (int o = 0; o < 3; o++) {\
 		ivec3 datav = texelFetch (neighbourcelltexture, int (gl_GlobalInvocationID.x * 3 + o)).xyz;\
@@ -28,12 +28,11 @@ void main (void)
 	
 	uint flag = imageLoad (highlighttexture, id).x;
 	
-	if (flag == 1)
+	if (flag & 1)
 	{
 		FOR_EACH_NEIGHBOUR(j)
 		{
-			// TODO
-			imageStore (highlighttexture, int (particlekeys[j].id), uvec4(2, 0, 0, 0));
+			imageAtomicOr (highlighttexture, int (particlekeys[j].id), uint(2));
 		}
 		END_FOR_EACH_NEIGHBOUR(j)
 	}	

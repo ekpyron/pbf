@@ -55,7 +55,7 @@ Simulation::Simulation (void) : width (0), height (0), font ("textures/font.png"
 
     // pass position and color to the point sprite class
     pointsprite.SetPositionBuffer (sph.GetPositionBuffer (), 4 * sizeof (float), 0);
-    pointsprite.SetHighlightBuffer (sph.GetHighlightBuffer (), 1, 0);
+    pointsprite.SetHighlightBuffer (sph.GetHighlightBuffer (), sizeof (GLuint), 0);
 
     // update view matrix
     UpdateViewMatrix ();
@@ -139,43 +139,36 @@ void Simulation::OnMouseDown (const int &button)
 		GLint id = selection.GetParticle (sph.GetPositionBuffer (), GetNumberOfParticles (), xpos, ypos);
 		if (id >= 0)
 		{
-			// TODO
-			GLuint highlightbuffer = sph.GetHighlightBuffer ();
-
 			// create a temporary buffer
 			GLuint tmpbuffer;
 			glGenBuffers (1, &tmpbuffer);
 			glBindBuffer (GL_COPY_WRITE_BUFFER, tmpbuffer);
-			glBufferData (GL_COPY_WRITE_BUFFER, sizeof (GLubyte), NULL, GL_DYNAMIC_READ);
+			glBufferData (GL_COPY_WRITE_BUFFER, sizeof (GLuint), NULL, GL_DYNAMIC_READ);
 
-			// copy the particle information to the temporary buffer
+			// copy the particle highlighting information to the temporary buffer
 			// a temporary buffer is used, so that drivers (in particular the NVIDIA driver)
-			// are not tempted to move the whole particle buffer from GPU to host/DMA memory
+			// are not tempted to move the whole buffer from GPU to host/DMA memory
 			glBindBuffer (GL_COPY_READ_BUFFER, sph.GetHighlightBuffer ());
 			glCopyBufferSubData (GL_COPY_READ_BUFFER, GL_COPY_WRITE_BUFFER,
-					id * sizeof (GLubyte), 0, sizeof (GLubyte));
+					id * sizeof (GLuint), 0, sizeof (GLuint));
 
 			// map the temporary buffer to CPU address space
-			GLubyte *info = reinterpret_cast<GLubyte*> (glMapBuffer (GL_COPY_WRITE_BUFFER, GL_READ_WRITE));
+			GLuint *info = reinterpret_cast<GLuint*> (glMapBuffer (GL_COPY_WRITE_BUFFER, GL_READ_WRITE));
 			if (info == NULL)
 				throw std::runtime_error ("A GPU buffer could not be mapped to CPU address space.");
 
 			// modify the particle information i order to highlight/unhighlight the particle
 			if (*info > 0)
-			{
 				*info = 0;
-			}
 			else
-			{
 				*info = 1;
-			}
 
 			// unmap the temporary buffer
 			glUnmapBuffer (GL_COPY_WRITE_BUFFER);
 
-			// copy back to the particle buffer
+			// copy back to the highlighting buffer
 			glCopyBufferSubData (GL_COPY_WRITE_BUFFER, GL_COPY_READ_BUFFER,
-					0, id * sizeof (GLubyte), sizeof (GLubyte));
+					0, id * sizeof (GLuint), sizeof (GLuint));
 
 			// delete the temporary buffer
 			glDeleteBuffers (1, &tmpbuffer);
