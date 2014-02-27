@@ -5,7 +5,7 @@ layout (local_size_x = 256) in;
 
 layout (std430, binding = 0) buffer ParticleKeys
 {
-	ParticleKey particlekeys[];
+	vec4 particlekeys[];
 };
 
 layout (binding = 2) uniform isamplerBuffer neighbourcelltexture;
@@ -49,7 +49,7 @@ vec3 gradWspiky (vec3 r)
 
 void main (void)
 {
-	vec3 position = particlekeys[gl_GlobalInvocationID.x].position;
+	vec3 position = particlekeys[gl_GlobalInvocationID.x].xyz;
 
 	vec3 deltap = vec3 (0, 0, 0);
 	
@@ -60,7 +60,7 @@ void main (void)
 	{
 		// This might fetch an already updated position,
 		// but that doesn't cause any harm.
-		vec3 position_j = particlekeys[j].position;
+		vec3 position_j = particlekeys[j].xyz;
 		
 		float scorr = (Wpoly6 (distance (position, position_j)) / Wpoly6 (tensile_instability_h));
 		scorr *= scorr;
@@ -81,5 +81,5 @@ void main (void)
 	position = clamp (position, vec3 (0, 0, 0) + wall, GRID_SIZE - wall);
 	// collision detection end
 	
-	particlekeys[gl_GlobalInvocationID.x].position = position;
+	particlekeys[gl_GlobalInvocationID.x].xyz = position;
 }

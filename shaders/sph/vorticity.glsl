@@ -5,7 +5,7 @@ layout (local_size_x = 256) in;
 
 layout (std430, binding = 0) buffer ParticleKeys
 {
-	ParticleKey particlekeys[];
+	vec4 particlekeys[];
 };
 
 layout (std430, binding = 3) coherent buffer VorticityBuffer
@@ -47,12 +47,12 @@ vec3 gradWspiky (vec3 r)
 
 void main (void)
 {
-	ParticleKey key = particlekeys[gl_GlobalInvocationID.x];
-	uint particleid = key.id;
-	vec3 position = key.position;
+	vec4 key = particlekeys[gl_GlobalInvocationID.x];
+	int particleid = floatBitsToInt (key.w);
+	vec3 position = key.xyz;
 
 	// fetch velocity	
-	vec3 velocity = imageLoad (velocitytexture, int (particleid)).xyz;
+	vec3 velocity = imageLoad (velocitytexture, particleid).xyz;
 	
 	// calculate vorticity & apply XSPH viscosity
 	vec3 v = vec3 (0, 0, 0);
@@ -60,9 +60,9 @@ void main (void)
 	float rho = 0;
 	FOR_EACH_NEIGHBOUR(j)
 	{
-		ParticleKey key_j = particlekeys[j];
-		vec3 v_ij = imageLoad (velocitytexture, int (key_j.id)).xyz - velocity;
-		vec3 p_ij = position - key_j.position;
+		vec4 key_j = particlekeys[j];
+		vec3 v_ij = imageLoad (velocitytexture, floatBitsToInt (key_j.w)).xyz - velocity;
+		vec3 p_ij = position - key_j.xyz;
 		float tmp = Wpoly6 (length (p_ij));
 		rho += tmp;
 		v += v_ij * tmp;
@@ -80,7 +80,7 @@ void main (void)
 	vec3 gradVorticity = vec3 (0, 0, 0);
 	FOR_EACH_NEIGHBOUR(j)
 	{
-		vec3 p_ij = position - particlekeys[j].position;
+		vec3 p_ij = position - particlekeys[j].xyz;
 		// There is no real guarantee that vorticities[] contains the correct
 		// values at this point, but there seem to be no issues in practice.
 		gradVorticity += vorticities[j] * gradWspiky (p_ij);
@@ -96,5 +96,5 @@ void main (void)
 	velocity += timestep * vorticity_epsilon * cross (N, vorticity);
 	
 	// update particle information
-	imageStore (velocitytexture, int (particleid), vec4 (velocity, 0));
+	imageStore (velocitytexture, particleid, vec4 (velocity, 0));
 }

@@ -18,7 +18,7 @@ RadixSort::RadixSort (GLuint _numblocks)
 
 	// allocate input buffer
 	glBindBuffer (GL_SHADER_STORAGE_BUFFER, buffer);
-	glBufferData (GL_SHADER_STORAGE_BUFFER, sizeof (particlekey_t) * blocksize * numblocks, NULL, GL_DYNAMIC_DRAW);
+	glBufferData (GL_SHADER_STORAGE_BUFFER, sizeof (glm::vec4) * blocksize * numblocks, NULL, GL_DYNAMIC_DRAW);
 
 	// allocate prefix sum buffer
 	glBindBuffer (GL_SHADER_STORAGE_BUFFER, prefixsums);
@@ -46,7 +46,7 @@ RadixSort::RadixSort (GLuint _numblocks)
 
 	// allocate output buffer
 	glBindBuffer (GL_SHADER_STORAGE_BUFFER, result);
-	glBufferData (GL_SHADER_STORAGE_BUFFER, sizeof (particlekey_t) * blocksize * numblocks, NULL, GL_STATIC_DRAW);
+	glBufferData (GL_SHADER_STORAGE_BUFFER, sizeof (glm::vec4) * blocksize * numblocks, NULL, GL_STATIC_DRAW);
 
 	// pass block sum offsets to the shader programs
 	glm::uvec4 blocksumoffsets (0, numblocks, numblocks * 2, numblocks * 3);

@@ -5,7 +5,7 @@ layout (local_size_x = 256) in;
 
 layout (std430, binding = 0) readonly buffer ParticleKeys
 {
-	ParticleKey particlekeys[];
+	vec4 particlekeys[];
 };
 
 layout (binding = 0, r32i) uniform writeonly iimage3D gridtexture;
@@ -22,8 +22,8 @@ void main (void)
 		return;
 	}
 
-	ivec3 gridpos = ivec3 (clamp (particlekeys[gid].position, vec3 (0, 0, 0), GRID_SIZE));
-	ivec3 gridpos2 = ivec3 (clamp (particlekeys[gid - 1].position, vec3 (0, 0, 0), GRID_SIZE));
+	ivec3 gridpos = ivec3 (clamp (particlekeys[gid].xyz, vec3 (0, 0, 0), GRID_SIZE));
+	ivec3 gridpos2 = ivec3 (clamp (particlekeys[gid - 1].xyz, vec3 (0, 0, 0), GRID_SIZE));
 	
 	if (gridpos != gridpos2)
 	{

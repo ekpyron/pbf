@@ -18,9 +18,3 @@ const float tensile_instability_h = 0.2;
 
 const float xsph_viscosity_c = 0.01;
 const float vorticity_epsilon = 5;
-
-struct ParticleKey
-{
-	vec3 position;
-	uint id;
-};

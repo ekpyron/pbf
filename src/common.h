@@ -30,18 +30,6 @@
 
 extern GLFWwindow *window;
 
-/** Particle key.
- * Structure representing key information for each particle.
- */
-typedef struct particlekey {
-	/** Particle position.
-	 */
-	glm::vec3 position;
-	/** Particle ID.
-	 */
-	GLuint id;
-} particlekey_t;
-
 /** Check for OpenGL extension.
  * Checks whether an OpenGL extension is supported.
  * \param name Name of the extension.

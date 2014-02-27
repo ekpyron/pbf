@@ -5,7 +5,7 @@ layout (local_size_x = 256) in;
 
 layout (std430, binding = 0) writeonly buffer ParticleKeys
 {
-	ParticleKey particlekeys[];
+	vec4 particlekeys[];
 };
 
 uniform bool extforce;
@@ -16,11 +16,10 @@ layout (binding = 1) uniform samplerBuffer velocitytexture;
 
 void main (void)
 {
-	uint particleid;
-	particleid = gl_GlobalInvocationID.x;
+	int particleid = int (gl_GlobalInvocationID.x);
 	
-	vec3 position = texelFetch (positiontexture, int (particleid)).xyz;
-	vec3 velocity = texelFetch (velocitytexture, int (particleid)).xyz;
+	vec3 position = texelFetch (positiontexture, particleid).xyz;
+	vec3 velocity = texelFetch (velocitytexture, particleid).xyz;
 	
 	// optionally apply an additional external force to some particles
 	if (extforce && position.z > GRID_DEPTH/2)
@@ -30,8 +29,8 @@ void main (void)
 	velocity += gravity * vec3 (0, -1, 0) * timestep;
 	
 	// predict new position
-	particlekeys[particleid].position = position + timestep * velocity;
-	particlekeys[particleid].id = particleid;
+	particlekeys[particleid].xyz = position + timestep * velocity;
+	particlekeys[particleid].w = intBitsToFloat (particleid);
 	// set color
 	// particles[particleid].color = vec3 (0.25, 0, 1);
 }

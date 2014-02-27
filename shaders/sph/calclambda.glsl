@@ -5,7 +5,7 @@ layout (local_size_x = 256) in;
 
 layout (std430, binding = 0) buffer ParticleKeys
 {
-	ParticleKey particlekeys[];
+	vec4 particlekeys[];
 };
 
 layout (binding = 2) uniform isamplerBuffer neighbourcelltexture;
@@ -50,7 +50,7 @@ vec3 gradWspiky (vec3 r)
 
 void main (void)
 {
-	vec3 position = particlekeys[gl_GlobalInvocationID.x].position;
+	vec3 position = particlekeys[gl_GlobalInvocationID.x].xyz;
 
 	float sum_k_grad_Ci = 0;
 	float rho = 0;
@@ -59,7 +59,7 @@ void main (void)
 	
 	FOR_EACH_NEIGHBOUR(j)
 	{
-		vec3 position_j = particlekeys[j].position;
+		vec3 position_j = particlekeys[j].xyz;
 		
 		// compute rho_i (equation 2)
 		float len = distance (position, position_j);

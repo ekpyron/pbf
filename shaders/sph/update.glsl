@@ -5,7 +5,7 @@ layout (local_size_x = 256) in;
 
 layout (std430, binding = 0) buffer ParticleKeys
 {
-	ParticleKey particlekeys[];
+	vec4 particlekeys[];
 };
 
 layout (binding = 0, rgba32f) uniform imageBuffer positiontexture;
@@ -26,11 +26,11 @@ layout (binding = 2) uniform isamplerBuffer neighbourcelltexture;
 
 void main (void)
 {
-	ParticleKey key = particlekeys[gl_GlobalInvocationID.x];
-	uint particleid = key.id;
-	vec3 position = key.position;
+	vec4 key = particlekeys[gl_GlobalInvocationID.x];
+	int particleid = floatBitsToInt (key.w);
+	vec3 position = key.xyz;
 	
-	vec3 oldposition = imageLoad (positiontexture, int (particleid)).xyz;
+	vec3 oldposition = imageLoad (positiontexture, particleid).xyz;
 
 	// calculate velocity	
 	vec3 velocity = (position - oldposition) / timestep;

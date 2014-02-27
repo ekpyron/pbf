@@ -5,7 +5,7 @@ layout (local_size_x = 256) in;
 
 layout (std430, binding = 0) buffer ParticleKeys
 {
-	ParticleKey particlekeys[];
+	vec4 particlekeys[];
 };
 
 layout (binding = 2) uniform isamplerBuffer neighbourcelltexture;
@@ -24,7 +24,7 @@ layout (binding = 0, r32ui) uniform uimageBuffer highlighttexture;
 
 void main (void)
 {
-	int id = int (particlekeys[gl_GlobalInvocationID.x].id);
+	int id = floatBitsToInt (particlekeys[gl_GlobalInvocationID.x].w);
 	
 	uint flag = imageLoad (highlighttexture, id).x;
 	
@@ -32,7 +32,7 @@ void main (void)
 	{
 		FOR_EACH_NEIGHBOUR(j)
 		{
-			imageAtomicOr (highlighttexture, int (particlekeys[j].id), uint(2));
+			imageAtomicOr (highlighttexture, floatBitsToInt (particlekeys[j].w), uint(2));
 		}
 		END_FOR_EACH_NEIGHBOUR(j)
 	}	
