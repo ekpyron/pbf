@@ -3,11 +3,8 @@
 const int GRID_WIDTH = 128;
 const int GRID_HEIGHT = 64;
 const int GRID_DEPTH = 128;
-const uint NUM_PARTICLES = 32 * 32 * 32 * 2;
 
 const vec3 GRID_SIZE = vec3 (GRID_WIDTH - 1, GRID_HEIGHT - 1, GRID_DEPTH - 1);
-
-#define MAX_GRID_ID (GRID_WIDTH * GRID_HEIGHT * GRID_DEPTH - 1)
 
 // parameters
 const float rho_0 = 1.0;
