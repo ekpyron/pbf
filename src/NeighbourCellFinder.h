@@ -54,11 +54,6 @@ private:
 
     union {
         struct {
-            /** Grid texture clear buffer.
-             * Buffer used to clear the grid texture;
-             */
-            GLuint gridclearbuffer;
-
             /** Neighbour cell buffer.
              * Buffer used to store neighbouring cells for each particle.
              */
@@ -69,8 +64,13 @@ private:
          * The buffer objects are stored in a union, so that it is possible
          * to create/delete all buffer objects with a single OpenGL call.
          */
-        GLuint buffers[2];
+        GLuint buffers[1];
     };
+
+    /** Grid clear texture.
+     * Texture used to clear the grid texture if GL_ARB_clear_texture is not available.
+     */
+    Texture gridcleartexture;
 
     /** Grid texture.
      * Texture in which the offset of the first particle for each grid is stored.

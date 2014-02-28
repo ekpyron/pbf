@@ -17,18 +17,22 @@ NeighbourCellFinder::NeighbourCellFinder (const GLuint &_numparticles, const glm
     neighbourcells.Link ();
 
 	// create buffer objects
-	glGenBuffers (2, buffers);
+	glGenBuffers (1, buffers);
 
     // allocate grid clear buffer
 	// (only needed if GL_ARB_clear_texture is not available)
+	GLuint tmpbuffer;
     if (!GLEXTS.ARB_clear_texture)
     {
-    	glBindBuffer (GL_PIXEL_UNPACK_BUFFER, gridclearbuffer);
+    	glGenBuffers (1, &tmpbuffer);
+    	glBindBuffer (GL_PIXEL_UNPACK_BUFFER, tmpbuffer);
     	glBufferData (GL_PIXEL_UNPACK_BUFFER, sizeof (GLint) * gridsize.x * gridsize.y * gridsize.z, NULL, GL_STATIC_DRAW);
     	{
     		GLint v = -1;
     		glClearBufferData (GL_PIXEL_UNPACK_BUFFER, GL_R32I, GL_RED_INTEGER, GL_INT, &v);
     	}
+    	gridcleartexture.Bind (GL_TEXTURE_3D);
+        glTexImage3D (GL_TEXTURE_3D, 0, GL_R32I, gridsize.x, gridsize.y, gridsize.z, 0, GL_RED_INTEGER, GL_INT, NULL);
     }
 
     // allocate grid texture
@@ -48,6 +52,7 @@ NeighbourCellFinder::NeighbourCellFinder (const GLuint &_numparticles, const glm
     if (!GLEXTS.ARB_clear_texture)
     {
     	glBindBuffer (GL_PIXEL_UNPACK_BUFFER, 0);
+    	glDeleteBuffers (1, &tmpbuffer);
     }
     else
     {
@@ -77,7 +82,7 @@ NeighbourCellFinder::NeighbourCellFinder (const GLuint &_numparticles, const glm
 NeighbourCellFinder::~NeighbourCellFinder (void)
 {
 	// cleanup
-	glDeleteBuffers (2, buffers);
+	glDeleteBuffers (1, buffers);
 }
 
 const Texture &NeighbourCellFinder::GetResult (void) const
@@ -96,10 +101,9 @@ void NeighbourCellFinder::FindNeighbourCells (const GLuint &particlebuffer)
 	}
 	else
 	{
-		gridtexture.Bind (GL_TEXTURE_3D);
-		glBindBuffer (GL_PIXEL_UNPACK_BUFFER, gridclearbuffer);
-		glTexSubImage3D (GL_TEXTURE_3D, 0, 0, 0, 0, gridsize.x, gridsize.y, gridsize.z, GL_RED_INTEGER, GL_INT, NULL);
-		glBindBuffer (GL_PIXEL_UNPACK_BUFFER, 0);
+		glCopyImageSubData (gridcleartexture.get (), GL_TEXTURE_3D, 0, 0, 0, 0,
+				gridtexture.get (), GL_TEXTURE_3D, 0, 0, 0, 0,
+				gridsize.x, gridsize.y, gridsize.z);
 		glMemoryBarrier (GL_TEXTURE_UPDATE_BARRIER_BIT);
 	}
 
