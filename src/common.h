@@ -43,7 +43,6 @@ bool IsExtensionSupported (const std::string &name);
  */
 typedef struct glextflags {
 	bool ARB_clear_texture;
-	bool ARB_buffer_storage;
 } glextflags_t;
 
 extern glextflags_t GLEXTS;

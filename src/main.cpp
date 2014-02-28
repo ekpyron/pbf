@@ -174,7 +174,6 @@ void initialize (void)
 
     // determine OpenGL extension capabilities
     GLEXTS.ARB_clear_texture = IsExtensionSupported ("GL_ARB_clear_texture");
-    GLEXTS.ARB_buffer_storage = IsExtensionSupported ("GL_ARB_buffer_storage");
 
     // create the simulation class
     simulation = new Simulation ();

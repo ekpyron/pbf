@@ -65,10 +65,7 @@ NeighbourCellFinder::NeighbourCellFinder (const GLuint &_numparticles, const glm
 
     // allocate neighbour cell buffer
     glBindBuffer (GL_SHADER_STORAGE_BUFFER, neighbourcellbuffer);
-    if (GLEXTS.ARB_buffer_storage)
-        glBufferStorage (GL_SHADER_STORAGE_BUFFER, sizeof (GLuint) * 12 * numparticles, NULL, 0);
-    else
-    	glBufferData (GL_SHADER_STORAGE_BUFFER, sizeof (GLuint) * 12 * numparticles, NULL, GL_DYNAMIC_COPY);
+   	glBufferData (GL_SHADER_STORAGE_BUFFER, sizeof (GLuint) * 12 * numparticles, NULL, GL_DYNAMIC_COPY);
 
     // create neighbour cell texture
     neighbourcelltexture.Bind (GL_TEXTURE_BUFFER);
