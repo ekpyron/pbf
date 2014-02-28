@@ -1,6 +1,6 @@
 // header is included here
 
-layout (local_size_x = 256) in;
+layout (local_size_x = BLOCKSIZE) in;
 
 layout (std430, binding = 0) buffer ParticleKeys
 {

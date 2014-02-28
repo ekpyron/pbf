@@ -20,7 +20,9 @@ SPH::SPH (const GLuint &_numparticles, const glm::ivec3 &gridsize)
 		   << "const float tensile_instability_h = 0.2;" << std::endl
 		   << std::endl
 		   << "const float xsph_viscosity_c = 0.01;" << std::endl
-		   << "const float vorticity_epsilon = 5;" << std::endl;
+		   << "const float vorticity_epsilon = 5;" << std::endl
+		   << std::endl
+		   << "#define BLOCKSIZE 256" << std::endl;
 
 	// prepare shader programs
     predictpos.CompileShader (GL_COMPUTE_SHADER, "shaders/sph/predictpos.glsl", stream.str ());

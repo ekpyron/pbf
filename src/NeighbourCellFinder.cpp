@@ -6,7 +6,8 @@ NeighbourCellFinder::NeighbourCellFinder (const GLuint &_numparticles, const glm
 	std::stringstream stream;
 	stream << "#version 430 core" << std::endl
 		   << "const vec3 GRID_SIZE = vec3 (" << gridsize.x << ", " << gridsize.y << ", " << gridsize.z << ");" << std::endl
-		   << "const ivec3 GRID_HASHWEIGHTS = ivec3 (1, " << gridsize.x * gridsize.z <<  ", " << gridsize.z << ");" << std::endl;
+		   << "const ivec3 GRID_HASHWEIGHTS = ivec3 (1, " << gridsize.x * gridsize.z <<  ", " << gridsize.z << ");" << std::endl
+		   << "#define BLOCKSIZE 256" << std::endl;
 
 
 	findcells.CompileShader (GL_COMPUTE_SHADER, "shaders/neighbourcellfinder/findcells.glsl", stream.str ());
