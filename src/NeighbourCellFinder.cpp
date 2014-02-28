@@ -3,7 +3,9 @@
 NeighbourCellFinder::NeighbourCellFinder (const GLuint &_numparticles, const glm::ivec3 &_gridsize)
 	: numparticles (_numparticles), gridsize (_gridsize)
 {
+    // determine OpenGL extension support
 	ARB_clear_texture_supported = IsExtensionSupported ("GL_ARB_clear_texture");
+    bool use_buffer_storage = IsExtensionSupported ("GL_ARB_buffer_storage");
 
 	std::stringstream stream;
 	stream << "#version 430 core" << std::endl
@@ -25,7 +27,7 @@ NeighbourCellFinder::NeighbourCellFinder (const GLuint &_numparticles, const glm
     if (!ARB_clear_texture_supported)
     {
     	glBindBuffer (GL_PIXEL_UNPACK_BUFFER, gridclearbuffer);
-    	glBufferData (GL_PIXEL_UNPACK_BUFFER, sizeof (GLint) * gridsize.x * gridsize.y * gridsize.z, NULL, GL_DYNAMIC_DRAW);
+    	glBufferData (GL_PIXEL_UNPACK_BUFFER, sizeof (GLint) * gridsize.x * gridsize.y * gridsize.z, NULL, GL_STATIC_DRAW);
     	{
     		GLint v = -1;
     		glClearBufferData (GL_PIXEL_UNPACK_BUFFER, GL_R32I, GL_RED_INTEGER, GL_INT, &v);
@@ -67,7 +69,10 @@ NeighbourCellFinder::NeighbourCellFinder (const GLuint &_numparticles, const glm
 
     // allocate neighbour cell buffer
     glBindBuffer (GL_SHADER_STORAGE_BUFFER, neighbourcellbuffer);
-    glBufferData (GL_SHADER_STORAGE_BUFFER, sizeof (GLuint) * 12 * numparticles, NULL, GL_DYNAMIC_DRAW);
+    if (use_buffer_storage)
+        glBufferStorage (GL_SHADER_STORAGE_BUFFER, sizeof (GLuint) * 12 * numparticles, NULL, 0);
+    else
+    	glBufferData (GL_SHADER_STORAGE_BUFFER, sizeof (GLuint) * 12 * numparticles, NULL, GL_DYNAMIC_COPY);
 
     // create neighbour cell texture
     neighbourcelltexture.Bind (GL_TEXTURE_BUFFER);
