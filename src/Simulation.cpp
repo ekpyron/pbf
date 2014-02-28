@@ -223,13 +223,30 @@ void Simulation::ResetParticleBuffer (void)
             }
         }
     }
-    //  update the particle buffer
-    glBindBuffer (GL_SHADER_STORAGE_BUFFER, sph.GetPositionBuffer ());
-    glBufferSubData (GL_SHADER_STORAGE_BUFFER, 0, 4 * sizeof (float) * positions.size (), &positions[0]);
 
-    glBindBuffer (GL_SHADER_STORAGE_BUFFER, sph.GetVelocityBuffer ());
-    glBufferSubData (GL_SHADER_STORAGE_BUFFER, 0, 4 * sizeof (float) * velocities.size (), &velocities[0]);
+    // create temporary buffer
+    GLuint tmpbuffer;
+    glGenBuffers (1, &tmpbuffer);
 
+    // upload position data
+    glBindBuffer (GL_COPY_READ_BUFFER, tmpbuffer);
+    glBufferData (GL_COPY_READ_BUFFER, 4 * sizeof (float) * positions.size (), &positions[0], GL_STREAM_COPY);
+
+    // copy the new position data to SPH position buffer
+    glBindBuffer (GL_COPY_WRITE_BUFFER, sph.GetPositionBuffer ());
+    glCopyBufferSubData (GL_COPY_READ_BUFFER, GL_COPY_WRITE_BUFFER, 0, 0, 4 * sizeof (float) * positions.size ());
+
+    // upload velocity data
+    glBufferData (GL_COPY_READ_BUFFER, 4 * sizeof (float) * velocities.size (), &velocities[0], GL_STREAM_COPY);
+
+    // copy the new velocity data to SPH position buffer
+    glBindBuffer (GL_COPY_WRITE_BUFFER, sph.GetVelocityBuffer ());
+    glCopyBufferSubData (GL_COPY_READ_BUFFER, GL_COPY_WRITE_BUFFER, 0, 0, 4 * sizeof (float) * velocities.size ());
+
+    // delete temporary buffer
+    glDeleteBuffers (1, &tmpbuffer);
+
+    // clear highlight buffer
     glBindBuffer (GL_SHADER_STORAGE_BUFFER, sph.GetHighlightBuffer ());
     glClearBufferData (GL_SHADER_STORAGE_BUFFER, GL_R8UI, GL_RED, GL_UNSIGNED_INT, NULL);
 }
