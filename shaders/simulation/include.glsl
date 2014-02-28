@@ -1,6 +1,6 @@
 #version 430 core
 
-const vec3 GRID_SIZE = vec3 (128 - 1, 64 - 1, 128 - 1);
+const vec3 GRID_SIZE = vec3 (128, 64, 128);
 const ivec3 GRID_HASHWEIGHTS = ivec3 (1, 128 * 128, 128);
 
 // parameters

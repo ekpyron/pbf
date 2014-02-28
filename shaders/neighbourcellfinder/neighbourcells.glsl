@@ -14,27 +14,27 @@ layout (binding = 1) uniform isampler3D gridendtexture;
 layout (binding = 0, rgba32i) uniform writeonly iimageBuffer neighbourtexture;
 
 // neighbour grids in y and z direction
-const vec3 gridoffsets[9] = {
-	vec3 (0, -1, -1) / GRID_SIZE,
-	vec3 (0, -1, 0) / GRID_SIZE,
-	vec3 (0, -1, 1) / GRID_SIZE,
-	vec3 (0, 0, -1) / GRID_SIZE,
-	vec3 (0, 0, 0) / GRID_SIZE,
-	vec3 (0, 0, 1) / GRID_SIZE,
-	vec3 (0, 1, -1) / GRID_SIZE,
-	vec3 (0, 1, 0) / GRID_SIZE,
-	vec3 (0, 1, 1) / GRID_SIZE
+const ivec3 gridoffsets[9] = {
+	ivec3 (0, -1, -1),
+	ivec3 (0, -1, 0),
+	ivec3 (0, -1, 1),
+	ivec3 (0, 0, -1),
+	ivec3 (0, 0, 0),
+	ivec3 (0, 0, 1),
+	ivec3 (0, 1, -1),
+	ivec3 (0, 1, 0),
+	ivec3 (0, 1, 1)
 };
 
 // offset between grids in x direction
-const vec3 gridxoffset = vec3 (1, 0, 0) / GRID_SIZE;
+const ivec3 gridxoffset = ivec3 (1, 0, 0);
 
 void main (void)
 {
 	uint particleid;
 	particleid = gl_GlobalInvocationID.x;
 
-	vec3 gridpos = floor (particlekeys[particleid].xyz) / GRID_SIZE;
+	ivec3 gridpos = ivec3 (particlekeys[particleid].xyz);
 	
 	int cells[9];
 
@@ -48,14 +48,14 @@ void main (void)
 		for (int j = -1; j <= 1; j++)
 		{
 			// fetch its starting position
-			int c = texture (gridtexture, gridpos + gridoffsets[o] + j * gridxoffset).x;
+			int c = texelFetch (gridtexture, gridpos + gridoffsets[o] + j * gridxoffset, 0).x;
 			// store the position, if we don't already have a starting point
 			if (cell == -1) cell = c;
 			// if the cell exists
 			if (c != -1)
 			{
 				// lookup its size and update entry count
-				int end = texture (gridendtexture, gridpos + gridoffsets[o] + j * gridxoffset).x;
+				int end = texelFetch (gridendtexture, gridpos + gridoffsets[o] + j * gridxoffset, 0).x;
 				entries += end - c;
 			}
 		}
