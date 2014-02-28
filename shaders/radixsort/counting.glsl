@@ -1,7 +1,4 @@
-// simulation/include.glsl is included here
-
-#define BLOCKSIZE 512
-#define HALFBLOCKSIZE 256
+// header is included here
 
 layout (local_size_x = HALFBLOCKSIZE) in;
 

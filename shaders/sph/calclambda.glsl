@@ -1,5 +1,4 @@
-// include.glsl is included here
-#line 3
+// header is included here
 
 layout (local_size_x = 256) in;
 

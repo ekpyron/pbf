@@ -14,8 +14,9 @@ RadixSort::RadixSort (GLuint _numblocks, const glm::ivec3 &gridsize)
 	std::stringstream stream;
 	stream << "#version 430 core" << std::endl
 		   << "const vec3 GRID_SIZE = vec3 (" << gridsize.x << ", " << gridsize.y << ", " << gridsize.z << ");" << std::endl
-		   << "const ivec3 GRID_HASHWEIGHTS = ivec3 (1, " << gridsize.x * gridsize.z <<  ", " << gridsize.z << ");" << std::endl;
-
+		   << "const ivec3 GRID_HASHWEIGHTS = ivec3 (1, " << gridsize.x * gridsize.z <<  ", " << gridsize.z << ");" << std::endl
+		   << "#define BLOCKSIZE 512" << std::endl
+		   << "#define HALFBLOCKSIZE 256" << std::endl;
 
 	numbits = count_sortbits (uint64_t (gridsize.x) * uint64_t (gridsize.y) * uint64_t (gridsize.z) - 1);
 

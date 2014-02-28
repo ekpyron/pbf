@@ -9,14 +9,21 @@ ShaderProgram::~ShaderProgram (void)
     glDeleteProgram (program);
 }
 
-void ShaderProgram::CompileShader (GLenum type, const std::string &filename, const std::string &include)
+void ShaderProgram::CompileShader (GLenum type, const std::string &filename, const std::string &header)
 {
     GLuint shader;
 
-    // load shader source into memory
     std::vector<char> data;
     GLint length = 0;
-    data.assign (include.begin (), include.end ());
+
+    // prepend header
+    data.assign (header.begin (), header.end ());
+
+    // fix line count
+    const std::string linedef = "\n#line 1\n";
+    data.insert (data.end (), linedef.begin (), linedef.end ());
+
+    // load shader source
     length = data.size ();
     {
     	size_t len;
