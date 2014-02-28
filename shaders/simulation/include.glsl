@@ -1,10 +1,7 @@
 #version 430 core
 
-const int GRID_WIDTH = 128;
-const int GRID_HEIGHT = 64;
-const int GRID_DEPTH = 128;
-
-const vec3 GRID_SIZE = vec3 (GRID_WIDTH - 1, GRID_HEIGHT - 1, GRID_DEPTH - 1);
+const vec3 GRID_SIZE = vec3 (128 - 1, 64 - 1, 128 - 1);
+const ivec3 GRID_HASHWEIGHTS = ivec3 (1, 128 * 128, 128);
 
 // parameters
 const float rho_0 = 1.0;

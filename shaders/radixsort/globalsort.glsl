@@ -33,7 +33,7 @@ uint GetHash (int id)
 {
 	vec3 pos = data[id].xyz;
 	ivec3 grid = ivec3 (clamp (pos, vec3 (0, 0, 0), GRID_SIZE));
-	return grid.y * GRID_WIDTH * GRID_DEPTH + grid.z * GRID_WIDTH + grid.x;
+	return uint (dot (grid, GRID_HASHWEIGHTS));
 }
 
 void main (void)

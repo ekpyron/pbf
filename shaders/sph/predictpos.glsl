@@ -22,7 +22,7 @@ void main (void)
 	vec3 velocity = texelFetch (velocitytexture, particleid).xyz;
 	
 	// optionally apply an additional external force to some particles
-	if (extforce && position.z > GRID_DEPTH/2)
+	if (extforce && position.z > GRID_SIZE.z/2)
 		velocity += vec3 (0, 0, -20) * timestep;
 	
 	// gravity

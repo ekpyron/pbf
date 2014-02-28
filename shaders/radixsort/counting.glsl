@@ -35,7 +35,7 @@ uniform int bitshift;
 uint GetHash (in vec3 pos)
 {
 	ivec3 grid = ivec3 (clamp (pos.xyz, vec3 (0, 0, 0), GRID_SIZE));
-	return grid.y * GRID_WIDTH * GRID_DEPTH + grid.z * GRID_WIDTH + grid.x;
+	return uint (dot (grid, GRID_HASHWEIGHTS));
 }
 
 void main (void)
