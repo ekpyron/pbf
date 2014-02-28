@@ -16,13 +16,22 @@ RadixSort::RadixSort (GLuint _numblocks)
 	// create buffer objects
 	glGenBuffers (3, buffers);
 
+    // determine OpenGL extension support
+    bool use_buffer_storage = IsExtensionSupported ("GL_ARB_buffer_storage");
+
 	// allocate input buffer
 	glBindBuffer (GL_SHADER_STORAGE_BUFFER, buffer);
-	glBufferData (GL_SHADER_STORAGE_BUFFER, sizeof (glm::vec4) * blocksize * numblocks, NULL, GL_DYNAMIC_DRAW);
+	if (use_buffer_storage)
+		glBufferStorage (GL_SHADER_STORAGE_BUFFER, sizeof (glm::vec4) * blocksize * numblocks, NULL, 0);
+	else
+		glBufferData (GL_SHADER_STORAGE_BUFFER, sizeof (glm::vec4) * blocksize * numblocks, NULL, GL_DYNAMIC_COPY);
 
 	// allocate prefix sum buffer
 	glBindBuffer (GL_SHADER_STORAGE_BUFFER, prefixsums);
-	glBufferData (GL_SHADER_STORAGE_BUFFER, sizeof (uint32_t) * blocksize * numblocks, NULL, GL_DYNAMIC_DRAW);
+	if (use_buffer_storage)
+		glBufferStorage (GL_SHADER_STORAGE_BUFFER, sizeof (uint32_t) * blocksize * numblocks, NULL, 0);
+	else
+		glBufferData (GL_SHADER_STORAGE_BUFFER, sizeof (uint32_t) * blocksize * numblocks, NULL, GL_DYNAMIC_COPY);
 
 	// create block sum buffers
 	uint32_t numblocksums = 4 * numblocks;
@@ -40,13 +49,19 @@ RadixSort::RadixSort (GLuint _numblocks)
 		numblocksums = ((numblocksums + blocksize - 1) / blocksize) * blocksize;
 		if (numblocksums < 1)
 			numblocksums = 1;
-		glBufferData (GL_SHADER_STORAGE_BUFFER, sizeof (uint32_t) * numblocksums, NULL, GL_STATIC_DRAW);
+		if (use_buffer_storage)
+			glBufferStorage (GL_SHADER_STORAGE_BUFFER, sizeof (uint32_t) * numblocksums, NULL, 0);
+		else
+			glBufferData (GL_SHADER_STORAGE_BUFFER, sizeof (uint32_t) * numblocksums, NULL, GL_DYNAMIC_COPY);
 		numblocksums /= blocksize;
 	}
 
 	// allocate output buffer
 	glBindBuffer (GL_SHADER_STORAGE_BUFFER, result);
-	glBufferData (GL_SHADER_STORAGE_BUFFER, sizeof (glm::vec4) * blocksize * numblocks, NULL, GL_STATIC_DRAW);
+	if (use_buffer_storage)
+		glBufferStorage (GL_SHADER_STORAGE_BUFFER, sizeof (glm::vec4) * blocksize * numblocks, NULL, 0);
+	else
+		glBufferData (GL_SHADER_STORAGE_BUFFER, sizeof (glm::vec4) * blocksize * numblocks, NULL, GL_DYNAMIC_COPY);
 
 	// pass block sum offsets to the shader programs
 	glm::uvec4 blocksumoffsets (0, numblocks, numblocks * 2, numblocks * 3);
