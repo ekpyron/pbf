@@ -1,4 +1,4 @@
-// header is included here
+#version 430 core
 
 // input from vertex shader
 flat in int particleid;

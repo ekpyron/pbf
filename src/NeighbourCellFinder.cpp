@@ -1,15 +1,20 @@
 #include "NeighbourCellFinder.h"
 
-NeighbourCellFinder::NeighbourCellFinder (const GLuint &_numparticles) : numparticles (_numparticles)
+NeighbourCellFinder::NeighbourCellFinder (const GLuint &_numparticles, const glm::ivec3 &_gridsize)
+	: numparticles (_numparticles), gridsize (_gridsize)
 {
 	ARB_clear_texture_supported = IsExtensionSupported ("GL_ARB_clear_texture");
 
-	findcells.CompileShader (GL_COMPUTE_SHADER, "shaders/neighbourcellfinder/findcells.glsl",
-    		"shaders/simulation/include.glsl");
+	std::stringstream stream;
+	stream << "#version 430 core" << std::endl
+		   << "const vec3 GRID_SIZE = vec3 (" << gridsize.x << ", " << gridsize.y << ", " << gridsize.z << ");" << std::endl
+		   << "const ivec3 GRID_HASHWEIGHTS = ivec3 (1, " << gridsize.x * gridsize.z <<  ", " << gridsize.z << ");" << std::endl;
+
+
+	findcells.CompileShader (GL_COMPUTE_SHADER, "shaders/neighbourcellfinder/findcells.glsl", stream.str ());
     findcells.Link ();
 
-    neighbourcells.CompileShader (GL_COMPUTE_SHADER, "shaders/neighbourcellfinder/neighbourcells.glsl",
-    		"shaders/simulation/include.glsl");
+    neighbourcells.CompileShader (GL_COMPUTE_SHADER, "shaders/neighbourcellfinder/neighbourcells.glsl", stream.str ());
     neighbourcells.Link ();
 
 	// create buffer objects
@@ -20,7 +25,7 @@ NeighbourCellFinder::NeighbourCellFinder (const GLuint &_numparticles) : numpart
     if (!ARB_clear_texture_supported)
     {
     	glBindBuffer (GL_PIXEL_UNPACK_BUFFER, gridclearbuffer);
-    	glBufferData (GL_PIXEL_UNPACK_BUFFER, sizeof (GLint) * 128 * 64 * 128, NULL, GL_DYNAMIC_DRAW);
+    	glBufferData (GL_PIXEL_UNPACK_BUFFER, sizeof (GLint) * gridsize.x * gridsize.y * gridsize.z, NULL, GL_DYNAMIC_DRAW);
     	{
     		GLint v = -1;
     		glClearBufferData (GL_PIXEL_UNPACK_BUFFER, GL_R32I, GL_RED_INTEGER, GL_INT, &v);
@@ -29,7 +34,7 @@ NeighbourCellFinder::NeighbourCellFinder (const GLuint &_numparticles) : numpart
 
     // allocate grid texture
     gridtexture.Bind (GL_TEXTURE_3D);
-    glTexImage3D (GL_TEXTURE_3D, 0, GL_R32I, 128, 64, 128, 0, GL_RED_INTEGER, GL_INT, NULL);
+    glTexImage3D (GL_TEXTURE_3D, 0, GL_R32I, gridsize.x, gridsize.y, gridsize.z, 0, GL_RED_INTEGER, GL_INT, NULL);
     glTexParameteri (GL_TEXTURE_3D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
     glTexParameteri (GL_TEXTURE_3D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
     glTexParameteri (GL_TEXTURE_3D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
@@ -53,7 +58,7 @@ NeighbourCellFinder::NeighbourCellFinder (const GLuint &_numparticles) : numpart
 
     // allocate grid end texture
     gridendtexture.Bind (GL_TEXTURE_3D);
-    glTexImage3D (GL_TEXTURE_3D, 0, GL_R32I, 128, 64, 128, 0, GL_RED_INTEGER, GL_INT, NULL);
+    glTexImage3D (GL_TEXTURE_3D, 0, GL_R32I, gridsize.x, gridsize.y, gridsize.z, 0, GL_RED_INTEGER, GL_INT, NULL);
     glTexParameteri (GL_TEXTURE_3D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
     glTexParameteri (GL_TEXTURE_3D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
     glTexParameteri (GL_TEXTURE_3D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
@@ -94,7 +99,7 @@ void NeighbourCellFinder::FindNeighbourCells (const GLuint &particlebuffer)
 	{
 		gridtexture.Bind (GL_TEXTURE_3D);
 		glBindBuffer (GL_PIXEL_UNPACK_BUFFER, gridclearbuffer);
-		glTexSubImage3D (GL_TEXTURE_3D, 0, 0, 0, 0, 128, 64, 128, GL_RED_INTEGER, GL_INT, NULL);
+		glTexSubImage3D (GL_TEXTURE_3D, 0, 0, 0, 0, gridsize.x, gridsize.y, gridsize.z, GL_RED_INTEGER, GL_INT, NULL);
 		glBindBuffer (GL_PIXEL_UNPACK_BUFFER, 0);
 		glMemoryBarrier (GL_TEXTURE_UPDATE_BARRIER_BIT);
 	}

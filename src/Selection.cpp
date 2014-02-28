@@ -4,8 +4,7 @@ Selection::Selection (void)
 {
 	// load shaders
     selectionprogram.CompileShader (GL_VERTEX_SHADER, "shaders/selection/vertex.glsl");
-    selectionprogram.CompileShader (GL_FRAGMENT_SHADER, "shaders/selection/fragment.glsl",
-    		"shaders/simulation/include.glsl");
+    selectionprogram.CompileShader (GL_FRAGMENT_SHADER, "shaders/selection/fragment.glsl");
     selectionprogram.Link ();
 
     // create depth texture

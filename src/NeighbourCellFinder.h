@@ -16,8 +16,9 @@ class NeighbourCellFinder
 public:
 	/** Constructor.
 	 * \param numparticles number of particles to process
+	 * \param gridsize size of the particle grid
 	 */
-	NeighbourCellFinder (const GLuint &numparticles);
+	NeighbourCellFinder (const GLuint &numparticles, const glm::ivec3 &gridsize);
 	/** Destructor.
 	 */
 	~NeighbourCellFinder (void);
@@ -40,6 +41,11 @@ private:
      * sorted particle array.
      */
     ShaderProgram findcells;
+
+    /** Grid size.
+     * Size of the particle grid.
+     */
+    const glm::ivec3 gridsize;
 
     /** Neighbour cell program.
      * Shader program for finding neighbouring cells for a particle.

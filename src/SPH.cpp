@@ -1,36 +1,47 @@
 #include "SPH.h"
 
-SPH::SPH (const GLuint &_numparticles)
-	: numparticles (_numparticles), vorticityconfinement (false), radixsort (_numparticles >> 9),
-	  neighbourcellfinder (_numparticles)
+SPH::SPH (const GLuint &_numparticles, const glm::ivec3 &gridsize)
+	: numparticles (_numparticles), vorticityconfinement (false), radixsort (_numparticles >> 9, gridsize),
+	  neighbourcellfinder (_numparticles, gridsize)
 {
+	// shader definitions
+	std::stringstream stream;
+	stream << "#version 430 core" << std::endl
+		   << "const vec3 GRID_SIZE = vec3 (" << gridsize.x << ", " << gridsize.y << ", " << gridsize.z << ");" << std::endl
+		   << "const ivec3 GRID_HASHWEIGHTS = ivec3 (1, " << gridsize.x * gridsize.z <<  ", " << gridsize.z << ");" << std::endl
+		   << std::endl
+		   << "const float rho_0 = 1.0;" << std::endl
+		   << "const float h = 2.0;" << std::endl
+		   << "const float epsilon = 5.0;" << std::endl
+		   << "const float gravity = 10;" << std::endl
+		   << "const float timestep = 0.016;" << std::endl
+		   << std::endl
+		   << "const float tensile_instability_k = 0.1;" << std::endl
+		   << "const float tensile_instability_h = 0.2;" << std::endl
+		   << std::endl
+		   << "const float xsph_viscosity_c = 0.01;" << std::endl
+		   << "const float vorticity_epsilon = 5;" << std::endl;
+
 	// prepare shader programs
-    predictpos.CompileShader (GL_COMPUTE_SHADER, "shaders/sph/predictpos.glsl",
-    		"shaders/simulation/include.glsl");
+    predictpos.CompileShader (GL_COMPUTE_SHADER, "shaders/sph/predictpos.glsl", stream.str ());
     predictpos.Link ();
 
-    calclambdaprog.CompileShader (GL_COMPUTE_SHADER, "shaders/sph/calclambda.glsl",
-    		"shaders/simulation/include.glsl");
+    calclambdaprog.CompileShader (GL_COMPUTE_SHADER, "shaders/sph/calclambda.glsl", stream.str ());
     calclambdaprog.Link ();
 
-    updateposprog.CompileShader (GL_COMPUTE_SHADER, "shaders/sph/updatepos.glsl",
-    		"shaders/simulation/include.glsl");
+    updateposprog.CompileShader (GL_COMPUTE_SHADER, "shaders/sph/updatepos.glsl", stream.str ());
     updateposprog.Link ();
 
-    vorticityprog.CompileShader (GL_COMPUTE_SHADER, "shaders/sph/vorticity.glsl",
-    		"shaders/simulation/include.glsl");
+    vorticityprog.CompileShader (GL_COMPUTE_SHADER, "shaders/sph/vorticity.glsl", stream.str ());
     vorticityprog.Link ();
 
-    updateprog.CompileShader (GL_COMPUTE_SHADER, "shaders/sph/update.glsl",
-    		"shaders/simulation/include.glsl");
+    updateprog.CompileShader (GL_COMPUTE_SHADER, "shaders/sph/update.glsl", stream.str ());
     updateprog.Link ();
 
-    highlightprog.CompileShader (GL_COMPUTE_SHADER, "shaders/sph/highlight.glsl",
-    		"shaders/simulation/include.glsl");
+    highlightprog.CompileShader (GL_COMPUTE_SHADER, "shaders/sph/highlight.glsl", stream.str ());
     highlightprog.Link ();
 
-    clearhighlightprog.CompileShader (GL_COMPUTE_SHADER, "shaders/sph/clearhighlight.glsl",
-    		"shaders/simulation/include.glsl");
+    clearhighlightprog.CompileShader (GL_COMPUTE_SHADER, "shaders/sph/clearhighlight.glsl", stream.str ());
     clearhighlightprog.Link ();
 
     // create query objects
@@ -140,7 +151,7 @@ void SPH::Run (void)
     glBeginQuery (GL_TIME_ELAPSED, sortquery);
     {
     	// sort particles
-    	radixsort.Run (20);
+    	radixsort.Run ();
     }
     glEndQuery (GL_TIME_ELAPSED);
 

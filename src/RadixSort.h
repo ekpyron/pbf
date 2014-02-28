@@ -14,8 +14,9 @@ class RadixSort
 public:
 	/** Constructor.
 	 * \param numblocks Number of blocks of 512 values to sort.
+	 * \param gridsize size of the particle grid
 	 */
-	 RadixSort (GLuint numblocks);
+	 RadixSort (GLuint numblocks, const glm::ivec3 &gridsize);
 	 /** Destuctor.
 	  */
 	 ~RadixSort (void);
@@ -29,16 +30,21 @@ public:
 	  */
 	 GLuint GetBuffer (void) const;
 	 /** Sort the buffer.
-	  * Sorts the buffer assuming that only the specified number of bits are relevant.
-	  * \param numbits number of relevant bits
+	  * Sorts the buffer.
 	  */
-	 void Run (unsigned int numbits);
+	 void Run (void);
 private:
 	 /** Sort bits.
 	  * Sorts the internal buffer with respect to two bits.
 	  * \param bits specifies less significant bit with respect to which to sort
 	  */
 	 void SortBits (int bits);
+
+	 /** Number of relevant bits.
+	  * Number of relevant bits that have to be sorted.
+	  */
+	 unsigned int numbits;
+
 	 /** Counting shader program.
 	  * Shader program used to count the key bits and thereby generate a prefix sum.
 	  */

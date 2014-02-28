@@ -14,8 +14,10 @@ class SPH
 public:
 	/** Constructor.
 	 * \param numparticles number of particles in the simulation
+	 * \param gridsize size of the particle grid
+	 * TODO: find out why the grid has to have equal x and z dimensions.
 	 */
-	SPH (const GLuint &numparticles);
+	SPH (const GLuint &numparticles, const glm::ivec3 &gridsize = glm::ivec3 (128, 64, 128));
 	/** Destructor.
 	 */
 	~SPH (void);

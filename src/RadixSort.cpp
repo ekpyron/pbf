@@ -1,16 +1,32 @@
 #include "RadixSort.h"
 
-RadixSort::RadixSort (GLuint _numblocks)
+unsigned int count_sortbits (uint64_t v)
+{
+	unsigned int r = 1;
+	while (v >>= 1)
+		r++;
+	return r;
+}
+
+RadixSort::RadixSort (GLuint _numblocks, const glm::ivec3 &gridsize)
 	: blocksize (512), numblocks (_numblocks)
 {
+	std::stringstream stream;
+	stream << "#version 430 core" << std::endl
+		   << "const vec3 GRID_SIZE = vec3 (" << gridsize.x << ", " << gridsize.y << ", " << gridsize.z << ");" << std::endl
+		   << "const ivec3 GRID_HASHWEIGHTS = ivec3 (1, " << gridsize.x * gridsize.z <<  ", " << gridsize.z << ");" << std::endl;
+
+
+	numbits = count_sortbits (uint64_t (gridsize.x) * uint64_t (gridsize.y) * uint64_t (gridsize.z) - 1);
+
 	// load shaders
-	counting.CompileShader (GL_COMPUTE_SHADER, "shaders/radixsort/counting.glsl", "shaders/simulation/include.glsl");
+	counting.CompileShader (GL_COMPUTE_SHADER, "shaders/radixsort/counting.glsl", stream.str ());
 	counting.Link ();
-	blockscan.CompileShader (GL_COMPUTE_SHADER, "shaders/radixsort/blockscan.glsl", "shaders/simulation/include.glsl");
+	blockscan.CompileShader (GL_COMPUTE_SHADER, "shaders/radixsort/blockscan.glsl", stream.str ());
 	blockscan.Link ();
-	globalsort.CompileShader (GL_COMPUTE_SHADER, "shaders/radixsort/globalsort.glsl", "shaders/simulation/include.glsl");
+	globalsort.CompileShader (GL_COMPUTE_SHADER, "shaders/radixsort/globalsort.glsl", stream.str ());
 	globalsort.Link ();
-	addblocksum.CompileShader (GL_COMPUTE_SHADER, "shaders/radixsort/addblocksum.glsl", "shaders/simulation/include.glsl");
+	addblocksum.CompileShader (GL_COMPUTE_SHADER, "shaders/radixsort/addblocksum.glsl", stream.str ());
 	addblocksum.Link ();
 
 	// create buffer objects
@@ -82,7 +98,7 @@ GLuint RadixSort::GetBuffer (void) const
 	return buffer;
 }
 
-void RadixSort::Run (unsigned int numbits)
+void RadixSort::Run (void)
 {
 	// sort bits from least to most significant
 	for (int i = 0; i < (numbits + 1) >> 1; i++)

@@ -16,25 +16,8 @@ void ShaderProgram::CompileShader (GLenum type, const std::string &filename, con
     // load shader source into memory
     std::vector<char> data;
     GLint length = 0;
-    if (!include.empty ())
-    {
-    	size_t len;
-        std::ifstream f (include.c_str (), std::ios_base::in);
-        if (!f.is_open ())
-            throw std::runtime_error (std::string ("Cannot load shader include: ") + include);
-
-        f.seekg (0, std::ios_base::end);
-        len = f.tellg ();
-        f.seekg (0, std::ios_base::beg);
-
-        data.resize (len);
-        f.read (&data[0], len);
-		len = f.gcount ();
-
-        if (f.bad ())
-            throw std::runtime_error (std::string ("Cannot load shader include: ") + include);
-        length += len;
-    }
+    data.assign (include.begin (), include.end ());
+    length = data.size ();
     {
     	size_t len;
         std::ifstream f (filename.c_str (), std::ios_base::in);
