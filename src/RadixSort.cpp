@@ -139,10 +139,10 @@ void RadixSort::SortBits (int bits)
 	glProgramUniform1i (globalsort.get (), globalsort_bitshift, bits);
 
 	// set buffer bindings
-	glBindBufferBase (GL_SHADER_STORAGE_BUFFER, 0, buffer);
-	glBindBufferBase (GL_SHADER_STORAGE_BUFFER, 1, prefixsums);
-	glBindBufferBase (GL_SHADER_STORAGE_BUFFER, 2, blocksums.front ());
-	glBindBufferBase (GL_SHADER_STORAGE_BUFFER, 3, result);
+	{
+		GLuint bufs[4] = { buffer, prefixsums, blocksums.front (), result };
+		glBindBuffersBase (GL_SHADER_STORAGE_BUFFER, 0, 4, bufs);
+	}
 
 	// counting
 	counting.Use ();
@@ -154,8 +154,7 @@ void RadixSort::SortBits (int bits)
 	uint32_t numblocksums = (4 * numblocks) / blocksize;
 	for (int i = 0; i < blocksums.size () - 1; i++)
 	{
-		glBindBufferBase (GL_SHADER_STORAGE_BUFFER, 0, blocksums[i]);
-		glBindBufferBase (GL_SHADER_STORAGE_BUFFER, 1, blocksums[i + 1]);
+		glBindBuffersBase (GL_SHADER_STORAGE_BUFFER, 0, 2, &blocksums[i]);
 		glDispatchCompute (numblocksums > 0 ? numblocksums : 1, 1, 1);
 		numblocksums /= blocksize;
 		glMemoryBarrier (GL_SHADER_STORAGE_BARRIER_BIT);
@@ -166,15 +165,16 @@ void RadixSort::SortBits (int bits)
 	for (int i = blocksums.size () - 3; i >= 0; i--)
 	{
 		uint32_t numblocksums = (4 * numblocks) / intpow (blocksize, i + 1);
-		glBindBufferBase (GL_SHADER_STORAGE_BUFFER, 0, blocksums[i]);
-		glBindBufferBase (GL_SHADER_STORAGE_BUFFER, 1, blocksums[i + 1]);
+		glBindBuffersBase (GL_SHADER_STORAGE_BUFFER, 0, 2, &blocksums[i]);
 		glDispatchCompute (numblocksums > 0 ? numblocksums : 1, 1, 1);
 		glMemoryBarrier (GL_SHADER_STORAGE_BARRIER_BIT);
 	}
 
 	// map values to their global position in the output buffer
-	glBindBufferBase (GL_SHADER_STORAGE_BUFFER, 0, buffer);
-	glBindBufferBase (GL_SHADER_STORAGE_BUFFER, 1, prefixsums);
+	{
+		GLuint bufs[2] = { buffer, prefixsums };
+		glBindBuffersBase (GL_SHADER_STORAGE_BUFFER, 0, 2, bufs);
+	}
 	globalsort.Use ();
 	glDispatchCompute (numblocks, 1, 1);
 	glMemoryBarrier (GL_SHADER_STORAGE_BARRIER_BIT);

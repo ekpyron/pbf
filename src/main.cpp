@@ -137,6 +137,25 @@ void _glMemoryBarrier_ATIHACK (GLbitfield bitfield)
 	_glMemoryBarrier_BROKEN_ATIHACK (bitfield);
 }
 
+/** Legacy glBindBuffersBase.
+ * Legacy implementation of glBindBuffersBase. This is used as a fallback if
+ * GL_ARB_multi_bind is not available.
+ * \param target Specify the target of the bind operation.
+ * \param first Specify the index of the first binding point within the array specified by target.
+ * \param count Specify the number of contiguous binding points to which to bind buffers.
+ * \param buffers A pointer to an array of names of buffer objects to bind to the targets on the specified binding point, or NULL.
+ */
+void _glBindBuffersBase (GLenum target, GLuint first, GLsizei count, const GLuint *buffers)
+{
+	for (GLsizei i = 0; i < count; i++)
+	{
+		if (buffers == NULL)
+			glBindBufferBase (target, first + i, 0);
+		else
+			glBindBufferBase (target, first + i, buffers[i]);
+	}
+}
+
 /** Initialization.
  * Perform general initialization tasks.
  */
@@ -172,8 +191,12 @@ void initialize (void)
     glDebugMessageCallback (glDebugCallback, NULL);
     glEnable (GL_DEBUG_OUTPUT);
 
-    // determine OpenGL extension capabilities
+    // determine OpenGL extension capabilities and apply workarounds where necessary
     GLEXTS.ARB_clear_texture = IsExtensionSupported ("GL_ARB_clear_texture");
+    if (!IsExtensionSupported ("GL_ARB_multi_bind"))
+    {
+    	glBindBuffersBase = _glBindBuffersBase;
+    }
 
     // create the simulation class
     simulation = new Simulation ();
