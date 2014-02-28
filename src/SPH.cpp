@@ -47,12 +47,18 @@ SPH::SPH (const GLuint &_numparticles, const glm::ivec3 &gridsize)
     // create query objects
     glGenQueries (5, queries);
 
+    // determine OpenGL extension support
+    bool use_buffer_storage = IsExtensionSupported ("GL_ARB_buffer_storage");
+
 	// create buffer objects
 	glGenBuffers (5, buffers);
 
     // allocate lambda buffer
     glBindBuffer (GL_SHADER_STORAGE_BUFFER, lambdabuffer);
-    glBufferData (GL_SHADER_STORAGE_BUFFER, sizeof (float) * numparticles, NULL, GL_DYNAMIC_DRAW);
+    if (use_buffer_storage)
+    	glBufferStorage (GL_SHADER_STORAGE_BUFFER, sizeof (float) * numparticles, NULL, 0);
+    else
+    	glBufferData (GL_SHADER_STORAGE_BUFFER, sizeof (float) * numparticles, NULL, GL_DYNAMIC_COPY);
 
     // create lambda texture
     lambdatexture.Bind (GL_TEXTURE_BUFFER);
@@ -60,7 +66,10 @@ SPH::SPH (const GLuint &_numparticles, const glm::ivec3 &gridsize)
 
     // allocate highlight buffer
     glBindBuffer (GL_SHADER_STORAGE_BUFFER, highlightbuffer);
-    glBufferData (GL_SHADER_STORAGE_BUFFER, sizeof (GLuint) * numparticles, NULL, GL_DYNAMIC_DRAW);
+    if (use_buffer_storage)
+    	glBufferStorage (GL_SHADER_STORAGE_BUFFER, sizeof (GLuint) * numparticles, NULL, 0);
+    else
+    	glBufferData (GL_SHADER_STORAGE_BUFFER, sizeof (GLuint) * numparticles, NULL, GL_DYNAMIC_COPY);
     glClearBufferData (GL_SHADER_STORAGE_BUFFER, GL_R32UI, GL_RED, GL_UNSIGNED_INT, NULL);
 
     // create highlight buffer
@@ -69,11 +78,17 @@ SPH::SPH (const GLuint &_numparticles, const glm::ivec3 &gridsize)
 
     // allocate vorticity buffer
     glBindBuffer (GL_SHADER_STORAGE_BUFFER, vorticitybuffer);
-    glBufferData (GL_SHADER_STORAGE_BUFFER, sizeof (float) * numparticles, NULL, GL_DYNAMIC_DRAW);
+    if (use_buffer_storage)
+    	glBufferStorage (GL_SHADER_STORAGE_BUFFER, sizeof (float) * numparticles, NULL, 0);
+    else
+    	glBufferData (GL_SHADER_STORAGE_BUFFER, sizeof (float) * numparticles, NULL, GL_DYNAMIC_COPY);
 
     // allocate position buffer
     glBindBuffer (GL_SHADER_STORAGE_BUFFER, positionbuffer);
-    glBufferData (GL_SHADER_STORAGE_BUFFER, 4 * sizeof (float) * numparticles, NULL, GL_DYNAMIC_DRAW);
+    if (use_buffer_storage)
+    	glBufferStorage (GL_SHADER_STORAGE_BUFFER, 4 * sizeof (float) * numparticles, NULL, 0);
+    else
+    	glBufferData (GL_SHADER_STORAGE_BUFFER, 4 * sizeof (float) * numparticles, NULL, GL_DYNAMIC_COPY);
 
     // create position texture
     positiontexture.Bind (GL_TEXTURE_BUFFER);
@@ -81,7 +96,10 @@ SPH::SPH (const GLuint &_numparticles, const glm::ivec3 &gridsize)
 
     // allocate velocity buffer
     glBindBuffer (GL_SHADER_STORAGE_BUFFER, velocitybuffer);
-    glBufferData (GL_SHADER_STORAGE_BUFFER, 4 * sizeof (float) * numparticles, NULL, GL_DYNAMIC_DRAW);
+    if (use_buffer_storage)
+    	glBufferStorage (GL_SHADER_STORAGE_BUFFER, 4 * sizeof (float) * numparticles, NULL, 0);
+    else
+    	glBufferData (GL_SHADER_STORAGE_BUFFER, 4 * sizeof (float) * numparticles, NULL, GL_DYNAMIC_COPY);
 
     // create velocity texture
     velocitytexture.Bind (GL_TEXTURE_BUFFER);
