@@ -1,7 +1,7 @@
 #include "SPH.h"
 
 SPH::SPH (const GLuint &_numparticles, const glm::ivec3 &gridsize)
-	: numparticles (_numparticles), vorticityconfinement (false), radixsort (_numparticles >> 9, gridsize),
+	: numparticles (_numparticles), vorticityconfinement (false), radixsort (512, _numparticles >> 9, gridsize),
 	  neighbourcellfinder (_numparticles, gridsize)
 {
 	// shader definitions

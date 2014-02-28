@@ -13,10 +13,11 @@ class RadixSort
 {
 public:
 	/** Constructor.
-	 * \param numblocks Number of blocks of 512 values to sort.
+	 * \param blocksize Block size used for sortig the particles.
+	 * \param numblocks Number of blocks of values to sort.
 	 * \param gridsize size of the particle grid
 	 */
-	 RadixSort (GLuint numblocks, const glm::ivec3 &gridsize);
+	 RadixSort (GLuint blocksize, GLuint numblocks, const glm::ivec3 &gridsize);
 	 /** Destuctor.
 	  */
 	 ~RadixSort (void);
