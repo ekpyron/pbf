@@ -47,15 +47,12 @@ SPH::SPH (const GLuint &_numparticles, const glm::ivec3 &gridsize)
     // create query objects
     glGenQueries (5, queries);
 
-    // determine OpenGL extension support
-    bool use_buffer_storage = IsExtensionSupported ("GL_ARB_buffer_storage");
-
 	// create buffer objects
 	glGenBuffers (5, buffers);
 
     // allocate lambda buffer
     glBindBuffer (GL_SHADER_STORAGE_BUFFER, lambdabuffer);
-    if (use_buffer_storage)
+    if (GLEXTS.ARB_buffer_storage)
     	glBufferStorage (GL_SHADER_STORAGE_BUFFER, sizeof (float) * numparticles, NULL, 0);
     else
     	glBufferData (GL_SHADER_STORAGE_BUFFER, sizeof (float) * numparticles, NULL, GL_DYNAMIC_COPY);
@@ -66,7 +63,7 @@ SPH::SPH (const GLuint &_numparticles, const glm::ivec3 &gridsize)
 
     // allocate highlight buffer
     glBindBuffer (GL_SHADER_STORAGE_BUFFER, highlightbuffer);
-    if (use_buffer_storage)
+    if (GLEXTS.ARB_buffer_storage)
     	glBufferStorage (GL_SHADER_STORAGE_BUFFER, sizeof (GLuint) * numparticles, NULL, 0);
     else
     	glBufferData (GL_SHADER_STORAGE_BUFFER, sizeof (GLuint) * numparticles, NULL, GL_DYNAMIC_COPY);
@@ -78,14 +75,14 @@ SPH::SPH (const GLuint &_numparticles, const glm::ivec3 &gridsize)
 
     // allocate vorticity buffer
     glBindBuffer (GL_SHADER_STORAGE_BUFFER, vorticitybuffer);
-    if (use_buffer_storage)
+    if (GLEXTS.ARB_buffer_storage)
     	glBufferStorage (GL_SHADER_STORAGE_BUFFER, sizeof (float) * numparticles, NULL, 0);
     else
     	glBufferData (GL_SHADER_STORAGE_BUFFER, sizeof (float) * numparticles, NULL, GL_DYNAMIC_COPY);
 
     // allocate position buffer
     glBindBuffer (GL_SHADER_STORAGE_BUFFER, positionbuffer);
-    if (use_buffer_storage)
+    if (GLEXTS.ARB_buffer_storage)
     	glBufferStorage (GL_SHADER_STORAGE_BUFFER, 4 * sizeof (float) * numparticles, NULL, 0);
     else
     	glBufferData (GL_SHADER_STORAGE_BUFFER, 4 * sizeof (float) * numparticles, NULL, GL_DYNAMIC_COPY);
@@ -96,7 +93,7 @@ SPH::SPH (const GLuint &_numparticles, const glm::ivec3 &gridsize)
 
     // allocate velocity buffer
     glBindBuffer (GL_SHADER_STORAGE_BUFFER, velocitybuffer);
-    if (use_buffer_storage)
+    if (GLEXTS.ARB_buffer_storage)
     	glBufferStorage (GL_SHADER_STORAGE_BUFFER, 4 * sizeof (float) * numparticles, NULL, 0);
     else
     	glBufferData (GL_SHADER_STORAGE_BUFFER, 4 * sizeof (float) * numparticles, NULL, GL_DYNAMIC_COPY);

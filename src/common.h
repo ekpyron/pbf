@@ -37,4 +37,15 @@ extern GLFWwindow *window;
  */
 bool IsExtensionSupported (const std::string &name);
 
+/** OpenGL extension support flags.
+ * Type of a structure that contains flags indicating whether
+ * specific OpenGL extensions are supported or not.
+ */
+typedef struct glextflags {
+	bool ARB_clear_texture;
+	bool ARB_buffer_storage;
+} glextflags_t;
+
+extern glextflags_t GLEXTS;
+
 #endif /* !defined COMMON_H */

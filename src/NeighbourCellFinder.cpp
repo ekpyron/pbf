@@ -3,10 +3,6 @@
 NeighbourCellFinder::NeighbourCellFinder (const GLuint &_numparticles, const glm::ivec3 &_gridsize)
 	: numparticles (_numparticles), gridsize (_gridsize)
 {
-    // determine OpenGL extension support
-	ARB_clear_texture_supported = IsExtensionSupported ("GL_ARB_clear_texture");
-    bool use_buffer_storage = IsExtensionSupported ("GL_ARB_buffer_storage");
-
 	std::stringstream stream;
 	stream << "#version 430 core" << std::endl
 		   << "const vec3 GRID_SIZE = vec3 (" << gridsize.x << ", " << gridsize.y << ", " << gridsize.z << ");" << std::endl
@@ -24,7 +20,7 @@ NeighbourCellFinder::NeighbourCellFinder (const GLuint &_numparticles, const glm
 
     // allocate grid clear buffer
 	// (only needed if GL_ARB_clear_texture is not available)
-    if (!ARB_clear_texture_supported)
+    if (!GLEXTS.ARB_clear_texture)
     {
     	glBindBuffer (GL_PIXEL_UNPACK_BUFFER, gridclearbuffer);
     	glBufferData (GL_PIXEL_UNPACK_BUFFER, sizeof (GLint) * gridsize.x * gridsize.y * gridsize.z, NULL, GL_STATIC_DRAW);
@@ -48,7 +44,7 @@ NeighbourCellFinder::NeighbourCellFinder (const GLuint &_numparticles, const glm
     }
 
     // clear grid texture
-    if (!ARB_clear_texture_supported)
+    if (!GLEXTS.ARB_clear_texture)
     {
     	glBindBuffer (GL_PIXEL_UNPACK_BUFFER, 0);
     }
@@ -69,7 +65,7 @@ NeighbourCellFinder::NeighbourCellFinder (const GLuint &_numparticles, const glm
 
     // allocate neighbour cell buffer
     glBindBuffer (GL_SHADER_STORAGE_BUFFER, neighbourcellbuffer);
-    if (use_buffer_storage)
+    if (GLEXTS.ARB_buffer_storage)
         glBufferStorage (GL_SHADER_STORAGE_BUFFER, sizeof (GLuint) * 12 * numparticles, NULL, 0);
     else
     	glBufferData (GL_SHADER_STORAGE_BUFFER, sizeof (GLuint) * 12 * numparticles, NULL, GL_DYNAMIC_COPY);
@@ -94,7 +90,7 @@ const Texture &NeighbourCellFinder::GetResult (void) const
 void NeighbourCellFinder::FindNeighbourCells (const GLuint &particlebuffer)
 {
     // clear grid buffer
-	if (ARB_clear_texture_supported)
+	if (GLEXTS.ARB_clear_texture)
 	{
 		GLint v = -1;
 		glClearTexImage (gridtexture.get (), 0, GL_RED_INTEGER, GL_INT, &v);

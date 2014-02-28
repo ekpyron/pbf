@@ -72,13 +72,6 @@ private:
         GLuint buffers[2];
     };
 
-    /** ARB_clear_texture support flag.
-     * This flag is set to true if the OpenGL extension ARB_clear_texture is supported
-     * by the current OpenGL context and to false, if not.
-     *
-     */
-    bool ARB_clear_texture_supported;
-
     /** Grid texture.
      * Texture in which the offset of the first particle for each grid is stored.
      */

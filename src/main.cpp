@@ -11,6 +11,13 @@
  * The GLFW window.
  */
 GLFWwindow *window = NULL;
+
+/** OpenGL extension support flags.
+ * Structure that contains flags indicating whether
+ * specific OpenGL extensions are supported or not.
+ */
+glextflags_t GLEXTS;
+
 /** Simulation class.
  * The global Simulation object.
  */
@@ -164,6 +171,10 @@ void initialize (void)
 
     glDebugMessageCallback (glDebugCallback, NULL);
     glEnable (GL_DEBUG_OUTPUT);
+
+    // determine OpenGL extension capabilities
+    GLEXTS.ARB_clear_texture = IsExtensionSupported ("GL_ARB_clear_texture");
+    GLEXTS.ARB_buffer_storage = IsExtensionSupported ("GL_ARB_buffer_storage");
 
     // create the simulation class
     simulation = new Simulation ();
