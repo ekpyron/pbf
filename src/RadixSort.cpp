@@ -86,7 +86,6 @@ RadixSort::RadixSort (GLuint _blocksize, GLuint _numblocks, const glm::ivec3 &gr
 		glBindBuffer (GL_SHADER_STORAGE_BUFFER, blocksum);
 		glClearBufferData (GL_SHADER_STORAGE_BUFFER, GL_RGBA32UI, GL_RGBA, GL_UNSIGNED_INT, NULL);
 	}
-	glMemoryBarrier (GL_BUFFER_UPDATE_BARRIER_BIT);
 }
 
 RadixSort::~RadixSort (void)

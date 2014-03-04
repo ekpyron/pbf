@@ -97,14 +97,12 @@ void NeighbourCellFinder::FindNeighbourCells (const GLuint &particlebuffer)
 	{
 		GLint v = -1;
 		glClearTexImage (gridtexture.get (), 0, GL_RED_INTEGER, GL_INT, &v);
-		glMemoryBarrier (GL_TEXTURE_UPDATE_BARRIER_BIT);
 	}
 	else
 	{
 		glCopyImageSubData (gridcleartexture.get (), GL_TEXTURE_3D, 0, 0, 0, 0,
 				gridtexture.get (), GL_TEXTURE_3D, 0, 0, 0, 0,
 				gridsize.x, gridsize.y, gridsize.z);
-		glMemoryBarrier (GL_TEXTURE_UPDATE_BARRIER_BIT);
 	}
 
     glBindBufferBase (GL_SHADER_STORAGE_BUFFER, 0, particlebuffer);
@@ -113,7 +111,6 @@ void NeighbourCellFinder::FindNeighbourCells (const GLuint &particlebuffer)
     glBindImageTexture (0, gridtexture.get (), 0, GL_TRUE, 0, GL_WRITE_ONLY, GL_R32I);
     glBindImageTexture (1, gridendtexture.get (), 0, GL_TRUE, 0, GL_WRITE_ONLY, GL_R32I);
     findcells.Use ();
-    glMemoryBarrier (GL_BUFFER_UPDATE_BARRIER_BIT);
     glDispatchCompute (numparticles >> 8, 1, 1);
     glMemoryBarrier (GL_SHADER_STORAGE_BARRIER_BIT | GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
 
