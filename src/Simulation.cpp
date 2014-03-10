@@ -339,11 +339,11 @@ void Simulation::OnKeyUp (int key)
     case GLFW_KEY_F:
     	sph.SetExternalForce (false);
     	break;
-    case GLFW_KEY_RIGHT:
+    case GLFW_KEY_UP:
     	guistate = (guistate_t) ((int (guistate) + 1) % GUISTATE_NUM_STATES);
     	guitimer = 5.0f;
     	break;
-    case GLFW_KEY_LEFT:
+    case GLFW_KEY_DOWN:
     	guistate = (guistate_t) ((int (guistate) + GUISTATE_NUM_STATES - 1) % GUISTATE_NUM_STATES);
     	guitimer = 5.0f;
     	break;
@@ -355,18 +355,18 @@ void Simulation::OnKeyUp (int key)
     	factor *= 10;
     switch (key)
     {
-    case GLFW_KEY_DOWN:
+    case GLFW_KEY_LEFT:
     case GLFW_KEY_KP_SUBTRACT:
     case '-':
     	factor *= -1;
-    case GLFW_KEY_UP:
+    case GLFW_KEY_RIGHT:
     case GLFW_KEY_KP_ADD:
     case '+':
     	guitimer = 5.0f;
     	switch (guistate)
     	{
     	case GUISTATE_REST_DENSITY:
-    		sph.SetRestDensity (glm::max (sph.GetRestDensity () + factor * 0.01, 0.001));
+    		sph.SetRestDensity (glm::max (sph.GetRestDensity () + factor * 0.01, 0.01));
     		break;
     	case GUISTATE_CFM_EPSILON:
     		sph.SetCFMEpsilon (glm::max (sph.GetCFMEpsilon () + factor, 0.01f));
@@ -375,19 +375,19 @@ void Simulation::OnKeyUp (int key)
     		sph.SetGravity (sph.GetGravity () + factor);
     		break;
     	case GUISTATE_TIMESTEP:
-    		sph.SetTimestep (glm::min (sph.GetTimestep () + 0.001 * factor, 0.001));
+    		sph.SetTimestep (glm::max (sph.GetTimestep () + 0.001 * factor, 0.001));
     		break;
     	case GUISTATE_TENSILE_INSTABILITY_K:
-    		sph.SetTensileInstabilityK (glm::min (sph.GetTensileInstabilityK () + factor * 0.1, 0.1));
+    		sph.SetTensileInstabilityK (glm::max (sph.GetTensileInstabilityK () + factor * 0.1, 0.1));
     		break;
     	case GUISTATE_TENSILE_INSTABILITY_SCALE:
-    		sph.SetTensileInstabilityScale (glm::min (sph.GetTensileInstabilityScale () + factor * 0.1, 0.1));
+    		sph.SetTensileInstabilityScale (glm::max (sph.GetTensileInstabilityScale () + factor * 0.1, 0.1));
     		break;
     	case GUISTATE_XSPH_VISCOSITY:
-    		sph.SetXSPHViscosity (glm::min (sph.GetXSPHViscosity () + factor * 0.01, 0.01));
+    		sph.SetXSPHViscosity (glm::max (sph.GetXSPHViscosity () + factor * 0.01, 0.01));
     		break;
     	case GUISTATE_VORTICITY_EPSILON:
-    		sph.SetVorticityEpsilon (glm::min (sph.GetVorticityEpsilon () + factor * 0.1, 0.1));
+    		sph.SetVorticityEpsilon (glm::max (sph.GetVorticityEpsilon () + factor * 0.1, 0.1));
     		break;
     	}
     	break;
