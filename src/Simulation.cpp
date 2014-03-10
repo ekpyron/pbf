@@ -4,7 +4,7 @@
 Simulation::Simulation (void) : width (0), height (0), font ("textures/font.png"),
     last_fps_time (glfwGetTime ()), framecount (0), fps (0), running (false),
     usesurfacereconstruction (false), sph (GetNumberOfParticles ()), useskybox (false),
-    envmap (NULL), usenoise (false)
+    envmap (NULL), usenoise (false), guitimer (0.0f), guistate (GUISTATE_REST_DENSITY)
 {
 	// load shaders
     particleprogram.CompileShader (GL_VERTEX_SHADER, "shaders/particles/vertex.glsl");
@@ -339,6 +339,66 @@ void Simulation::OnKeyUp (int key)
     case GLFW_KEY_F:
     	sph.SetExternalForce (false);
     	break;
+    case GLFW_KEY_RIGHT:
+    	guistate = (guistate_t) ((int (guistate) + 1) % GUISTATE_NUM_STATES);
+    	guitimer = 5.0f;
+    	break;
+    case GLFW_KEY_LEFT:
+    	guistate = (guistate_t) ((int (guistate) + GUISTATE_NUM_STATES - 1) % GUISTATE_NUM_STATES);
+    	guitimer = 5.0f;
+    	break;
+    }
+    float factor = 1;
+    if (glfwGetKey (window, GLFW_KEY_LEFT_SHIFT))
+    	factor *= 10;
+    if (glfwGetKey (window, GLFW_KEY_LEFT_CONTROL))
+    	factor *= 10;
+    switch (key)
+    {
+    case GLFW_KEY_DOWN:
+    case GLFW_KEY_KP_SUBTRACT:
+    case '-':
+    	factor *= -1;
+    case GLFW_KEY_UP:
+    case GLFW_KEY_KP_ADD:
+    case '+':
+    	guitimer = 5.0f;
+    	switch (guistate)
+    	{
+    	case GUISTATE_REST_DENSITY:
+    		sph.SetRestDensity (glm::max (sph.GetRestDensity () + factor * 0.01, 0.001));
+    		break;
+    	case GUISTATE_CFM_EPSILON:
+    		sph.SetCFMEpsilon (glm::max (sph.GetCFMEpsilon () + factor, 0.01f));
+    		break;
+    	case GUISTATE_GRAVITY:
+    		sph.SetGravity (sph.GetGravity () + factor);
+    		break;
+    	case GUISTATE_TIMESTEP:
+    		sph.SetTimestep (glm::min (sph.GetTimestep () + 0.001 * factor, 0.001));
+    		break;
+    	case GUISTATE_TENSILE_INSTABILITY_K:
+    		sph.SetTensileInstabilityK (glm::min (sph.GetTensileInstabilityK () + factor * 0.1, 0.1));
+    		break;
+    	case GUISTATE_TENSILE_INSTABILITY_SCALE:
+    		sph.SetTensileInstabilityScale (glm::min (sph.GetTensileInstabilityScale () + factor * 0.1, 0.1));
+    		break;
+    	case GUISTATE_XSPH_VISCOSITY:
+    		sph.SetXSPHViscosity (glm::min (sph.GetXSPHViscosity () + factor * 0.01, 0.01));
+    		break;
+    	case GUISTATE_VORTICITY_EPSILON:
+    		sph.SetVorticityEpsilon (glm::min (sph.GetVorticityEpsilon () + factor * 0.1, 0.1));
+    		break;
+    	}
+    	break;
+    }
+
+    if (key >= GLFW_KEY_F1 && key <= GLFW_KEY_F12)
+    {
+    	key -= GLFW_KEY_F1;
+    	key %= GUISTATE_NUM_STATES;
+    	guistate = (guistate_t) key;
+    	guitimer = 5.0f;
     }
 }
 
@@ -404,6 +464,41 @@ bool Simulation::Frame (void)
         std::stringstream stream;
         stream << "FPS: " << fps << std::endl;
         font.PrintStr (0, 0, stream.str ());
+
+        if (guitimer > 0)
+        {
+        	guitimer -= time_passed;
+        	std::stringstream stream;
+        	switch (guistate)
+        	{
+        	case GUISTATE_REST_DENSITY:
+        		stream << "Rest density: " << sph.GetRestDensity ();
+        		break;
+        	case GUISTATE_CFM_EPSILON:
+        		stream << "CFM epsilon: " << sph.GetCFMEpsilon ();
+        		break;
+        	case GUISTATE_GRAVITY:
+        		stream << "Gravity: " << sph.GetGravity ();
+        		break;
+        	case GUISTATE_TIMESTEP:
+        		stream << "Timestep: " << sph.GetTimestep ();
+        		break;
+        	case GUISTATE_TENSILE_INSTABILITY_K:
+        		stream << "Tensile instability k: " << sph.GetTensileInstabilityK ();
+        		break;
+        	case GUISTATE_TENSILE_INSTABILITY_SCALE:
+        		stream << "Tensile instability scale: " << sph.GetTensileInstabilityScale ();
+        		break;
+        	case GUISTATE_XSPH_VISCOSITY:
+        		stream << "XSPH viscosity: " << sph.GetXSPHViscosity ();
+        		break;
+        	case GUISTATE_VORTICITY_EPSILON:
+        		stream << "Vorticity epsilon: " << sph.GetVorticityEpsilon ();
+        		break;
+
+        	}
+    		font.PrintStr (39.0f - float (stream.str ().size ()) / 2.0f, 0, stream.str ());
+        }
     }
     return true;
 }

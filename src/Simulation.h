@@ -219,6 +219,29 @@ private:
      */
     float last_fps_time;
 
+    /** GUI timer.
+     * Timer storing the time left to display GUI information in seconds.
+     */
+    float guitimer;
+
+    /** Enum type for gui states.
+     */
+    typedef enum guistate {
+    	GUISTATE_REST_DENSITY = 0,
+    	GUISTATE_CFM_EPSILON,
+    	GUISTATE_GRAVITY,
+    	GUISTATE_TIMESTEP,
+    	GUISTATE_TENSILE_INSTABILITY_K,
+    	GUISTATE_TENSILE_INSTABILITY_SCALE,
+    	GUISTATE_XSPH_VISCOSITY,
+    	GUISTATE_VORTICITY_EPSILON,
+    	GUISTATE_NUM_STATES,
+    } guistate_t;
+
+    /** Gui states.
+     * Stores the current state of the gui.
+     */
+    guistate_t guistate;
     /** Frame counter.
      * Frame counter used to determine the frames per second.
      */
