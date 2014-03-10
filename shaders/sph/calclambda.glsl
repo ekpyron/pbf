@@ -69,7 +69,7 @@ void main (void)
 		// use j as k so that we can stay in the same loop
 		vec3 grad_pk_Ci = vec3 (0, 0, 0);
 		grad_pk_Ci = gradWspiky (position - position_j);
-		grad_pk_Ci /= rho_0;
+		grad_pk_Ci *= one_over_rho_0;
 		sum_k_grad_Ci += dot (grad_pk_Ci, grad_pk_Ci);
 		
 		// now use j as j again and accumulate grad_pi_Ci for the case k=i
@@ -81,7 +81,7 @@ void main (void)
 	sum_k_grad_Ci += dot (grad_pi_Ci, grad_pi_Ci);
 	
 	// compute lambda_i (equations 1 and 9)
-	float C_i = rho / rho_0 - 1;
+	float C_i = rho * one_over_rho_0 - 1;
 	float lambda = -C_i / (sum_k_grad_Ci + epsilon);
 	imageStore (lambdatexture, int (gl_GlobalInvocationID.x), vec4 (lambda, 0, 0, 0));
 }

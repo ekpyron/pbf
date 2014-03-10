@@ -61,7 +61,7 @@ void main (void)
 		// but that doesn't cause any harm.
 		vec3 position_j = particlekeys[j].xyz;
 		
-		float scorr = (Wpoly6 (distance (position, position_j)) / Wpoly6 (tensile_instability_h));
+		float scorr = tensile_instability_scale * Wpoly6 (distance (position, position_j));
 		scorr *= scorr;
 		scorr *= scorr;
 		scorr = -tensile_instability_k * scorr;
@@ -73,7 +73,7 @@ void main (void)
 	}
 	END_FOR_EACH_NEIGHBOUR(j)
 
-	position += deltap / rho_0;
+	position += one_over_rho_0 * deltap;
 
 	// collision detection begin
 	vec3 wall = vec3 (16, 0, 16);

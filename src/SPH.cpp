@@ -10,17 +10,31 @@ SPH::SPH (const GLuint &_numparticles, const glm::ivec3 &gridsize)
 		   << "const vec3 GRID_SIZE = vec3 (" << gridsize.x << ", " << gridsize.y << ", " << gridsize.z << ");" << std::endl
 		   << "const ivec3 GRID_HASHWEIGHTS = ivec3 (1, " << gridsize.x * gridsize.z <<  ", " << gridsize.x << ");" << std::endl
 		   << std::endl
-		   << "const float rho_0 = 1.0;" << std::endl
-		   << "const float h = 2.0;" << std::endl
+#ifdef SPH_CONSTANT_PARAMETERS
+		   << "const float one_over_rho_0 = 1.0;" << std::endl
 		   << "const float epsilon = 5.0;" << std::endl
 		   << "const float gravity = 10;" << std::endl
 		   << "const float timestep = 0.016;" << std::endl
 		   << std::endl
 		   << "const float tensile_instability_k = 0.1;" << std::endl
-		   << "const float tensile_instability_h = 0.2;" << std::endl
+		   << "const float tensile_instability_scale = " << 1.0f / Wpoly6 (0.2f) << ";" << std::endl
 		   << std::endl
 		   << "const float xsph_viscosity_c = 0.01;" << std::endl
 		   << "const float vorticity_epsilon = 5;" << std::endl
+#else
+		   << "layout (binding = 2, std140) uniform SPHParameters" << std::endl
+		   << "{" << std::endl
+		   << "  float one_over_rho_0;" << std::endl
+		   << "  float epsilon;" << std::endl
+		   << "  float gravity;" << std::endl
+		   << "  float timestep;" << std::endl
+		   << "  float tensile_instability_k;" << std::endl
+		   << "  float tensile_instability_scale;" << std::endl
+		   << "  float xsph_viscosity_c;" << std::endl
+		   << "  float vorticity_epsilon;" << std::endl
+		   << "};" << std::endl
+#endif
+		   << "const float h = 2.0;" << std::endl
 		   << std::endl
 		   << "#define BLOCKSIZE 256" << std::endl;
 
@@ -50,7 +64,7 @@ SPH::SPH (const GLuint &_numparticles, const glm::ivec3 &gridsize)
     glGenQueries (5, queries);
 
 	// create buffer objects
-	glGenBuffers (5, buffers);
+	glGenBuffers (6, buffers);
 
     // allocate lambda buffer
     glBindBuffer (GL_SHADER_STORAGE_BUFFER, lambdabuffer);
@@ -88,13 +102,39 @@ SPH::SPH (const GLuint &_numparticles, const glm::ivec3 &gridsize)
     // create velocity texture
     velocitytexture.Bind (GL_TEXTURE_BUFFER);
     glTexBuffer (GL_TEXTURE_BUFFER, GL_RGBA32F, velocitybuffer);
+
+    // create sph parameter buffer
+#ifndef SPH_CONSTANT_PARAMETERS
+    sphparams.one_over_rho_0 = 1.0f;
+    sphparams.epsilon = 5.0f;
+    sphparams.gravity = 10.0f;
+    sphparams.timestep = 0.016f;
+    sphparams.tensile_instability_k = 0.1f;
+    sphparams.tensile_instability_scale = 1.0f / Wpoly6 (0.2f, 2.0f);
+    sphparams.xsph_viscosity_c = 0.01f;
+    sphparams.vorticity_epsilon = 5;
+
+	glBindBuffer (GL_UNIFORM_BUFFER, sphparambuffer);
+    glBufferData (GL_UNIFORM_BUFFER, sizeof (sphparams_t), &sphparams, GL_STATIC_DRAW);
+
+    glBindBufferBase (GL_UNIFORM_BUFFER, 2, sphparambuffer);
+#endif
 }
 
 SPH::~SPH (void)
 {
 	// cleanup
-	glDeleteBuffers (5, buffers);
+	glDeleteBuffers (6, buffers);
 	glDeleteQueries (5, queries);
+}
+
+float SPH::Wpoly6 (const float &r, const float &h)
+{
+	if (r > h)
+		return 0;
+	float tmp = h * h - r * r;
+	return 1.56668147106 * tmp * tmp * tmp / (h*h*h*h*h*h*h*h*h);
+
 }
 
 void SPH::OutputTiming (void)

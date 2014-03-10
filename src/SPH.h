@@ -29,6 +29,97 @@ public:
 		return positionbuffer;
 	}
 
+	/** Get rest density.
+	 * Returns the current rest density.
+	 * \returns the rest density
+	 */
+	float GetRestDensity (void) const {
+		return 1.0f / sphparams.one_over_rho_0;
+	}
+
+	/** Set rest density.
+	 * Specifies the rest density.
+	 * \param rho the new rest density
+	 */
+	void SetRestDensity (const float &rho);
+
+	/** Get CFM epsilon.
+	 * Returns the constraint force mixing epsilon.
+	 * \returns the CFM epsilon
+	 */
+	const float &GetCFMEpsilon (void) const {
+		return sphparams.epsilon;
+	}
+
+	/** Specify CFM epsilon.
+	 * Specifies the constraint force mixing epsilon.
+	 * \param epsilon the CFM epsilon
+	 */
+	void SetCFMEpsilon (const float &epsilon);
+
+	/** Get gravity.
+	 * Returns the gravity strength.
+	 * \returns the gravity strength
+	 */
+	const float &GetGravity (void) const {
+		return sphparams.gravity;
+	}
+
+	/** Set gravity.
+	 * Specifies the gravity strength.
+	 * \param gravity the gravity strength
+	 */
+	void SetGravity (const float &gravity);
+
+	/** Get time step.
+	 * Returns the simulation time step.
+	 * \returns the simulation time step.
+	 */
+	const float &GetTimestep (void) const {
+		return sphparams.timestep;
+	}
+
+	/** Set time step.
+	 * Specifies the simulation time step.
+	 * \param timestep the simulation time step.
+	 */
+	void SetTimestep (const float &timestep);
+
+	/** Poly6 kernel.
+	 * Evaluate the Poly6 kernel for a given radius.
+	 * Used to specify the tensile instability scale factor
+	 * in terms of the smoothing kernel.
+	 * \param r radius
+	 * \param h smoothing width
+	 * \returns smoothing weight
+	 */
+	static float Wpoly6 (const float &r, const float &h);
+
+	/** Get tensile instability K.
+	 * Returns tensile instability K.
+	 * \returns tensile instability K.
+	 */
+	const float &GetTensileInstabilityK (void) const {
+		return sphparams.tensile_instability_k;
+	}
+
+	/** Set tensile instability K.
+	 * \param k tensile instability K.
+	 */
+	void SetTensileInstabilityK (const float &k);
+
+	/** Get tensile instability scale.
+	 * Returns tensile instability scale.
+	 * \returns tensile instability scale.
+	 */
+	const float &GetTensileInstabilityScale (void) const {
+		return sphparams.tensile_instability_scale;
+	}
+
+	/** Set tensile instability scale.
+	 * \param v tensile instability scale.
+	 */
+	void SetTensileInstabilityScale (const float &v);
 	/** Get velocity buffer.
 	 * Returns a buffer object containing the particle velocities.
 	 * \returns the velocity buffer
@@ -79,6 +170,26 @@ public:
 	 */
 	void OutputTiming (void);
 private:
+	/** Data type for SPH uniform parameters.
+	 * This structure represents the memory layout of the uniform buffer
+	 * object in which the SPH parameters are stored.
+	 */
+	typedef struct sphparams {
+		float one_over_rho_0;
+		float epsilon;
+		float gravity;
+		float timestep;
+		float tensile_instability_k;
+		float tensile_instability_scale;
+		float xsph_viscosity_c;
+		float vorticity_epsilon;
+	} sphparams_t;
+
+	/** SPH uniform parameters.
+	 * This structure stores a copy of the contents of the uniform buffer
+	 * in which the SPH parameters are stored.
+	 */
+	sphparams_t sphparams;
 
     /** Simulation step shader program.
      * Shader program for the simulation step that predicts the new position
@@ -181,12 +292,17 @@ private:
              * Buffer in which the vorticity of each particle is stored.
              */
             GLuint vorticitybuffer;
+
+            /** SPH parameter buffer.
+             * Uniform buffer in which the SPH parameters are stored.
+             */
+            GLuint sphparambuffer;
         };
         /** Buffer objects.
          * The buffer objects are stored in a union, so that it is possible
          * to create/delete all buffer objects with a single OpenGL call.
          */
-        GLuint buffers[5];
+        GLuint buffers[6];
     };
 
     union {
