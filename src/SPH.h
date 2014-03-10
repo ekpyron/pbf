@@ -103,7 +103,8 @@ public:
 		return sphparams.tensile_instability_k;
 	}
 
-	/** Set tensile instability K.
+	/** Set tensile instability K
+	 * Specifies the tensile instability K.
 	 * \param k tensile instability K.
 	 */
 	void SetTensileInstabilityK (const float &k);
@@ -120,6 +121,38 @@ public:
 	 * \param v tensile instability scale.
 	 */
 	void SetTensileInstabilityScale (const float &v);
+
+	/** Get XSPH viscosity.
+	 * Returns the XSPH viscosity constant.
+	 * \returns the XSPH viscosity constant.
+	 *
+	 */
+	const float &GetXSPHViscosity (void) const {
+		return sphparams.xsph_viscosity_c;
+	}
+
+	/** Set XSPH viscosity.
+	 * Specifies the XSPH viscosity.
+	 * \param v XSPH viscosity
+	 */
+	void SetXSPHViscosity (const float &v);
+
+	/** Get vorticity epsilon.
+	 * Returns the vorticity confinement epsilon.
+	 * \returns the vorticity confinement epsilon.
+	 *
+	 */
+	const float &GetVorticityEpsilon (void) const {
+		return sphparams.vorticity_epsilon;
+	}
+
+	/** Set Vorticity epsilon.
+	 * Specifies the vorticity confinement epsilon.
+	 * \param epsilon the vorticity confinement epsilon.
+	 *
+	 */
+	void SetVorticityEpsilon (const float &epsilon);
+
 	/** Get velocity buffer.
 	 * Returns a buffer object containing the particle velocities.
 	 * \returns the velocity buffer
@@ -170,6 +203,11 @@ public:
 	 */
 	void OutputTiming (void);
 private:
+	/** Upload SPH parameters.
+	 * Uploads the SPH parameter buffer to the contents of the sphparams
+	 * structure to the GPU.
+	 */
+	void UploadSPHParams (void);
 	/** Data type for SPH uniform parameters.
 	 * This structure represents the memory layout of the uniform buffer
 	 * object in which the SPH parameters are stored.

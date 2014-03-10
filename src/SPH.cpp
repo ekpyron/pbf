@@ -134,7 +134,67 @@ float SPH::Wpoly6 (const float &r, const float &h)
 		return 0;
 	float tmp = h * h - r * r;
 	return 1.56668147106 * tmp * tmp * tmp / (h*h*h*h*h*h*h*h*h);
+}
 
+void SPH::SetRestDensity (const float &rho)
+{
+	sphparams.one_over_rho_0 = 1.0f / rho;
+	UploadSPHParams ();
+}
+
+void SPH::SetCFMEpsilon (const float &epsilon)
+{
+	sphparams.epsilon = epsilon;
+	UploadSPHParams ();
+}
+
+void SPH::SetGravity (const float &gravity)
+{
+	sphparams.gravity = gravity;
+	UploadSPHParams ();
+}
+
+void SPH::SetTimestep (const float &timestep)
+{
+	sphparams.timestep = timestep;
+	UploadSPHParams ();
+}
+
+void SPH::SetTensileInstabilityK (const float &k)
+{
+	sphparams.tensile_instability_k = k;
+	UploadSPHParams ();
+}
+
+void SPH::SetTensileInstabilityScale (const float &v)
+{
+	sphparams.tensile_instability_scale = v;
+	UploadSPHParams ();
+}
+
+void SPH::SetXSPHViscosity (const float &v)
+{
+	sphparams.xsph_viscosity_c = v;
+	UploadSPHParams ();
+}
+
+void SPH::SetVorticityEpsilon (const float &epsilon)
+{
+	sphparams.vorticity_epsilon = epsilon;
+	UploadSPHParams ();
+}
+
+void SPH::UploadSPHParams (void)
+{
+#ifndef SPH_CONSTANT_PARAMETERS
+	GLuint tmpbuffer;
+	glGenBuffers (1, &tmpbuffer);
+	glBindBuffer (GL_COPY_READ_BUFFER, tmpbuffer);
+	glBufferData (GL_COPY_READ_BUFFER, sizeof (sphparams_t), &sphparams, GL_STREAM_COPY);
+	glBindBuffer (GL_COPY_WRITE_BUFFER, sphparambuffer);
+	glCopyBufferSubData (GL_COPY_READ_BUFFER, GL_COPY_WRITE_BUFFER, 0, 0, sizeof (sphparams_t));
+	glDeleteBuffers (1, &tmpbuffer);
+#endif
 }
 
 void SPH::OutputTiming (void)
