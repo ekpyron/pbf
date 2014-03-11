@@ -1,6 +1,7 @@
 #include "common.h"
 #include "Simulation.h"
 #include "FullscreenQuad.h"
+#include <stdlib.h>
 
 /** \file main.cpp
  * Main source file.
@@ -137,6 +138,15 @@ void _glMemoryBarrier_ATIHACK (GLbitfield bitfield)
 	_glMemoryBarrier_BROKEN_ATIHACK (bitfield);
 }
 
+/** Dummy override for glMemoryBarrier.
+ * This is used as a dummy function that does nothing. glMemoryBarrier
+ * will be overridden by this function, if the environment variable
+ * PBF_NO_MEMORY_BARRIERS is set to 1.
+ */
+void _glMemoryBarrier_DISABLED (GLbitfield bitfield)
+{
+}
+
 /** Legacy glBindBuffersBase.
  * Legacy implementation of glBindBuffersBase. This is used as a fallback if
  * GL_ARB_multi_bind is not available.
@@ -156,11 +166,38 @@ void _glBindBuffersBase (GLenum target, GLuint first, GLsizei count, const GLuin
 	}
 }
 
+/** Check for boolean environment setting.
+ * Checks whether a environment variable is set and returns true,
+ * if it is, unless its value starts with 0, f, F, n or N.
+ * \param varname Environment variable to check.
+ * \returns Whether the environment setting is set or not.
+ */
+bool CheckEnvironment (const char *varname)
+{
+	const char *env = getenv (varname);
+	if (env != NULL) {
+		switch (env[0])
+		{
+		case '0':
+		case 'f':
+		case 'F':
+		case 'n':
+		case 'N':
+			return false;
+		}
+		return true;
+	}
+	return false;
+}
+
 /** Initialization.
  * Perform general initialization tasks.
  */
 void initialize (void)
 {
+	// check whether a debug context should be created
+	bool debugcontext = !CheckEnvironment ("PBF_NO_DEBUG_CONTEXT");
+
     // set GLFW error callback
     glfwSetErrorCallback (glfwErrorCallback);
 
@@ -169,7 +206,7 @@ void initialize (void)
     glfwWindowHint (GLFW_CONTEXT_VERSION_MINOR, 3);
     glfwWindowHint (GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
     glfwWindowHint (GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
-    glfwWindowHint (GLFW_OPENGL_DEBUG_CONTEXT, GL_TRUE);
+    glfwWindowHint (GLFW_OPENGL_DEBUG_CONTEXT, debugcontext ? GL_TRUE : GL_FALSE);
 
     // open a window and an OpenGL context
     window = glfwCreateWindow (1280, 720, "PBF", NULL, NULL);
@@ -180,6 +217,7 @@ void initialize (void)
     // get OpenGL entry points
     glcorewInit ((glcorewGetProcAddressCallback) glfwGetProcAddress);
 
+    // check for ATI card and enable workarounds
     std::string vendor (reinterpret_cast<const char*> (glGetString (GL_VENDOR)));
     if (!vendor.compare ("ATI Technologies Inc."))
     {
@@ -188,8 +226,18 @@ void initialize (void)
     	glMemoryBarrier = _glMemoryBarrier_ATIHACK;
     }
 
-    glDebugMessageCallback (glDebugCallback, NULL);
-    glEnable (GL_DEBUG_OUTPUT);
+    // check for environment variables and enable workarounds respectively
+    if (CheckEnvironment ("PBF_NO_MEMORY_BARRIERS"))
+    {
+    	std::cout << "Disable glMemoryBarrier" << std::endl;
+    	glMemoryBarrier = _glMemoryBarrier_DISABLED;
+    }
+
+    if (debugcontext)
+    {
+    	glDebugMessageCallback (glDebugCallback, NULL);
+    	glEnable (GL_DEBUG_OUTPUT);
+    }
 
     // determine OpenGL extension capabilities and apply workarounds where necessary
     GLEXTS.ARB_clear_texture = IsExtensionSupported ("GL_ARB_clear_texture");
