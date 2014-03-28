@@ -6,6 +6,9 @@
 #include "Texture.h"
 #include "PointSprite.h"
 
+/** Selection class.
+ * This class is responsible for determining which particle is located at a given screen position.
+ */
 class Selection
 {
 public:
@@ -56,6 +59,9 @@ private:
     	GLuint framebuffers[1];
     };
 
+    /** Point sprite object.
+     * This is used to render point sprites for the particles.
+     */
     PointSprite pointsprite;
 };
 

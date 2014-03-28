@@ -76,7 +76,7 @@ void OnMouseMove (GLFWwindow *window, double x, double y)
  * \param action one of GLFW_PRESS or GLFW_RELEASE
  * \param mode bit field describing which modifier keys were hold down
  */
-void OnMouseButton (GLFWwindow *window, int button, int action, int mods)
+void OnMouseButton (GLFWwindow *window, int button, int action, int mode)
 {
     Simulation *simulation = reinterpret_cast<Simulation*> (glfwGetWindowUserPointer (window));
     if (action == GLFW_PRESS)
@@ -142,6 +142,7 @@ void _glMemoryBarrier_ATIHACK (GLbitfield bitfield)
  * This is used as a dummy function that does nothing. glMemoryBarrier
  * will be overridden by this function, if the environment variable
  * PBF_NO_MEMORY_BARRIERS is set to 1.
+ * \param bitfield ignored argument
  */
 void _glMemoryBarrier_DISABLED (GLbitfield bitfield)
 {

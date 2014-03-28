@@ -7,14 +7,38 @@
 #include "FullscreenQuad.h"
 #include "Blur.h"
 
+/** Surface reconstruction class.
+ * This class is responsible for the surface reconstruction.
+ */
 class SurfaceReconstruction
 {
 public:
+	/** Constuctor.
+	 */
 	SurfaceReconstruction (void);
+	/** Destructor.
+	 */
 	~SurfaceReconstruction (void);
+	/** Render surface.
+	 * Renders the surface of the particles stored in the given buffer.
+	 * \param positionbuffer Buffer object storing particle positions.
+	 * \param numparticles Number of particles.
+	 * \param width Framebuffer width.
+	 * \param height Framebuffer height.
+	 */
 	void Render (const GLuint &positionbuffer, const GLuint &numparticles, const GLuint &width, const GLuint &height);
+	/** Set environment map.
+	 * Sets an environment map used for reflection rendering.
+	 * \param envmap the environment map or NULL to disable reflections
+	 */
 	void SetEnvironmentMap (const Texture *envmap);
+	/** Enable noise.
+	 * Enable noise for rendering.
+	 */
 	void EnableNoise (void);
+	/** Disable noise.
+	 * Disable noise for rendering.
+	 */
 	void DisableNoise (void);
 private:
 

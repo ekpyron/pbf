@@ -77,21 +77,61 @@ public:
 
     /** Animation loop.
      * This function is called every frame and performs the actual simulation.
+     * \returns True, if there were no errors, false otherwise.
      */
     bool Frame (void);
 private:
+    /** Transformation buffer layout.
+     * Structure representing the memory layout of the uniform buffer
+     * containing the transformation information.
+     */
     typedef struct transformationbuffer {
+    	/** View matrix.
+    	 * The view matrix.
+    	 */
     	glm::mat4 viewmat;
+    	/** Projection matrix.
+    	 * The projection matrix.
+    	 */
     	glm::mat4 projmat;
+    	/** Inverse view matrix.
+    	 * Inverse of the view matrix.
+    	 */
     	glm::mat4 invviewmat;
     } transformationbuffer_t;
+
+    /** Lighting parameter layout.
+     * Structure representing the memory layout of the uniform buffer
+     * containing the lighting parameters.
+     */
     typedef struct lightparams {
+    	/** Light position.
+    	 * Position of the light source.
+    	 */
         glm::vec3 lightpos;
+        /** Padding.
+         * Padding to create the correct memory layout.
+         */
         float padding;
+        /** Spot direction.
+         * Direction of the spot light.
+         */
         glm::vec3 spotdir;
+        /** Padding.
+         * Padding to create the correct memory layout.
+         */
         float padding2;
+        /** Eye position.
+         * Eye/camera position used for specular lighting.
+         */
         glm::vec3 eyepos;
+        /** Spot exponent.
+         * Spot exponent used to calculate the spot light falloff.
+         */
         float spotexponent;
+        /** Light intensity.
+         * Intensity of the light source.
+         */
         float lightintensity;
     } lightparams_t;
 

@@ -24,7 +24,7 @@ public:
 
     /** Load a png image.
      * Loads a png image and stores it in the texture bound to the specified target.
-     * \param specifies the texture target
+     * \param target specifies the texture target
      * \param filename path to the image to load
      * \param internalformat internal format used to store the texture
      */

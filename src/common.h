@@ -42,6 +42,9 @@ bool IsExtensionSupported (const std::string &name);
  * specific OpenGL extensions are supported or not.
  */
 typedef struct glextflags {
+	/** ARB_clear_texture support.
+	 * True if ARB_clear_texture is supported, false otherwise.
+	 */
 	bool ARB_clear_texture;
 } glextflags_t;
 

@@ -213,13 +213,37 @@ private:
 	 * object in which the SPH parameters are stored.
 	 */
 	typedef struct sphparams {
+		/** One over rest density.
+		 * One over the rest density.
+		 */
 		float one_over_rho_0;
+		/** CFM epsilon.
+		 * Constraint force mixing epsilon.
+		 */
 		float epsilon;
+		/** Gravity.
+		 * Magnitude of the gravity.
+		 */
 		float gravity;
+		/** Timestep.
+		 * Simulation timestep.
+		 */
 		float timestep;
+		/** Tensile instability K.
+		 * A parameter for the tensile instability calculations.
+		 */
 		float tensile_instability_k;
+		/** Tensile instability scale.
+		 * A parameter for the tensile instability calculations.
+		 */
 		float tensile_instability_scale;
+		/** XSPH viscosity factor.
+		 * A parameter for the XSPH viscosity calculations.
+		 */
 		float xsph_viscosity_c;
+		/** Vorticity confinement epsilon.
+		 * A parameter for the vorticity confinement.
+		 */
 		float vorticity_epsilon;
 	} sphparams_t;
 

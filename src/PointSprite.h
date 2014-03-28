@@ -6,7 +6,6 @@
 /** PointSprite class.
  * This class renders point sprites that can be used for rendering particles.
  */
-
 class PointSprite
 {
 public:
@@ -20,9 +19,17 @@ public:
     /** Specify a position buffer.
      * Specifies a buffer containing the positions for the point sprites.
      * \param buffer the buffer object containing the position data
+     * \param stride number of bytes between consecutive positions or 0 for tightly packed positions
+     * \param offset byte offset of the position data in the buffer object
      */
     void SetPositionBuffer (GLuint buffer, GLsizei stride = 0, GLintptr offset = 0);
 
+    /** Specify a highlight buffer.
+     * Specifies a buffer containing the highlighting information for the point sprites.
+     * \param buffer the buffer object containing the highlighting information.
+     * \param stride number of bytes between consecutive positions or 0 for tightly packed positions
+     * \param offset byte offset of the position data in the buffer object
+     */
     void SetHighlightBuffer (GLuint buffer, GLsizei stride = 0, GLintptr offset = 0);
 
     /** Render the point sprites.
