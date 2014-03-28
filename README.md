@@ -22,11 +22,16 @@ can be generated with `make doc`.
 References
 ----------
 This position based fluids implementation is based on the following scientific paper:
+
 http://www.matthiasmueller.info/publications/pbf_sig_preprint.pdf
 
+
 Furthermore techniques from the following papers have been used:
+
 http://www.sci.utah.edu/~csilva/papers/cgf.pdf
+
 http://beowulf.lcs.mit.edu/18.337-2008/lectslides/scan.pdf
+
 http://developer.download.nvidia.com/presentations/2010/gdc/Direct3D_Effects.pdf
 
 Documentation
