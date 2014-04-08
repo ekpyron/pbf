@@ -377,6 +377,14 @@ void Simulation::OnKeyUp (int key)
     	case GUISTATE_TIMESTEP:
     		sph.SetTimestep (glm::max (sph.GetTimestep () + 0.001 * factor, 0.001));
     		break;
+    	case GUISTATE_NUM_SOLVER_ITERATIONS:
+    	{
+    		int iters = sph.GetNumSolverIterations ();
+    		iters += factor;
+    		if (iters < 0) iters = 0;
+    		sph.SetNumSolverIterations (iters);
+    		break;
+    	}
     	case GUISTATE_TENSILE_INSTABILITY_K:
     		sph.SetTensileInstabilityK (glm::max (sph.GetTensileInstabilityK () + factor * 0.1, 0.1));
     		break;
@@ -482,6 +490,9 @@ bool Simulation::Frame (void)
         		break;
         	case GUISTATE_TIMESTEP:
         		stream << "Timestep: " << sph.GetTimestep ();
+        		break;
+        	case GUISTATE_NUM_SOLVER_ITERATIONS:
+        		stream << "Solver iterations: " << sph.GetNumSolverIterations ();
         		break;
         	case GUISTATE_TENSILE_INSTABILITY_K:
         		stream << "Tensile instability k: " << sph.GetTensileInstabilityK ();

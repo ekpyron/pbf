@@ -2,7 +2,7 @@
 
 SPH::SPH (const GLuint &_numparticles, const glm::ivec3 &gridsize)
 	: numparticles (_numparticles), vorticityconfinement (false), radixsort (512, _numparticles >> 9, gridsize),
-	  neighbourcellfinder (_numparticles, gridsize)
+	  neighbourcellfinder (_numparticles, gridsize), num_solveriterations (5)
 {
 	// shader definitions
 	std::stringstream stream;
@@ -290,7 +290,7 @@ void SPH::Run (void)
 
     	// solver iteration
 
-    	for (int iteration = 0; iteration < 5; iteration++)
+    	for (int iteration = 0; iteration < num_solveriterations; iteration++)
     	{
     		calclambdaprog.Use ();
     		glDispatchCompute (numparticles >> 8, 1, 1);

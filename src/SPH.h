@@ -161,6 +161,22 @@ public:
 		return velocitybuffer;
 	}
 
+	/** Get number of solver iterations.
+	 * Returns the number of solver iterations currently used.
+	 * \returns the number of solver iterations.
+	 */
+	const GLuint &GetNumSolverIterations (void) const {
+		return num_solveriterations;
+	}
+
+	/** Set number of solver iterations.
+	 * Specifies the number of solver iterations.
+	 * \param iter the number of solver iterations.
+	 */
+	void SetNumSolverIterations (const GLuint &iter) {
+		num_solveriterations = iter;
+	}
+
 	/** Get highlight buffer.
 	 * Returns a buffer object containing the particle highlighting information.
 	 * \returns the highlight buffer
@@ -327,6 +343,11 @@ private:
      * Texture used to access the highlight buffer
      */
     Texture highlighttexture;
+
+    /** Number of solver iterations.
+     * Number of solver iterations used for the constraint solver.
+     */
+    GLuint num_solveriterations;
 
     union {
         struct {
