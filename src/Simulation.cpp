@@ -402,7 +402,7 @@ void Simulation::OnKeyUp (int key)
     	{
     		int iters = sph.GetNumSolverIterations ();
     		iters += factor;
-    		if (iters < 0) iters = 0;
+    		if (iters < 1) iters = 1;
     		sph.SetNumSolverIterations (iters);
     		break;
     	}
