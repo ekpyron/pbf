@@ -6,7 +6,11 @@ project (pbf)
 add_subdirectory (src)
 add_subdirectory (glcorew)
 
+find_package (ASSIMP REQUIRED)
 find_package (Doxygen QUIET)
+
+include_directories (${ASSIMP_INCLUDE_DIRS})
+target_link_libraries (${ASSIMP_LIBRARIES})
 
 if (DOXYGEN_FOUND)
 	find_package (LATEX QUIET)

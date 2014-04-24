@@ -313,6 +313,16 @@ bool IsExtensionSupported (const std::string &name)
 	return false;
 }
 
+char* getCmdOption(char** begin, char** end, const std::string& option)
+{
+    char ** itr = std::find(begin, end, option);
+    if (itr != end && ++itr != end)
+    {
+        return *itr;
+    }
+    return 0;
+}
+
 /** Main.
  * Main entry point.
  * \param argc number of arguments
@@ -327,7 +337,11 @@ int main (int argc, char *argv[])
         std::cerr << "Cannot initialize GLFW." << std::endl;
         return -1;
     }
-
+	// check if mesh argument was passed
+	char* mesh = getCmdOption(argv, argv + argc, "-mesh");
+	if(mesh) {
+		std::cout << "MESH: " << mesh << std::endl;
+	}
     try {
         // initialization
         initialize ();
