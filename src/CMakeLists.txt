@@ -11,9 +11,12 @@ endif (WIN32)
 
 file (GLOB PBF_SOURCES *.cpp)
 
+find_package (ASSIMP REQUIRED)
+include_directories (${ASSIMP_INCLUDE_DIRS})
+
 add_executable (pbf ${PBF_SOURCES})
 
-target_link_libraries (pbf ${GLFW_LIBRARY} ${PNG_LIBRARIES} ${OPENGL_LIBRARIES} glcorew)
+target_link_libraries (pbf ${GLFW_LIBRARY} ${PNG_LIBRARIES} ${OPENGL_LIBRARIES} ${ASSIMP_LIBRARIES} glcorew)
 
 set (USE_CXX11 YES CACHE BOOL "Enable C++11")
 if (USE_CXX11)
