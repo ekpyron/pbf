@@ -5,3 +5,4 @@ Release/
 .cproject
 .settings/
 html/
+.DS_Store
