@@ -23,27 +23,11 @@
 #include "Simulation.h"
 #include "FullscreenQuad.h"
 #include <stdlib.h>
-#include <assimp/Importer.hpp>
-#include <assimp/DefaultLogger.hpp>
-#include <assimp/scene.h>
-#include <assimp/postprocess.h>
-#include <assimp/cfileio.h>
 
 /** \file main.cpp
  * Main source file.
  * The source file that contains the main entry point and performs initialization and cleanup.
  */
-
-/**
- *  A wrapper class for the Open Asset Importer LogStream that just prints to cerr.
- */
-class LogStream : public Assimp::LogStream
-{
-public:
-	 virtual void write (const char *msg) {
-		 std::cerr << msg;
-	 }
-};
 
 /** GLFW window.
  * The GLFW window.
@@ -339,24 +323,6 @@ char* getCmdOption(char** begin, char** end, const std::string& option)
     return 0;
 }
 
-void importMesh(const char* fileName) {
-	std::cout << "Attempting to import mesh " << fileName << std::endl;
-	LogStream logstream;
-	Assimp::DefaultLogger::create("ASSIMP_LOG", Assimp::Logger::VERBOSE);
-	Assimp::DefaultLogger::get()->attachStream (&logstream,
-			Assimp::Logger::Debugging	|
-			Assimp::Logger::Info		|
-			Assimp::Logger::Err			|
-			Assimp::Logger::Warn);
-	Assimp::Importer importer;
-	const aiScene* scene = importer.ReadFile(fileName, aiProcess_GenNormals | aiProcess_FixInfacingNormals | aiProcess_FindInvalidData);
-	if(!scene) {
-		std::cerr << "Cannot load the model " << fileName << std::endl;
-	} else {
-		std::cout << "Importing mesh succeeded" << std::endl;
-	}
-}
-
 /** Main.
  * Main entry point.
  * \param argc number of arguments
@@ -374,7 +340,7 @@ int main (int argc, char *argv[])
 	// check if mesh argument was passed
 	char* mesh = getCmdOption(argv, argv + argc, "-mesh");
 	if(mesh) {
-		importMesh(mesh);
+
 	}
     try {
         // initialization
