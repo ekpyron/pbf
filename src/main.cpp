@@ -315,12 +315,12 @@ bool IsExtensionSupported (const std::string &name)
 
 char* getCmdOption(char** begin, char** end, const std::string& option)
 {
-    char ** itr = std::find(begin, end, option);
-    if (itr != end && ++itr != end)
-    {
-        return *itr;
-    }
-    return 0;
+	for (char **it = begin; it != end; it++)
+	{
+		if (!option.compare (*it) && it++ != end)
+			return *it;
+	}
+	return 0;
 }
 
 /** Main.
@@ -340,7 +340,6 @@ int main (int argc, char *argv[])
 	// check if mesh argument was passed
 	char* mesh = getCmdOption(argv, argv + argc, "-mesh");
 	if(mesh) {
-
 	}
     try {
         // initialization
