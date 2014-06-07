@@ -22,11 +22,16 @@
 #include "Simulation.h"
 
 
-Simulation::Simulation (void) : width (0), height (0), font ("textures/font.png"),
+Simulation::Simulation (const char *mesh) : width (0), height (0), font ("textures/font.png"),
     last_fps_time (glfwGetTime ()), framecount (0), fps (0), running (false),
     usesurfacereconstruction (false), sph (GetNumberOfParticles ()), useskybox (false),
-    envmap (NULL), usenoise (false), guitimer (0.0f), guistate (GUISTATE_REST_DENSITY)
+    envmap (NULL), usenoise (false), guitimer (0.0f), guistate (GUISTATE_REST_DENSITY),
+    framingmesh (NULL)
 {
+	// load framing mesh if a mesh was specified
+	if (mesh)
+		framingmesh = new FramingMesh (mesh);
+
 	// load shaders
     particleprogram.CompileShader (GL_VERTEX_SHADER, "shaders/particles/vertex.glsl");
     particleprogram.CompileShader (GL_FRAGMENT_SHADER, "shaders/particles/fragment.glsl");
@@ -88,6 +93,7 @@ Simulation::Simulation (void) : width (0), height (0), font ("textures/font.png"
 Simulation::~Simulation (void)
 {
     // cleanup
+	if (framingmesh) delete framingmesh;
 	if (envmap) delete envmap;
 	glDeleteQueries (1, &renderingquery);
     glDeleteBuffers (2, buffers);
@@ -457,8 +463,11 @@ bool Simulation::Frame (void)
     	glEnable (GL_DEPTH_TEST);
     }
 
-    // render the framing
-    framing.Render ();
+    // render framing
+    if (framingmesh)
+    	framingmesh->Render ();
+    else
+    	framing.Render ();
 
     // run simulation step 1
     if (running)

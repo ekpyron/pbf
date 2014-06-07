@@ -26,6 +26,7 @@
 #include "Camera.h"
 #include "ShaderProgram.h"
 #include "Framing.h"
+#include "FramingMesh.h"
 #include "Font.h"
 #include "FullscreenQuad.h"
 #include "PointSprite.h"
@@ -41,8 +42,9 @@ class Simulation
 {
 public:
     /** Constructor.
+     * \param mesh Collision mesh to be used.
      */
-    Simulation (void);
+    Simulation (const char *mesh);
     /** Destructor.
      */
     ~Simulation (void);
@@ -179,6 +181,11 @@ private:
      * Takes care of rendering a framing for the scene.
      */
     Framing framing;
+
+    /** Framing mesh.
+     * Takes care of handling a framing mesh for the scene.
+     */
+    FramingMesh *framingmesh;
 
     /** Point Sprite.
      * Takes care of rendering particles as point sprites.

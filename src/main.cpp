@@ -214,8 +214,9 @@ bool CheckEnvironment (const char *varname)
 
 /** Initialization.
  * Perform general initialization tasks.
+ * \param mesh Collision mesh to be used.
  */
-void initialize (void)
+void initialize (const char *mesh)
 {
 	// check whether a debug context should be created
 	bool debugcontext = !CheckEnvironment ("PBF_NO_DEBUG_CONTEXT");
@@ -269,7 +270,7 @@ void initialize (void)
     }
 
     // create the simulation class
-    simulation = new Simulation ();
+    simulation = new Simulation (mesh);
 
     // setup event callbacks
     glfwSetWindowUserPointer (window, simulation);
@@ -339,11 +340,9 @@ int main (int argc, char *argv[])
     }
 	// check if mesh argument was passed
 	char* mesh = getCmdOption(argv, argv + argc, "-mesh");
-	if(mesh) {
-	}
     try {
         // initialization
-        initialize ();
+        initialize (mesh);
 
         // simulation loop
         while (!glfwWindowShouldClose (window))

@@ -48,13 +48,17 @@ public:
      */
     void Render (void);
 	
-	const aiScene* ImportMesh (const char* input);
-	
+    void LoadMesh (const std::string &fileName);
 private:
     /** Shader program.
      * Shader program for displaying the surrounding scene.
     */
     ShaderProgram program;
+
+    /** Number of indices.
+     * Number of indices in the mesh that are to be rendered.
+     */
+    GLuint num_indices;
 
     union {
         struct {
@@ -66,10 +70,6 @@ private:
              *  OpenGL buffer object storing the normals of the framing.
              */
             GLuint normalbuffer;
-            /** Texture coordinate buffer.
-             *  OpenGL buffer object storing the texture coordinates of the framing.
-             */
-            GLuint texcoordbuffer;
             /** Index buffer.
              * OpenGL buffer object storing the vertex indices.
              */
@@ -79,17 +79,13 @@ private:
          * The buffer objects are stored in a union, so that it is possible
          * to create/delete all buffer objects with a single OpenGL call.
          */
-        GLuint buffers[4];
+        GLuint buffers[3];
     };
     /** Vertex array object.
      * OpenGL vertex array object used to store information about the layout and location
      * of the vertex attributes.
      */
     GLuint vertexarray;
-    /** Texture.
-     * Texture object storing the texture used on the framing.
-     */
-    Texture texture;
 };
 
 #endif /* FRAMINGMESH_H */
