@@ -22,11 +22,9 @@
 #ifndef COMMON_H
 #define COMMON_H
 
-#define GLFW_INCLUDE_NONE
-#include <GLFW/glfw3.h>
+#include <GL/glew.h>
 #include <iostream>
 #include <stdexcept>
-#include <glcorew.h>
 #define GLM_SWIZZLE
 #define GLM_FORCE_RADIANS
 #include <glm/glm.hpp>
@@ -48,27 +46,5 @@
 #ifndef M_PI_2
 #define M_PI_2     1.57079632679489661923
 #endif
-
-extern GLFWwindow *window;
-
-/** Check for OpenGL extension.
- * Checks whether an OpenGL extension is supported.
- * \param name Name of the extension.
- * \returns True, if the extension is supported, false, if not.
- */
-bool IsExtensionSupported (const std::string &name);
-
-/** OpenGL extension support flags.
- * Type of a structure that contains flags indicating whether
- * specific OpenGL extensions are supported or not.
- */
-typedef struct glextflags {
-	/** ARB_clear_texture support.
-	 * True if ARB_clear_texture is supported, false otherwise.
-	 */
-	bool ARB_clear_texture;
-} glextflags_t;
-
-extern glextflags_t GLEXTS;
 
 #endif /* !defined COMMON_H */

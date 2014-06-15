@@ -23,7 +23,7 @@
 
 
 Simulation::Simulation (const char *mesh) : width (0), height (0), font ("textures/font.png"),
-    last_fps_time (glfwGetTime ()), framecount (0), fps (0), running (false),
+    last_fps_time (/*glfwGetTime ()*/0), framecount (0), fps (0), running (false),
     usesurfacereconstruction (false), sph (GetNumberOfParticles ()), useskybox (false),
     envmap (NULL), usenoise (false), guitimer (0.0f), guistate (GUISTATE_REST_DENSITY),
     framingmesh (NULL)
@@ -87,7 +87,7 @@ Simulation::Simulation (const char *mesh) : width (0), height (0), font ("textur
     UpdateViewMatrix ();
 
     // initialize last frame time
-    last_time = glfwGetTime ();
+    last_time = 0.0f;//glfwGetTime ();
 }
 
 Simulation::~Simulation (void)
@@ -128,36 +128,37 @@ void Simulation::UpdateViewMatrix (void)
     glBufferSubData (GL_UNIFORM_BUFFER, offsetof (lightparams_t, eyepos), sizeof (eyepos), glm::value_ptr (eyepos));
 }
 
-void Simulation::OnMouseMove (const double &x, const double &y)
+void Simulation::Start (void)
 {
-    // handle mouse events and pass them to the camera class
-    if (glfwGetMouseButton (window, GLFW_MOUSE_BUTTON_LEFT))
-    {
-    	// ignore mouse movement, when in highlighting mode
-    	if (glfwGetKey (window, GLFW_KEY_H)) return;
-
-        if (glfwGetKey (window, GLFW_KEY_LEFT_CONTROL))
-        {
-            camera.Zoom (x + y);
-        }
-        else if (glfwGetKey (window, GLFW_KEY_LEFT_SHIFT))
-        {
-            camera.MoveX (x);
-            camera.MoveY (y);
-        }
-        else
-        {
-            camera.Rotate (y, -x);
-        }
-        UpdateViewMatrix ();
-    }
+	running = true;
 }
 
-void Simulation::OnMouseUp (const int &button)
+void Simulation::Stop (void)
 {
+	running = false;
 }
 
-void Simulation::OnMouseDown (const int &button)
+void Simulation::Rotate (const float &x, const float &y)
+{
+	camera.Rotate (y, -x);
+	UpdateViewMatrix ();
+}
+
+void Simulation::Zoom (const float &amount)
+{
+	camera.Zoom (amount);
+	UpdateViewMatrix ();
+}
+
+void Simulation::Move (const float &x, const float &y)
+{
+	camera.MoveX (x);
+	camera.MoveY (y);
+	UpdateViewMatrix ();
+}
+
+
+/*void Simulation::OnMouseDown (const int &button)
 {
 	if (glfwGetKey (window, GLFW_KEY_H))
 	{
@@ -201,7 +202,7 @@ void Simulation::OnMouseDown (const int &button)
 			glDeleteBuffers (1, &tmpbuffer);
 		}
 	}
-}
+}*/
 
 const unsigned int Simulation::GetNumberOfParticles (void) const
 {
@@ -278,7 +279,7 @@ void Simulation::ResetParticleBuffer (void)
     glClearBufferData (GL_SHADER_STORAGE_BUFFER, GL_R8UI, GL_RED, GL_UNSIGNED_INT, NULL);
 }
 
-void Simulation::OnKeyDown (int key)
+/*void Simulation::OnKeyDown (int key)
 {
 	switch (key)
 	{
@@ -287,11 +288,11 @@ void Simulation::OnKeyDown (int key)
 		sph.SetExternalForce (true);
 		break;
 	}
-}
+}*/
 
-void Simulation::OnKeyUp (int key)
+/*void Simulation::OnKeyUp (int key)
 {
-    switch (key)
+   switch (key)
     {
     // toggle surface reconstruction
     case GLFW_KEY_ENTER:
@@ -435,11 +436,11 @@ void Simulation::OnKeyUp (int key)
     	guistate = (guistate_t) key;
     	guitimer = 5.0f;
     }
-}
+}*/
 
 bool Simulation::Frame (void)
 {
-    float time_passed = glfwGetTime () - last_time;
+    float time_passed = 0.0f;//glfwGetTime () - last_time;
     last_time += time_passed;
 
     GLenum err = glGetError ();
@@ -491,14 +492,14 @@ bool Simulation::Frame (void)
 
     // determine the framerate every second
     framecount++;
-    if (glfwGetTime () >= last_fps_time + 1)
+    /*if (glfwGetTime () >= last_fps_time + 1)
     {
         fps = framecount;
         framecount = 0;
         last_fps_time = glfwGetTime ();
-    }
+    }*/
     // display the framerate
-    {
+/*    {
         std::stringstream stream;
         stream << "FPS: " << fps << std::endl;
         font.PrintStr (0, 0, stream.str ());
@@ -540,6 +541,6 @@ bool Simulation::Frame (void)
         	}
     		font.PrintStr (39.0f - float (stream.str ().size ()) / 2.0f, 0, stream.str ());
         }
-    }
+    }*/
     return true;
 }

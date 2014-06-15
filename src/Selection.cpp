@@ -54,7 +54,8 @@ Selection::~Selection (void)
 
 GLint Selection::GetParticle (GLuint positionbuffer, GLuint numparticles, float xpos, float ypos)
 {
-	// setup viewport according to the specified position
+return -1;
+/*	// setup viewport according to the specified position
 	int width, height;
 	glfwGetFramebufferSize (window, &width, &height);
 	glBindFramebuffer (GL_FRAMEBUFFER, selectionfb);
@@ -81,5 +82,5 @@ GLint Selection::GetParticle (GLuint positionbuffer, GLuint numparticles, float 
 	selectiontexture.Bind (GL_TEXTURE_2D);
 	GLint id;
 	glGetTexImage (GL_TEXTURE_2D, 0, GL_RED_INTEGER, GL_INT, &id);
-	return id;
+	return id;*/
 }

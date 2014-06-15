@@ -43,7 +43,7 @@ NeighbourCellFinder::NeighbourCellFinder (const GLuint &_numparticles, const glm
     // allocate grid clear buffer
 	// (only needed if GL_ARB_clear_texture is not available)
 	GLuint tmpbuffer;
-    if (!GLEXTS.ARB_clear_texture)
+    if (!GLEW_ARB_clear_texture)
     {
     	glGenBuffers (1, &tmpbuffer);
     	glBindBuffer (GL_PIXEL_UNPACK_BUFFER, tmpbuffer);
@@ -70,7 +70,7 @@ NeighbourCellFinder::NeighbourCellFinder (const GLuint &_numparticles, const glm
     }
 
     // clear grid texture
-    if (!GLEXTS.ARB_clear_texture)
+    if (!GLEW_ARB_clear_texture)
     {
     	glBindBuffer (GL_PIXEL_UNPACK_BUFFER, 0);
     	glDeleteBuffers (1, &tmpbuffer);
@@ -114,7 +114,7 @@ const Texture &NeighbourCellFinder::GetResult (void) const
 void NeighbourCellFinder::FindNeighbourCells (const GLuint &particlebuffer)
 {
     // clear grid buffer
-	if (GLEXTS.ARB_clear_texture)
+	if (GLEW_ARB_clear_texture)
 	{
 		GLint v = -1;
 		glClearTexImage (gridtexture.get (), 0, GL_RED_INTEGER, GL_INT, &v);

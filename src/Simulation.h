@@ -49,41 +49,16 @@ public:
      */
     ~Simulation (void);
 
-    /** Mouse movement event.
-     * Handles mouse movement events.
-     * \param x relative movement of the cursor in x direction
-     * \param y relative movement of the cursor in y direction
-     */
-    void OnMouseMove (const double &x, const double &y);
-
-    /** Mouse button event.
-     * Handles mouse button events.
-     * \param button button that was pressed.
-     */
-    void OnMouseDown (const int &button);
-
-    /** Mouse button event.
-     * Handles mouse button events.
-     * \param button button that was released.
-     */
-    void OnMouseUp (const int &button);
+	void Start (void);
+	void Stop (void);
+	void Zoom (const float &amount);
+	void Move (const float &x, const float &y);
+	void Rotate (const float &x, const float &y);
 
     /** Reset particle buffer.
      * Resets the particle buffer containing the particle information.
      */
     void ResetParticleBuffer (void);
-
-    /** Key up event.
-     * Handles key release events.
-     * \param key key that was released
-     */
-    void OnKeyUp (int key);
-
-    /** Key down event.
-     * Handles key press events.
-     * \param key key that was pressed
-     */
-    void OnKeyDown (int key);
 
     /** Resize event.
      * Handles window resize event.
