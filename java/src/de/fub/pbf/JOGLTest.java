@@ -1,6 +1,7 @@
 package de.fub.pbf;
 
 import com.jogamp.opengl.util.Animator;
+import de.fub.pbf.impl.JNIPBF;
 
 import javax.media.opengl.GLAutoDrawable;
 import javax.media.opengl.GLCapabilities;
@@ -9,12 +10,10 @@ import javax.media.opengl.GLProfile;
 import javax.media.opengl.awt.GLCanvas;
 import java.awt.*;
 import java.awt.event.*;
-import java.util.*;
 
-public class JOGLTest extends JNIPBFWrapper implements ComponentListener, GLEventListener {
+public class JOGLTest implements ComponentListener, GLEventListener {
 
-    public static void main(String[] args) {
-        System.load("C:\\Users\\Moritz\\IdeaProjects\\jnitest\\libpbf_jni.jnilib");
+    public static void main(String[] args) throws Exception {
         new JOGLTest().run();
     }
 
@@ -27,8 +26,10 @@ public class JOGLTest extends JNIPBFWrapper implements ComponentListener, GLEven
     public boolean running;
 
     protected int lastX=-1, lastY=-1;
+    protected PBF pbf;
 
-    private void run() {
+    private void run() throws JNIPBF.JNIInitializationException {
+        pbf = JNIPBF.getInstance();
         //System.out.println(System.getProperty("java.library.path"));
         canvas.addGLEventListener(this);
 
@@ -50,11 +51,11 @@ public class JOGLTest extends JNIPBFWrapper implements ComponentListener, GLEven
                     int relX = e.getX() - lastX;
                     int relY = e.getY() - lastY;
                     if(isCtrl) {
-                        move(relX, relY);
+                        pbf.move(relX, relY);
                     } else if(isShift) {
-                        zoom(relX - relY);
+                        pbf.zoom(relX - relY);
                     } else {
-                        rotate (relX, relY);
+                        pbf.rotate(relX, relY);
                     }
                 }
                 lastX = e.getX();
@@ -74,9 +75,9 @@ public class JOGLTest extends JNIPBFWrapper implements ComponentListener, GLEven
                     case KeyEvent.VK_SPACE:
                         running = !running;
                         if (running) {
-                            start();
+                            pbf.start();
                         } else {
-                            stop();
+                            pbf.stop();
                         }
                 }
             }
@@ -105,9 +106,9 @@ public class JOGLTest extends JNIPBFWrapper implements ComponentListener, GLEven
                     case KeyEvent.VK_SPACE:
                         running = !running;
                         if (running) {
-                            start();
+                            pbf.start();
                         } else {
-                            stop();
+                            pbf.stop();
                         }
                         break;
                 }
@@ -148,7 +149,7 @@ public class JOGLTest extends JNIPBFWrapper implements ComponentListener, GLEven
     @Override
     public void init(GLAutoDrawable glAutoDrawable) {
         try {
-            init();
+            pbf.init();
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -156,16 +157,16 @@ public class JOGLTest extends JNIPBFWrapper implements ComponentListener, GLEven
 
     @Override
     public void dispose(GLAutoDrawable glAutoDrawable) {
-        dispose();
+        pbf.dispose();
     }
 
     @Override
     public void display(GLAutoDrawable glAutoDrawable) {
-        display();
+        pbf.display();
     }
 
     @Override
     public void reshape(GLAutoDrawable glAutoDrawable, int i, int i2, int w, int h) {
-        resized(w,h);
+        pbf.resized(w,h);
     }
 }

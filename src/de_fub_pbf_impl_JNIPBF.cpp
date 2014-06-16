@@ -1,11 +1,11 @@
-#include "de_fub_pbf_JNIPBFWrapper.h"
+#include "de_fub_pbf_impl_JNIPBF.h"
 #include "Simulation.h"
 #include <iostream>
 #include <exception>
 
 Simulation *simulation = NULL;
 
-JNIEXPORT jboolean JNICALL Java_de_fub_pbf_JNIPBFWrapper__1resized
+JNIEXPORT jboolean JNICALL Java_de_fub_pbf_impl_JNIPBF__1resized
   (JNIEnv *, jobject, jint w, jint h)
   {
 	if (simulation)
@@ -31,7 +31,7 @@ void _glMemoryBarrier_ATIHACK (GLbitfield bitfield)
 	_glMemoryBarrier_BROKEN_ATIHACK (bitfield);
 }
 
-JNIEXPORT jboolean JNICALL Java_de_fub_pbf_JNIPBFWrapper__1init
+JNIEXPORT jboolean JNICALL Java_de_fub_pbf_impl_JNIPBF__1init
   (JNIEnv *, jobject)
   {
   	if (glewInit () != GLEW_OK)
@@ -58,7 +58,7 @@ JNIEXPORT jboolean JNICALL Java_de_fub_pbf_JNIPBFWrapper__1init
 	}
   }
 
-JNIEXPORT jboolean JNICALL Java_de_fub_pbf_JNIPBFWrapper__1display
+JNIEXPORT jboolean JNICALL Java_de_fub_pbf_impl_JNIPBF__1display
   (JNIEnv *, jobject)
   {
   	if (simulation)
@@ -75,7 +75,7 @@ JNIEXPORT jboolean JNICALL Java_de_fub_pbf_JNIPBFWrapper__1display
 
   }
 
-JNIEXPORT jboolean JNICALL Java_de_fub_pbf_JNIPBFWrapper__1start
+JNIEXPORT jboolean JNICALL Java_de_fub_pbf_impl_JNIPBF__1start
   (JNIEnv *, jobject)
   {
 	if (simulation)
@@ -91,7 +91,7 @@ JNIEXPORT jboolean JNICALL Java_de_fub_pbf_JNIPBFWrapper__1start
 	else return false;
   }
 
-JNIEXPORT jboolean JNICALL Java_de_fub_pbf_JNIPBFWrapper__1stop
+JNIEXPORT jboolean JNICALL Java_de_fub_pbf_impl_JNIPBF__1stop
   (JNIEnv *, jobject)
   {
 	if (simulation)
@@ -107,7 +107,7 @@ JNIEXPORT jboolean JNICALL Java_de_fub_pbf_JNIPBFWrapper__1stop
 	else return false;
   }
 
-JNIEXPORT jboolean JNICALL Java_de_fub_pbf_JNIPBFWrapper__1zoom
+JNIEXPORT jboolean JNICALL Java_de_fub_pbf_impl_JNIPBF__1zoom
   (JNIEnv *, jobject, jfloat amount)
   {
   	if (simulation)
@@ -124,7 +124,7 @@ JNIEXPORT jboolean JNICALL Java_de_fub_pbf_JNIPBFWrapper__1zoom
 
   }
   
-JNIEXPORT jboolean JNICALL Java_de_fub_pbf_JNIPBFWrapper__1rotate
+JNIEXPORT jboolean JNICALL Java_de_fub_pbf_impl_JNIPBF__1rotate
   (JNIEnv *, jobject, jfloat x, jfloat y)
 {
   	if (simulation)
@@ -140,7 +140,7 @@ JNIEXPORT jboolean JNICALL Java_de_fub_pbf_JNIPBFWrapper__1rotate
 	else return false;
   }
    
-JNIEXPORT jboolean JNICALL Java_de_fub_pbf_JNIPBFWrapper__1move
+JNIEXPORT jboolean JNICALL Java_de_fub_pbf_impl_JNIPBF__1move
   (JNIEnv *, jobject, jfloat x, jfloat y)
   {
   	if (simulation)
@@ -156,7 +156,7 @@ JNIEXPORT jboolean JNICALL Java_de_fub_pbf_JNIPBFWrapper__1move
 	else return false;
   }
  
-JNIEXPORT void JNICALL Java_de_fub_pbf_JNIPBFWrapper_dispose
+JNIEXPORT jboolean JNICALL Java_de_fub_pbf_impl_JNIPBF__1dispose
   (JNIEnv *, jobject)
   {
 	if (simulation)
@@ -164,4 +164,5 @@ JNIEXPORT void JNICALL Java_de_fub_pbf_JNIPBFWrapper_dispose
 		delete simulation;
 		simulation = NULL;
 	}
+	return true;
   }
