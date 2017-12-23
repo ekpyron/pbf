@@ -19,7 +19,7 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-#version 430 core
+//#version 430 core
 
 // enable early z culling
 layout (early_fragment_tests) in;

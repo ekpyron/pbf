@@ -27,7 +27,7 @@
 #include <iostream>
 #include <stdexcept>
 #include <glcorew.h>
-#define GLM_SWIZZLE
+#define GLM_FORCE_SWIZZLE
 #define GLM_FORCE_RADIANS
 #include <glm/glm.hpp>
 #include <glm/gtc/type_ptr.hpp>

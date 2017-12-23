@@ -269,7 +269,7 @@ void Simulation::ResetParticleBuffer (void)
 
     // clear highlight buffer
     glBindBuffer (GL_SHADER_STORAGE_BUFFER, sph.GetHighlightBuffer ());
-    glClearBufferData (GL_SHADER_STORAGE_BUFFER, GL_R8UI, GL_RED, GL_UNSIGNED_INT, NULL);
+    glClearBufferData (GL_SHADER_STORAGE_BUFFER, GL_R8UI, GL_RED_INTEGER, GL_UNSIGNED_INT, NULL);
 }
 
 void Simulation::OnKeyDown (int key)

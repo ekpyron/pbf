@@ -33,8 +33,7 @@ RadixSort::RadixSort (GLuint _blocksize, GLuint _numblocks, const glm::ivec3 &gr
 	: blocksize (_blocksize), numblocks (_numblocks)
 {
 	std::stringstream stream;
-	stream << "#version 430 core" << std::endl
-		   << "const vec3 GRID_SIZE = vec3 (" << gridsize.x << ", " << gridsize.y << ", " << gridsize.z << ");" << std::endl
+	stream << "const vec3 GRID_SIZE = vec3 (" << gridsize.x << ", " << gridsize.y << ", " << gridsize.z << ");" << std::endl
 		   << "const ivec3 GRID_HASHWEIGHTS = ivec3 (1, " << gridsize.x * gridsize.z <<  ", " << gridsize.x << ");" << std::endl
 		   << "#define BLOCKSIZE " << blocksize << std::endl
 		   << "#define HALFBLOCKSIZE " << (blocksize / 2) << std::endl;
@@ -105,7 +104,7 @@ RadixSort::RadixSort (GLuint _blocksize, GLuint _numblocks, const glm::ivec3 &gr
 	{
 		unsigned int &blocksum = blocksums[i];
 		glBindBuffer (GL_SHADER_STORAGE_BUFFER, blocksum);
-		glClearBufferData (GL_SHADER_STORAGE_BUFFER, GL_RGBA32UI, GL_RGBA, GL_UNSIGNED_INT, NULL);
+		glClearBufferData (GL_SHADER_STORAGE_BUFFER, GL_RGBA32UI, GL_RGBA_INTEGER, GL_UNSIGNED_INT, NULL);
 	}
 }
 

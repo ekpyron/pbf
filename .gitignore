@@ -1,7 +1,9 @@
 build*/
+cmake-build-*/
 Debug/
 Release/
 .project
 .cproject
 .settings/
 html/
+.idea/

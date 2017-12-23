@@ -37,8 +37,12 @@ void ShaderProgram::CompileShader (GLenum type, const std::string &filename, con
     std::vector<char> data;
     GLint length = 0;
 
+    // prepend #version statement
+    const char version[] = "#version 430 core\n";
+    data.assign(version, version + (sizeof(version) / sizeof(version[0]) - 1));
+
     // prepend header
-    data.assign (header.begin (), header.end ());
+    data.insert (data.end (), header.begin (), header.end ());
 
     // fix line count
     const std::string linedef = "\n#line 1\n";

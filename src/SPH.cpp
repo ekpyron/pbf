@@ -27,8 +27,7 @@ SPH::SPH (const GLuint &_numparticles, const glm::ivec3 &gridsize)
 {
 	// shader definitions
 	std::stringstream stream;
-	stream << "#version 430 core" << std::endl
-		   << "const vec3 GRID_SIZE = vec3 (" << gridsize.x << ", " << gridsize.y << ", " << gridsize.z << ");" << std::endl
+	stream << "const vec3 GRID_SIZE = vec3 (" << gridsize.x << ", " << gridsize.y << ", " << gridsize.z << ");" << std::endl
 		   << "const ivec3 GRID_HASHWEIGHTS = ivec3 (1, " << gridsize.x * gridsize.z <<  ", " << gridsize.x << ");" << std::endl
 		   << std::endl
 #ifdef SPH_CONSTANT_PARAMETERS
@@ -98,7 +97,7 @@ SPH::SPH (const GLuint &_numparticles, const glm::ivec3 &gridsize)
     // allocate highlight buffer
     glBindBuffer (GL_SHADER_STORAGE_BUFFER, highlightbuffer);
    	glBufferData (GL_SHADER_STORAGE_BUFFER, sizeof (GLuint) * numparticles, NULL, GL_DYNAMIC_COPY);
-    glClearBufferData (GL_SHADER_STORAGE_BUFFER, GL_R32UI, GL_RED, GL_UNSIGNED_INT, NULL);
+    glClearBufferData (GL_SHADER_STORAGE_BUFFER, GL_R32UI, GL_RED_INTEGER, GL_UNSIGNED_INT, NULL);
 
     // create highlight buffer
     highlighttexture.Bind (GL_TEXTURE_BUFFER);

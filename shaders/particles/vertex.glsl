@@ -19,7 +19,7 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-#version 430 core
+//#version 430 core
 
 // input vertex attributes
 layout (location = 0) in vec2 vPosition;
