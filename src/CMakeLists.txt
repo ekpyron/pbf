@@ -11,8 +11,27 @@ if (WIN32)
 endif (WIN32)
 
 file (GLOB PBF_SOURCES *.cpp)
+set(PBF_SOURCES
+        common.h
+        Blur.h Blur.cpp
+        Camera.h Camera.cpp
+        Font.h Font.cpp
+        Framing.h Framing.cpp
+        FullscreenQuad.h FullscreenQuad.cpp
+        NeighbourCellFinder.h NeighbourCellFinder.cpp
+        PointSprite.h PointSprite.cpp
+        RadixSort.h RadixSort.cpp
+        Selection.h Selection.cpp
+        ShaderProgram.h ShaderProgram.cpp
+        Simulation.h Simulation.cpp
+        Skybox.h Skybox.cpp
+        SPH.h SPH.cpp
+        SurfaceReconstruction.h SurfaceReconstruction.cpp
+        Texture.h Texture.cpp)
 
-add_executable (pbf ${PBF_SOURCES})
+add_library(pbf_lib ${PBF_SOURCES})
+target_link_libraries(pbf_lib glfw ${PNG_LIBRARIES} ${OPENGL_LIBRARIES} glcorew spdlog Threads::Threads)
 
-target_link_libraries (pbf glfw ${PNG_LIBRARIES} ${OPENGL_LIBRARIES} glcorew spdlog Threads::Threads)
+add_executable (pbf main.cpp)
+target_link_libraries (pbf pbf_lib)
 add_dependencies(pbf shaders-target textures-target)

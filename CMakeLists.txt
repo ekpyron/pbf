@@ -17,6 +17,10 @@ add_subdirectory (textures)
 add_subdirectory (src)
 add_subdirectory (glcorew)
 
+add_library(catch2 INTERFACE)
+target_include_directories(catch2 INTERFACE "${CMAKE_CURRENT_SOURCE_DIR}/libs/Catch2/single_include")
+add_subdirectory(test)
+
 find_package (Doxygen QUIET)
 
 if (DOXYGEN_FOUND)
