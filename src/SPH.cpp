@@ -21,9 +21,9 @@
  */
 #include "SPH.h"
 
-SPH::SPH(const GLuint &_numparticles, const glm::ivec3 &gridsize)
+SPH::SPH(GLuint _numparticles, const glm::ivec3 &gridsize)
         : numparticles(_numparticles), vorticityconfinement(false), radixsort(512, _numparticles >> 9, gridsize),
-          neighbourcellfinder(_numparticles, gridsize), num_solveriterations(5) {
+          neighbourcellfinder(_numparticles, gridsize), num_solveriterations(5),_grid_size(gridsize) {
     // shader definitions
     std::stringstream stream;
     stream << "const vec3 GRID_SIZE = vec3 (" << gridsize.x << ", " << gridsize.y << ", " << gridsize.z << ");"
@@ -90,47 +90,47 @@ SPH::SPH(const GLuint &_numparticles, const glm::ivec3 &gridsize)
     clearhighlightprog.Link();
 
     // create query objects
-    glGenQueries(5, queries);
+    glGenQueries(queries.size(), queries.data());
 
     // create buffer objects
-    glGenBuffers(6, buffers);
+    glCreateBuffers(buffers.size(), buffers.data());
 
     // allocate lambda buffer
-    glBindBuffer(GL_SHADER_STORAGE_BUFFER, lambdabuffer);
-    glBufferData(GL_SHADER_STORAGE_BUFFER, sizeof(float) * numparticles, NULL, GL_DYNAMIC_COPY);
+    glNamedBufferStorage(lambdabuffer, sizeof(float) * numparticles, nullptr, 0);
 
     // create lambda texture
     lambdatexture.Bind(GL_TEXTURE_BUFFER);
     glTexBuffer(GL_TEXTURE_BUFFER, GL_R32F, lambdabuffer);
 
     // allocate highlight buffer
-    glBindBuffer(GL_SHADER_STORAGE_BUFFER, highlightbuffer);
-    glBufferData(GL_SHADER_STORAGE_BUFFER, sizeof(GLuint) * numparticles, NULL, GL_DYNAMIC_COPY);
-    glClearBufferData(GL_SHADER_STORAGE_BUFFER, GL_R32UI, GL_RED_INTEGER, GL_UNSIGNED_INT, NULL);
+    glNamedBufferStorage(_highlight_buffer, sizeof(GLuint) * numparticles, nullptr, 0);
+    glClearNamedBufferData(_highlight_buffer, GL_R32UI, GL_RED_INTEGER, GL_UNSIGNED_INT, nullptr);
 
     // create highlight buffer
     highlighttexture.Bind(GL_TEXTURE_BUFFER);
-    glTexBuffer(GL_TEXTURE_BUFFER, GL_R32UI, highlightbuffer);
+    glTexBuffer(GL_TEXTURE_BUFFER, GL_R32UI, _highlight_buffer);
 
     // allocate vorticity buffer
-    glBindBuffer(GL_SHADER_STORAGE_BUFFER, vorticitybuffer);
-    glBufferData(GL_SHADER_STORAGE_BUFFER, sizeof(float) * numparticles, NULL, GL_DYNAMIC_COPY);
+    glNamedBufferStorage(vorticitybuffer, sizeof(float) * numparticles, nullptr, 0);
+
+    // allocate species buffer
+    glNamedBufferStorage(_species_buffer, sizeof(uint8_t) * numparticles, nullptr, 0);
+    _species_texture.Bind(GL_TEXTURE_BUFFER);
+    glTexBuffer(GL_TEXTURE_BUFFER, GL_R8UI, _species_buffer);
 
     // allocate position buffer
-    glBindBuffer(GL_SHADER_STORAGE_BUFFER, positionbuffer);
-    glBufferData(GL_SHADER_STORAGE_BUFFER, 4 * sizeof(float) * numparticles, NULL, GL_DYNAMIC_COPY);
+    glNamedBufferStorage(_position_buffer, 4 * sizeof(float) * numparticles, nullptr, 0);
 
     // create position texture
     positiontexture.Bind(GL_TEXTURE_BUFFER);
-    glTexBuffer(GL_TEXTURE_BUFFER, GL_RGBA32F, positionbuffer);
+    glTexBuffer(GL_TEXTURE_BUFFER, GL_RGBA32F, _position_buffer);
 
     // allocate velocity buffer
-    glBindBuffer(GL_SHADER_STORAGE_BUFFER, velocitybuffer);
-    glBufferData(GL_SHADER_STORAGE_BUFFER, 4 * sizeof(float) * numparticles, NULL, GL_DYNAMIC_COPY);
+    glNamedBufferStorage(_velocity_buffer, 4 * sizeof(float) * numparticles, nullptr, 0);
 
     // create velocity texture
     velocitytexture.Bind(GL_TEXTURE_BUFFER);
-    glTexBuffer(GL_TEXTURE_BUFFER, GL_RGBA32F, velocitybuffer);
+    glTexBuffer(GL_TEXTURE_BUFFER, GL_RGBA32F, _velocity_buffer);
 
     // create sph parameter buffer
 #ifndef SPH_CONSTANT_PARAMETERS
@@ -152,8 +152,8 @@ SPH::SPH(const GLuint &_numparticles, const glm::ivec3 &gridsize)
 
 SPH::~SPH(void) {
     // cleanup
-    glDeleteBuffers(6, buffers);
-    glDeleteQueries(5, queries);
+    glDeleteBuffers(buffers.size(), buffers.data());
+    glDeleteQueries(queries.size(), queries.data());
 }
 
 float SPH::Wpoly6(const float &r, const float &h) {
@@ -266,6 +266,33 @@ void SPH::Run(void) {
         radixsort.Run();
     }
     glEndQuery(GL_TIME_ELAPSED);
+
+    {
+        GLuint tmpbuffer;
+        glCreateBuffers(1, &tmpbuffer);
+        glNamedBufferStorage(tmpbuffer, sizeof(float) * 4 * numparticles, nullptr, GL_MAP_READ_BIT);
+
+        glCopyNamedBufferSubData(radixsort.GetBuffer(), tmpbuffer, 0, 0, sizeof(float) * 4 * numparticles);
+
+        const glm::vec4 *data = reinterpret_cast<const glm::vec4*>(glMapNamedBuffer(tmpbuffer, GL_READ_ONLY));
+
+        for (auto i = 0U; i < numparticles - 1; i++) {
+
+            auto data1 = glm::clamp(glm::ivec3(data[i]), glm::ivec3(0,0,0), _grid_size);
+            auto data2 = glm::clamp(glm::ivec3(data[i + 1]), glm::ivec3(0,0,0), _grid_size);
+            auto key1 = glm::dot(glm::vec3(data1), glm::vec3(grid_hashweights()));
+            auto key2 = glm::dot(glm::vec3(data2), glm::vec3(grid_hashweights()));
+
+            if (key2 < key1) {
+                spdlog::get("console")->critical("Bäh {}: {} < {}", i, key2, key1);
+                spdlog::get("console")->critical("  ({},{},{}) ; ({},{},{})", data[i].x, data[i].y, data[i].z, data[i + 1].x, data[i + 1].y, data[i + 1].z);
+            }
+        }
+
+        glUnmapNamedBuffer(tmpbuffer);
+
+        glDeleteBuffers(1, &tmpbuffer);
+    }
 
     glBeginQuery(GL_TIME_ELAPSED, neighbourcellquery);
     {

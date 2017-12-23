@@ -89,5 +89,5 @@ void PointSprite::Render (GLuint instances) const
     glBindVertexArray (vertexarray);
     glBindBuffer (GL_ELEMENT_ARRAY_BUFFER, indexbuffer);
     // render the framing
-    glDrawElementsInstanced (GL_TRIANGLES, 6, GL_UNSIGNED_SHORT, 0, instances);
+    glDrawElementsInstanced (GL_TRIANGLES, 6, GL_UNSIGNED_SHORT, nullptr, instances);
 }

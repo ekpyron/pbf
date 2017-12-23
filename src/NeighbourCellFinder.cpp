@@ -127,7 +127,10 @@ void NeighbourCellFinder::FindNeighbourCells (const GLuint &particlebuffer)
 
     glBindBufferBase (GL_SHADER_STORAGE_BUFFER, 0, particlebuffer);
 
-    // find grid cells
+    // find grid cells: this will set up grid textures containing boundaries of grid cells with begin and end:
+    // - gridtexture(i,j,k) = n -> particle n is the first particle of the (i,j,k) box
+    // - gridendtexture(i,j,k) = m -> particle m-1 is the last particle of the (i,j,k) box
+    // - gridtexture(i,j,k) = -1 -> no particle in this box
     glBindImageTexture (0, gridtexture.get (), 0, GL_TRUE, 0, GL_WRITE_ONLY, GL_R32I);
     glBindImageTexture (1, gridendtexture.get (), 0, GL_TRUE, 0, GL_WRITE_ONLY, GL_R32I);
     findcells.Use ();

@@ -19,7 +19,12 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-// header is included here
+
+/**
+ * This shader computes the block-wise prefix sums counting the occurrences of the value of two bits (therefore in [0, 3]).
+ * The result is stored in the prefixsum array.
+ * The total sum of each block is stored in the blocksum array.
+ */
 
 layout (local_size_x = HALFBLOCKSIZE) in;
 
@@ -60,18 +65,25 @@ void main (void)
 {
 	const int gid = int (gl_GlobalInvocationID.x);
 	const int lid = int (gl_LocalInvocationIndex);
-	
+
+	// index in the lower half of the block
 	int ai = lid;
+	// index in the upper half of the block
 	int bi = lid + (n/2);
 	
 	int bankOffsetA = CONFLICT_FREE_OFFSET(ai);
 	int bankOffsetB = CONFLICT_FREE_OFFSET(bi);
-	
-	uint bits1 = bitfieldExtract (GetHash (data[gl_WorkGroupID.x * BLOCKSIZE + lid].xyz), bitshift, 2);
-	uint bits2 = bitfieldExtract (GetHash (data[gl_WorkGroupID.x * BLOCKSIZE + lid + (n/2)].xyz), bitshift, 2);
+
+	// the 2 bits of the hash value at position bitshift, resp. in the lower and upper half of the block
+	// values 0 <= x < 4
+	uint bits1 = bitfieldExtract (GetHash (data[gl_WorkGroupID.x * BLOCKSIZE + ai].xyz), bitshift, 2);
+	uint bits2 = bitfieldExtract (GetHash (data[gl_WorkGroupID.x * BLOCKSIZE + bi].xyz), bitshift, 2);
+
+	// mask containing a single component with a 1 corresponding to the value of bits{1,2}
 	mask[ai + bankOffsetA] = uvec4 (equal (bits1 * uvec4 (1, 1, 1, 1), uvec4 (0, 1, 2, 3)));
 	mask[bi + bankOffsetB] = uvec4 (equal (bits2 * uvec4 (1, 1, 1, 1), uvec4 (0, 1, 2, 3)));
 
+    // build prefix sums of mask
 	int offset = 1;	
 	for (int d = n >> 1; d > 0; d >>= 1)
 	{
@@ -97,13 +109,15 @@ void main (void)
 	{
 		for (int i = 0; i < 4; i++)
 		{
+		    // final entry of prefix sum mask with total sum
 			blocksum[blocksumoffsets[i] + gl_WorkGroupID.x] = uvec4 (mask[n - 1 + CONFLICT_FREE_OFFSET(n - 1)])[i];
 		}
 
+        // reset total sum to 0,0,0,0
 		mask[n - 1 + CONFLICT_FREE_OFFSET(n - 1)] = uvec4 (0, 0, 0, 0);
 	}
 	
-	
+	// shift entries from right to left s.t. the (0,0,0,0) is at the first position and mask contains a prefix sum
 	for (int d = 1; d < n; d *= 2)
 	{
 		offset >>= 1;

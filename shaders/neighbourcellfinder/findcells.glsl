@@ -35,16 +35,22 @@ void main (void)
 {
 	uint gid;
 	gid = gl_GlobalInvocationID.x;
-	
-	if (gid == 0)
-	{
-		imageStore (gridtexture, ivec3 (0, 0, 0), ivec4 (0, 0, 0, 0));
-		return;
-	}
 
 	ivec3 gridpos = ivec3 (clamp (particlekeys[gid].xyz, vec3 (0, 0, 0), GRID_SIZE));
+	// first grid cell starts at the first particle (gid = 0)
+	if (gid == 0)
+	{
+		imageStore (gridtexture, gridpos, ivec4 (0, 0, 0, 0));
+		return;
+	}
+	if (gid == gl_WorkGroupSize.x * BLOCKSIZE - 1) {
+	    imageStore (gridendtexture, gridpos, ivec4 (gid, 0, 0, 0));
+	}
+
 	ivec3 gridpos2 = ivec3 (clamp (particlekeys[gid - 1].xyz, vec3 (0, 0, 0), GRID_SIZE));
-	
+
+	// if the current particle is the first particle in a new grid cell, write its position and the position of its
+	// predecessor into gridtexture and gridendtxture, respectively
 	if (gridpos != gridpos2)
 	{
 		imageStore (gridtexture, gridpos, ivec4 (gid, 0, 0, 0));

@@ -273,12 +273,12 @@ private:
     /** Last frame time.
      * Stores the time when the rendering of the last frame took place.
      */
-    float last_time;
+    double last_time;
 
     /** Last FPS time.
      * Stores the last time the fps count was updated.
      */
-    float last_fps_time;
+    double last_fps_time;
 
     /** GUI timer.
      * Timer storing the time left to display GUI information in seconds.

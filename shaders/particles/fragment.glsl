@@ -57,7 +57,7 @@ void main (void)
 	vec4 fPos = vec4 (fPosition - 0.1 * normal, 1.0);
 	vec4 clipPos = projmat * fPos;
 	float d = clipPos.z / clipPos.w;
-	gl_FragDepth = d;
+	gl_FragDepth = d*.5 + .5;
 	
 	// lighting calculations
 

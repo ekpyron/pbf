@@ -197,7 +197,7 @@ void _glBindBuffersBase (GLenum target, GLuint first, GLsizei count, const GLuin
 bool CheckEnvironment (const char *varname)
 {
 	const char *env = getenv (varname);
-	if (env != NULL) {
+	if (env != nullptr) {
 		switch (env[0])
 		{
 		case '0':
@@ -222,7 +222,7 @@ void initialize (void)
 
     // specify parameters for the opengl context
     glfwWindowHint (GLFW_CONTEXT_VERSION_MAJOR, 4);
-    glfwWindowHint (GLFW_CONTEXT_VERSION_MINOR, 3);
+    glfwWindowHint (GLFW_CONTEXT_VERSION_MINOR, 5);
     glfwWindowHint (GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
     glfwWindowHint (GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
     glfwWindowHint (GLFW_OPENGL_DEBUG_CONTEXT, debugcontext ? GL_TRUE : GL_FALSE);
@@ -256,6 +256,9 @@ void initialize (void)
     {
     	glDebugMessageCallback (glDebugCallback, NULL);
     	glEnable (GL_DEBUG_OUTPUT);
+        spdlog::get("console")->set_level(spdlog::level::debug);
+    } else {
+        spdlog::get("console")->set_level(spdlog::level::warn);
     }
 
     // determine OpenGL extension capabilities and apply workarounds where necessary
@@ -279,7 +282,7 @@ void initialize (void)
     // notify the Simulation class of the initial window dimensions
     int width, height;
     glfwGetFramebufferSize (window, &width, &height);
-    simulation->Resize (width, height);
+    simulation->Resize (static_cast<unsigned int>(width), static_cast<unsigned int>(height));
 }
 
 /** Cleanup.
