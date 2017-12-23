@@ -1,8 +1,17 @@
-cmake_minimum_required (VERSION 2.8)
+cmake_minimum_required (VERSION 3.5)
 set (CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake/Modules")
 
-project (pbf)
+project (pbf C CXX)
 
+set(CMAKE_CXX_STANDARD 11)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
+# ensure that the build directory is not the source directory
+include(MacroOutOfSourceBuild)
+MACRO_ENSURE_OUT_OF_SOURCE_BUILD("${PROJECT_NAME} requires an out source build.")
+
+add_subdirectory (shaders)
+add_subdirectory (textures)
 add_subdirectory (src)
 add_subdirectory (glcorew)
 

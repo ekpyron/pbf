@@ -220,9 +220,6 @@ void initialize (void)
 	// check whether a debug context should be created
 	bool debugcontext = !CheckEnvironment ("PBF_NO_DEBUG_CONTEXT");
 
-    // set GLFW error callback
-    glfwSetErrorCallback (glfwErrorCallback);
-
     // specify parameters for the opengl context
     glfwWindowHint (GLFW_CONTEXT_VERSION_MAJOR, 4);
     glfwWindowHint (GLFW_CONTEXT_VERSION_MINOR, 3);
@@ -321,7 +318,8 @@ bool IsExtensionSupported (const std::string &name)
  */
 int main (int argc, char *argv[])
 {
-    // initialize GLFW
+    // set GLFW error callback
+    glfwSetErrorCallback (glfwErrorCallback);
     if (!glfwInit ())
     {
         std::cerr << "Cannot initialize GLFW." << std::endl;
