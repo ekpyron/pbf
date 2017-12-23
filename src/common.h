@@ -49,6 +49,8 @@
 #define M_PI_2     1.57079632679489661923
 #endif
 
+#include "spdlog/spdlog.h"
+
 extern GLFWwindow *window;
 
 /** Check for OpenGL extension.

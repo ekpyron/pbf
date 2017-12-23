@@ -12,7 +12,7 @@ set(shaders_files
         selection/fragment.glsl selection/vertex.glsl
         skybox/vertex.glsl skybox/fragment.glsl
         sph/calclambda.glsl sph/clearhighlight.glsl sph/highlight.glsl sph/predictpos.glsl
-        sph/update.glsl sph/updatepos.glsl sph/vorticity.glsl
+        sph/update.glsl sph/updatepos.glsl sph/vorticity.glsl sph/foreachneighbour.glsl
         thickness/fragment.glsl thickness/vertex.glsl)
 
 foreach(item IN ITEMS ${shaders_files})

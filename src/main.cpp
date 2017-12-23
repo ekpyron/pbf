@@ -318,6 +318,9 @@ bool IsExtensionSupported (const std::string &name)
  */
 int main (int argc, char *argv[])
 {
+    // initialize logging
+    auto console = spdlog::stdout_color_mt("console");
+
     // set GLFW error callback
     glfwSetErrorCallback (glfwErrorCallback);
     if (!glfwInit ())

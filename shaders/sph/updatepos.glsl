@@ -1,35 +1,18 @@
-/*
- * Copyright (c) 2013-2014 Daniel Kirchner
- *
- * Permission is hereby granted, free of charge, to any person obtaining a copy
- * of this software and associated documentation files (the "Software"), to deal
- * in the Software without restriction, including without limitation the rights
- * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
- * copies of the Software, and to permit persons to whom the Software is
- * furnished to do so, subject to the following conditions:
- *
- * The above copyright notice and this permission notice shall be included in
- * all copies or substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
- * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
- * FITNESS FOR A PARTICULAR PURPOSE ANDNONINFRINGEMENT. IN NO EVENT SHALL THE
- * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
- * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
- * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
- * THE SOFTWARE.
- */
-// header is included here
-
 layout (local_size_x = BLOCKSIZE) in;
 
-layout (std430, binding = 0) buffer ParticleKeys
+struct ParticleKey {
+	vec3 pos;
+	int id;
+};
+
+layout (std430, binding = 1) buffer ParticleKeys
 {
-	vec4 particlekeys[];
+	ParticleKey particlekeys[];
 };
 
 layout (binding = 2) uniform isamplerBuffer neighbourcelltexture;
 layout (binding = 3) uniform samplerBuffer lambdatexture;
+layout (binding = 4) uniform sampler3D collisiontexture;
 
 float Wpoly6 (float r)
 {
@@ -56,20 +39,9 @@ vec3 gradWspiky (vec3 r)
 	return (-3 * 4.774648292756860 * tmp * tmp) * r / (l * h*h*h*h*h*h);
 }
 
-#define FOR_EACH_NEIGHBOUR(var) for (int o = 0; o < 3; o++) {\
-		ivec3 datav = texelFetch (neighbourcelltexture, int (gl_GlobalInvocationID.x * 3 + o)).xyz;\
-		for (int comp = 0; comp < 3; comp++) {\
-		int data = datav[comp];\
-		int entries = data >> 24;\
-		data = data & 0xFFFFFF;\
-		if (data == 0) continue;\
-		for (int var = data; var < data + entries; var++) {\
-		if (var != gl_GlobalInvocationID.x) {
-#define END_FOR_EACH_NEIGHBOUR(var)	}}}}
-
 void main (void)
 {
-	vec3 position = particlekeys[gl_GlobalInvocationID.x].xyz;
+	vec3 position = particlekeys[gl_GlobalInvocationID.x].pos;
 
 	vec3 deltap = vec3 (0, 0, 0);
 	
@@ -80,7 +52,7 @@ void main (void)
 	{
 		// This might fetch an already updated position,
 		// but that doesn't cause any harm.
-		vec3 position_j = particlekeys[j].xyz;
+		vec3 position_j = particlekeys[j].pos;
 		
 		float scorr = tensile_instability_scale * Wpoly6 (distance (position, position_j));
 		scorr *= scorr;
@@ -94,12 +66,40 @@ void main (void)
 	}
 	END_FOR_EACH_NEIGHBOUR(j)
 
-	position += one_over_rho_0 * deltap;
+    /*deltap *= one_over_rho_0;
 
-	// collision detection begin
-	vec3 wall = vec3 (16, 0, 16);
+    float dist = length (deltap);
+    int num_taps = int (floor (dist)) +1;
+    float step = 1.0f / float (num_taps);
+
+    for (int i = 0; i < num_taps; i++) {
+        position += step * deltap;
+    	vec4 constraint = texture (collisiontexture, position / GRID_SIZE);
+	    //vec4 constraint = texelFetch (collisiontexture, ivec3 (position), 0);
+	    float epsilon = dot (position.xyz, constraint.xyz) - constraint.w;
+	    if (epsilon < 0) {
+    		position -= 2*epsilon * constraint.xyz;
+    		break;
+    	}
+    }*/
+    position += one_over_rho_0 * deltap;
+
+
+/*	// collision detection begin
+	vec3 wall = vec3 (1, 1, 1);
+
+	vec3 walldist = position - wall;
+
+	position = wall + walldist * (vec3 (greaterThan (walldist, vec3 (0, 0, 0))) * 1.75 - 0.75);
+
+	walldist = (GRID_SIZE - wall) - position;
+	position = (GRID_SIZE - wall) - walldist * (vec3 (greaterThan (walldist, vec3 (0, 0, 0))) * 1.75 - 0.75);*/
+
+	vec3 wall = vec3 (16, 0, 16 );
+
 	position = clamp (position, vec3 (0, 0, 0) + wall, GRID_SIZE - wall);
+	/*position = clamp (position, vec3 (-16, 0, -16), vec3 (16, 16, 16));*/
 	// collision detection end
-	
-	particlekeys[gl_GlobalInvocationID.x].xyz = position;
+
+	particlekeys[gl_GlobalInvocationID.x].pos = position;
 }

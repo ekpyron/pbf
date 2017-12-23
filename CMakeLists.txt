@@ -3,12 +3,14 @@ set (CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake/Modules")
 
 project (pbf C CXX)
 
-set(CMAKE_CXX_STANDARD 11)
+set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 # ensure that the build directory is not the source directory
 include(MacroOutOfSourceBuild)
 MACRO_ENSURE_OUT_OF_SOURCE_BUILD("${PROJECT_NAME} requires an out source build.")
+
+add_subdirectory(libs/spdlog)
 
 add_subdirectory (shaders)
 add_subdirectory (textures)

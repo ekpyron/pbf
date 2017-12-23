@@ -23,10 +23,16 @@
 
 layout (local_size_x = BLOCKSIZE) in;
 
-layout (std430, binding = 0) buffer ParticleKeys
-{
-	vec4 particlekeys[];
+struct ParticleKey {
+	vec3 pos;
+	int id;
 };
+
+layout (std430, binding = 1) readonly buffer ParticleKeys
+{
+	ParticleKey particlekeys[];
+};
+
 
 layout (binding = 2) uniform isamplerBuffer neighbourcelltexture;
 layout (binding = 0, r32f) uniform writeonly imageBuffer lambdatexture;
@@ -57,29 +63,18 @@ vec3 gradWspiky (vec3 r)
 	return (-3 * 4.774648292756860 * tmp * tmp) * r / (l * h*h*h*h*h*h);
 }
 
-#define FOR_EACH_NEIGHBOUR(var) for (int o = 0; o < 3; o++) {\
-		ivec3 datav = texelFetch (neighbourcelltexture, int (gl_GlobalInvocationID.x * 3 + o)).xyz;\
-		for (int comp = 0; comp < 3; comp++) {\
-		int data = datav[comp];\
-		int entries = data >> 24;\
-		data = data & 0xFFFFFF;\
-		if (data == 0) continue;\
-		for (int var = data; var < data + entries; var++) {\
-		if (var != gl_GlobalInvocationID.x) {
-#define END_FOR_EACH_NEIGHBOUR(var)	}}}}
-
 void main (void)
 {
-	vec3 position = particlekeys[gl_GlobalInvocationID.x].xyz;
+	vec3 position = particlekeys[gl_GlobalInvocationID.x].pos;
 
 	float sum_k_grad_Ci = 0;
 	float rho = 0;
 
 	vec3 grad_pi_Ci = vec3 (0, 0, 0);
-	
+
 	FOR_EACH_NEIGHBOUR(j)
 	{
-		vec3 position_j = particlekeys[j].xyz;
+		vec3 position_j = particlekeys[j].pos;
 		
 		// compute rho_i (equation 2)
 		float len = distance (position, position_j);
