@@ -245,6 +245,14 @@ public:
      */
     void OutputTiming();
 
+    const RadixSort &radix_sort() const {
+        return _radix_sort;
+    }
+
+    RadixSort &radix_sort() {
+        return _radix_sort;
+    }
+
 private:
     /** Upload SPH parameters.
      * Uploads the SPH parameter buffer to the contents of the sphparams
@@ -350,7 +358,7 @@ private:
      * Takes care of sorting the particle list.
      * The contained buffer object is used as particle buffer.
      */
-    RadixSort radixsort;
+    RadixSort _radix_sort;
 
     /** Lambda texture.
      * Texture used to access the lambda buffer.

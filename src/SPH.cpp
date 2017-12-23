@@ -22,7 +22,7 @@
 #include "SPH.h"
 
 SPH::SPH(GLuint _numparticles, const glm::ivec3 &gridsize)
-        : numparticles(_numparticles), vorticityconfinement(false), radixsort(512, _numparticles >> 9, gridsize),
+        : numparticles(_numparticles), vorticityconfinement(false), _radix_sort(512, _numparticles >> 9, gridsize),
           neighbourcellfinder(_numparticles, gridsize), num_solveriterations(5),_grid_size(gridsize) {
     // shader definitions
     std::stringstream stream;
@@ -247,7 +247,7 @@ void SPH::Run(void) {
     glBeginQuery(GL_TIME_ELAPSED, predictposquery);
     {
         // predict positions
-        glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, radixsort.GetBuffer());
+        glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, _radix_sort.GetBuffer());
 
         positiontexture.Bind(GL_TEXTURE_BUFFER);
         glActiveTexture(GL_TEXTURE1);
@@ -263,7 +263,7 @@ void SPH::Run(void) {
     glBeginQuery(GL_TIME_ELAPSED, sortquery);
     {
         // sort particles
-        radixsort.Run();
+        _radix_sort.Run();
     }
     glEndQuery(GL_TIME_ELAPSED);
 
@@ -272,7 +272,7 @@ void SPH::Run(void) {
         glCreateBuffers(1, &tmpbuffer);
         glNamedBufferStorage(tmpbuffer, sizeof(float) * 4 * numparticles, nullptr, GL_MAP_READ_BIT);
 
-        glCopyNamedBufferSubData(radixsort.GetBuffer(), tmpbuffer, 0, 0, sizeof(float) * 4 * numparticles);
+        glCopyNamedBufferSubData(_radix_sort.GetBuffer(), tmpbuffer, 0, 0, sizeof(float) * 4 * numparticles);
 
         const glm::vec4 *data = reinterpret_cast<const glm::vec4*>(glMapNamedBuffer(tmpbuffer, GL_READ_ONLY));
 
@@ -297,14 +297,14 @@ void SPH::Run(void) {
     glBeginQuery(GL_TIME_ELAPSED, neighbourcellquery);
     {
         // find neighbour cells
-        neighbourcellfinder.FindNeighbourCells(radixsort.GetBuffer());
+        neighbourcellfinder.FindNeighbourCells(_radix_sort.GetBuffer());
     }
     glEndQuery(GL_TIME_ELAPSED);
 
     glBeginQuery(GL_TIME_ELAPSED, solverquery);
     {
         // set buffer bindings
-        glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, radixsort.GetBuffer());
+        glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, _radix_sort.GetBuffer());
 
         glActiveTexture(GL_TEXTURE2);
         neighbourcellfinder.GetResult().Bind(GL_TEXTURE_BUFFER);
