@@ -6,7 +6,7 @@
 
 namespace pbf {
 
-class Swapchain;
+class Renderer;
 
 class Context {
 public:
@@ -16,11 +16,7 @@ public:
     Context(const Context&) = delete;
     Context& operator=(const Context&) = delete;
 
-    void run() {
-        while (!_window->shouldClose()) {
-            _glfw.pollEvents();
-        }
-    }
+    void run();
 
     const vk::Device &device() const { return *_device; }
     const vk::PhysicalDevice &physicalDevice() const { return _physicalDevice; }
@@ -29,6 +25,9 @@ public:
     const vk::SurfaceFormatKHR &surfaceFormat() const { return _surfaceFormat; }
     const vk::PresentModeKHR &presentMode() const { return _presentMode; }
     const auto &families() const { return _families; }
+    const vk::Queue &graphicsQueue() const { return _graphicsQueue; }
+    const vk::Queue &presentQueue() const { return _presentQueue; }
+    const vk::CommandPool &commandPool() const { return *_commandPool; }
 
 private:
 
@@ -103,7 +102,9 @@ private:
     vk::SurfaceFormatKHR _surfaceFormat {vk::Format::eB8G8R8A8Unorm, vk::ColorSpaceKHR::eSrgbNonlinear};
     vk::PresentModeKHR _presentMode {vk::PresentModeKHR::eFifo};
 
-    std::unique_ptr<Swapchain> _swapchain;
+    vk::UniqueCommandPool _commandPool;
+
+    std::unique_ptr<Renderer> _renderer;
 };
 
 }

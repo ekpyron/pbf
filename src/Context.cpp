@@ -8,7 +8,7 @@
  */
 
 #include "Context.h"
-#include "Swapchain.h"
+#include "Renderer.h"
 
 namespace pbf {
 
@@ -100,7 +100,8 @@ Context::Context() {
         if(it != std::end(modes)) _presentMode = *it;
     }
 
-    _swapchain = std::make_unique<Swapchain>(this);
+    _commandPool = _device->createCommandPoolUnique({{}, _families.graphics});
+    _renderer = std::make_unique<Renderer>(this);
 }
 
 Context::~Context() = default;
@@ -123,6 +124,13 @@ Context::debugReportCallback(VkDebugReportFlagsEXT flags, VkDebugReportObjectTyp
     }
     return VK_FALSE;
 
+}
+
+void Context::run() {
+    while (!_window->shouldClose()) {
+        _glfw.pollEvents();
+        _renderer->render();
+    }
 }
 
 }

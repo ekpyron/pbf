@@ -17,6 +17,10 @@ class Swapchain {
 public:
     Swapchain(Context* context, vk::SwapchainKHR oldSwapChain = nullptr);
 
+    const vk::SwapchainKHR &swapchain() const { return *_swapchain; }
+
+    const std::vector<vk::Image> &images() const { return _images; }
+    const std::vector<vk::UniqueImageView> &imageViews() const { return _imageViews; };
 private:
     vk::Extent2D _extent;
     vk::UniqueSwapchainKHR _swapchain;
