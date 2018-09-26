@@ -82,6 +82,12 @@ public:
         return vk::UniqueSurfaceKHR(surface, {instance});
     }
 
+    auto framebufferSize() const {
+        int width, height;
+        glfwGetFramebufferSize(_window, &width, &height);
+        return std::make_tuple(static_cast<std::uint32_t>(width), static_cast<std::uint32_t>(height));
+    }
+
 private:
     GLFWwindow *_window;
 

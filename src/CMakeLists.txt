@@ -1,4 +1,4 @@
-set(SOURCES main.cpp glfw.h Context.cpp Context.h common.h)
+set(SOURCES main.cpp glfw.h Context.cpp Context.h common.h Swapchain.cpp Swapchain.h)
 
 add_executable(${PROJECT_NAME} ${SOURCES})
-target_link_libraries(${PROJECT_NAME} PUBLIC glfw fmt vulkan spdlog)
+target_link_libraries(${PROJECT_NAME} PUBLIC glfw fmt vulkan spdlog glm)
