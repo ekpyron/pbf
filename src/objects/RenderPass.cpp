@@ -13,6 +13,7 @@
 namespace pbf {
 
 objects::RenderPass::RenderPass(Context *context, const objects::RenderPass::Descriptor &desc) {
-    _renderPass = context->device().createRenderPassUnique(desc.toCreateInfo());
+    auto info = desc.toCreateInfo();
+    _renderPass = context->device().createRenderPassUnique(info);
 }
 }

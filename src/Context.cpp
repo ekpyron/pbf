@@ -123,7 +123,6 @@ Context::debugReportCallback(VkDebugReportFlagsEXT flags, VkDebugReportObjectTyp
         logger->info("Vulkan ({}): \"{}\", Object: {:#x}", pLayerPrefix, pMessage, object);
     }
     return VK_FALSE;
-
 }
 
 void Context::run() {

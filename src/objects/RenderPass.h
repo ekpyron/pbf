@@ -52,6 +52,12 @@ public:
 
         Descriptor(const vk::RenderPassCreateFlags &flags) : _flags(flags) {}
 
+        Descriptor (const Descriptor&) = delete;
+        Descriptor &operator=(const Descriptor &) = delete;
+        Descriptor (Descriptor &&) = default;
+        Descriptor &operator=(Descriptor &&) = default;
+        ~Descriptor() = default;
+
 
         bool operator<(const Descriptor &rhs) const {
             using T = Descriptor;

@@ -63,7 +63,7 @@ private:
 template<typename T>
 class CachedObject {
 public:
-    CachedObject(Cache *cache, const typename T::Descriptor &objdesc) : _cache(cache), _objdesc(objdesc) {}
+    CachedObject(Cache *cache, typename T::Descriptor &&objdesc) : _cache(cache), _objdesc(std::move(objdesc)) {}
 
     CachedObject(const CachedObject &) = delete;
 
@@ -119,11 +119,20 @@ public:
     using T = typename Descriptor::Result;
 
     TypedCache(Cache *cache) : _cache(cache) {}
+/*
+    template<typename D>
+    CacheReference<T> fetch(D&& descriptor) {
+        auto it = _set.find(descriptor);
+        if (it == _set.end())
+            it = _set.emplace(_cache, std::forward<D>(descriptor)).first;
+        return {&*it};
+    }
+*/
 
     CacheReference<T> fetch(Descriptor &&descriptor) {
         auto it = _set.find(descriptor);
         if (it == _set.end())
-            it = _set.emplace(_cache, descriptor).first;
+            it = _set.emplace(_cache, std::move(descriptor)).first;
         return {&*it};
     }
 
