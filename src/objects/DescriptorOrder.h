@@ -11,6 +11,7 @@
 #include <cstddef>
 #include <type_traits>
 #include <vector>
+#include <optional>
 
 namespace pbf {
 
@@ -55,9 +56,10 @@ template<auto M1, auto... M>
 struct MemberComparator<M1, M...> {
 
     template<typename A, typename N, typename T>
-    bool compare(const A& lhs, const A& rhs, T N::*m) const {
+    bool compare(const A& lhs, const A& rhs, T N::*const m) const {
         return DescriptorOrder<T>()(lhs.*m, rhs.*m);
     }
+
     template<typename A, auto ptrMember, auto sizeMember>
     bool compare(const A& lhs, const A& rhs, detail::AutoListType<ptrMember, sizeMember>*) const {
         if constexpr (std::is_integral_v<decltype(sizeMember)>) {
@@ -87,6 +89,16 @@ template<typename T>
 struct DescriptorOrder {
     bool operator()(const T &lhs, const T &rhs) const {
         return lhs < rhs;
+    }
+};
+
+template<typename T>
+struct DescriptorOrder<std::optional<T>> {
+
+    bool operator()(const std::optional<T> &lhs, const std::optional<T> &rhs) const {
+        if(!rhs) return false;
+        if(!lhs) return true;
+        return DescriptorOrder<T>()(lhs.value(), rhs.value());
     }
 };
 

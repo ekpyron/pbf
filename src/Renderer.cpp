@@ -17,9 +17,11 @@ Renderer::Renderer(Context *context) : _context(context){
     _imageAvailableSemaphore = context->device().createSemaphoreUnique({});
     _renderFinishedSemaphore = context->device().createSemaphoreUnique({});
 
-    _renderPass = context->cache().fetch(objects::RenderPass::Descriptor{
-
-    });
+    {
+        auto descriptor = objects::RenderPass::Descriptor{{}};
+        _renderPass = context->cache().fetch(std::move(descriptor));
+    }
+    *_renderPass;
 
     reset();
 }

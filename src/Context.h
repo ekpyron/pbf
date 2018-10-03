@@ -107,7 +107,7 @@ private:
 
     vk::UniqueCommandPool _commandPool;
 
-    Cache _cache {100};
+    Cache _cache { this, 100 };
 
     std::unique_ptr<Renderer> _renderer;
 };
