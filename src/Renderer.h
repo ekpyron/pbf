@@ -18,6 +18,10 @@ public:
     explicit Renderer(Context *context);
 
     void render();
+
+    CacheReference<objects::RenderPass> renderPass() const {
+        return _renderPass;
+    }
 private:
 
     void reset();

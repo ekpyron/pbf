@@ -105,6 +105,14 @@ public:
         return _obj->get();
     }
 
+    T *operator->() {
+        return &**this;
+    }
+
+    void keepAlive() {
+        **this;
+    }
+
     operator bool() const {
         return _obj;
     }

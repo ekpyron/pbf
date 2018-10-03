@@ -31,7 +31,7 @@ public:
     const vk::Queue &presentQueue() const { return _presentQueue; }
     const vk::CommandPool &commandPool() const { return *_commandPool; }
     Cache &cache() { return _cache; }
-
+    const Renderer &renderer() const { return *_renderer; }
 private:
 
     auto getPhysicalDevice() {

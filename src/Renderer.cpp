@@ -35,11 +35,11 @@ Renderer::Renderer(Context *context) : _context(context) {
         });
         _renderPass = context->cache().fetch(std::move(descriptor));
     }
-    *_renderPass;
     reset();
 }
 
 void Renderer::render() {
+    _renderPass.keepAlive();
     const auto &device = _context->device();
     auto[result, imageIndex] = device.acquireNextImageKHR(_swapchain->swapchain(), TIMEOUT, *_imageAvailableSemaphore,
                                                           nullptr);
@@ -70,9 +70,10 @@ void Renderer::render() {
 }
 
 void Renderer::reset() {
-    _swapchain = std::make_unique<Swapchain>(_context, _swapchain ? _swapchain->swapchain() : nullptr);
+    _swapchain = std::make_unique<Swapchain>(_context, _renderPass->get(), _swapchain ? _swapchain->swapchain() : nullptr);
     const auto &images = _swapchain->images();
     const auto &imageViews = _swapchain->imageViews();
+    const auto &framebuffers = _swapchain->frameBuffers();
     _commandBuffers = _context->device().allocateCommandBuffersUnique({
                                                                               _context->commandPool(),
                                                                               vk::CommandBufferLevel::ePrimary,
@@ -82,7 +83,13 @@ void Renderer::reset() {
     for (std::size_t i = 0; i < images.size(); ++i) {
         auto &buf = _commandBuffers[i];
         buf->begin({vk::CommandBufferUsageFlagBits::eSimultaneousUse, nullptr});
-        {
+        vk::ClearValue clearValue;
+        clearValue.setColor({ std::array<float, 4> { 0.0f, 1.0f, 0.0f, 1.0f }});
+        buf->beginRenderPass(vk::RenderPassBeginInfo{
+                                     (*_renderPass).get(), *framebuffers[i], vk::Rect2D{{}, _swapchain->extent()}, 1, &clearValue
+        }, vk::SubpassContents::eInline);
+        buf->endRenderPass();
+        /*{
             auto imb = vk::ImageMemoryBarrier().setOldLayout(vk::ImageLayout::ePresentSrcKHR)
                     .setNewLayout(vk::ImageLayout::eGeneral)
                     .setSrcQueueFamilyIndex(_context->families().present)
@@ -104,7 +111,7 @@ void Renderer::reset() {
                     .setSubresourceRange(vk::ImageSubresourceRange{vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1});
             buf->pipelineBarrier(vk::PipelineStageFlagBits::eTopOfPipe, vk::PipelineStageFlagBits::eTopOfPipe, {}, {},
                                  {}, {{imb}});
-        }
+        }*/
         buf->end();
     }
 }

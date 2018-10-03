@@ -8,10 +8,11 @@
  */
 #include "Swapchain.h"
 #include "glm/glm.hpp"
+#include "Renderer.h"
 
 namespace pbf {
 
-Swapchain::Swapchain(Context *context, vk::SwapchainKHR oldSwapChain) {
+Swapchain::Swapchain(Context *context, const vk::RenderPass& renderPass, vk::SwapchainKHR oldSwapChain) {
     const auto &device = context->device();
     const auto &physicalDevice = context->physicalDevice();
     const auto &surfaceCapabilities = physicalDevice.getSurfaceCapabilitiesKHR(context->surface());
@@ -67,10 +68,12 @@ Swapchain::Swapchain(Context *context, vk::SwapchainKHR oldSwapChain) {
     }
 
     _frameBuffers.reserve(_images.size());
-    /*for(const auto &iv : _imageViews) {
+    for(const auto &iv : _imageViews) {
         _frameBuffers.emplace_back(device.createFramebufferUnique(
-
+                vk::FramebufferCreateInfo(
+                        {}, renderPass, 1, &*iv, _extent.width, _extent.height, 1
+                )
                 ));
-    }*/
+    }
 }
 }

@@ -15,12 +15,14 @@ namespace pbf {
 
 class Swapchain {
 public:
-    Swapchain(Context* context, vk::SwapchainKHR oldSwapChain = nullptr);
+    Swapchain(Context* context, const vk::RenderPass& renderPass, vk::SwapchainKHR oldSwapChain = nullptr);
 
     const vk::SwapchainKHR &swapchain() const { return *_swapchain; }
 
     const std::vector<vk::Image> &images() const { return _images; }
     const std::vector<vk::UniqueImageView> &imageViews() const { return _imageViews; };
+    const std::vector<vk::UniqueFramebuffer> &frameBuffers() const { return _frameBuffers; };
+    const vk::Extent2D &extent() const { return _extent; }
 
     std::size_t size() const {
         return _images.size();
