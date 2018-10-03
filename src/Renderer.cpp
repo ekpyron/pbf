@@ -8,6 +8,8 @@
  */
 #include "Renderer.h"
 
+static constexpr std::uint64_t TIMEOUT = std::numeric_limits<std::uint64_t>::max();
+
 namespace pbf {
 
 Renderer::Renderer(Context *context) : _context(context){
@@ -15,12 +17,13 @@ Renderer::Renderer(Context *context) : _context(context){
     _imageAvailableSemaphore = context->device().createSemaphoreUnique({});
     _renderFinishedSemaphore = context->device().createSemaphoreUnique({});
 
+
     reset();
 }
 
 void Renderer::render() {
     const auto &device = _context->device();
-    auto [result, imageIndex] = device.acquireNextImageKHR(_swapchain->swapchain(), std::numeric_limits<std::uint64_t>::max(), *_imageAvailableSemaphore, nullptr);
+    auto [result, imageIndex] = device.acquireNextImageKHR(_swapchain->swapchain(), TIMEOUT, *_imageAvailableSemaphore, nullptr);
 
     switch (result) {
         case vk::Result::eErrorOutOfDateKHR: {
@@ -51,10 +54,6 @@ void Renderer::reset() {
     _swapchain = std::make_unique<Swapchain>(_context, _swapchain ? _swapchain->swapchain() : nullptr);
     const auto &images = _swapchain->images();
     const auto &imageViews = _swapchain->imageViews();
-    {
-        _frameBuffers.reserve(imageViews.size());
-        // todo
-    }
     _commandBuffers = _context->device().allocateCommandBuffersUnique({
         _context->commandPool(), vk::CommandBufferLevel::ePrimary, static_cast<uint32_t>(imageViews.size())
     });

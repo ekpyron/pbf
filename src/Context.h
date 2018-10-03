@@ -3,6 +3,8 @@
 #include <vulkan/vulkan.hpp>
 #include "common.h"
 #include "glfw.h"
+#include "objects/RenderPass.h"
+#include "Cache.h"
 
 namespace pbf {
 
@@ -103,6 +105,8 @@ private:
     vk::PresentModeKHR _presentMode {vk::PresentModeKHR::eFifo};
 
     vk::UniqueCommandPool _commandPool;
+
+    Cache<objects::RenderPass> _renderPassCache {100};
 
     std::unique_ptr<Renderer> _renderer;
 };

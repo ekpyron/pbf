@@ -65,5 +65,12 @@ Swapchain::Swapchain(Context *context, vk::SwapchainKHR oldSwapChain) {
             { vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1}
         }));
     }
+
+    _frameBuffers.reserve(_images.size());
+    /*for(const auto &iv : _imageViews) {
+        _frameBuffers.emplace_back(device.createFramebufferUnique(
+
+                ));
+    }*/
 }
 }

@@ -21,11 +21,16 @@ public:
 
     const std::vector<vk::Image> &images() const { return _images; }
     const std::vector<vk::UniqueImageView> &imageViews() const { return _imageViews; };
+
+    std::size_t size() const {
+        return _images.size();
+    }
 private:
     vk::Extent2D _extent;
     vk::UniqueSwapchainKHR _swapchain;
     std::vector<vk::Image> _images;
     std::vector<vk::UniqueImageView> _imageViews;
+    std::vector<vk::UniqueFramebuffer> _frameBuffers;
 };
 
 }

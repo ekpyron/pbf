@@ -26,7 +26,6 @@ private:
     std::unique_ptr<Swapchain> _swapchain;
     vk::UniqueSemaphore _imageAvailableSemaphore;
     vk::UniqueSemaphore _renderFinishedSemaphore;
-    std::vector<vk::UniqueFramebuffer> _frameBuffers;
     std::vector<vk::UniqueCommandBuffer> _commandBuffers;
 };
 
