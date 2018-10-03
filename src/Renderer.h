@@ -23,6 +23,7 @@ private:
     void reset();
 
     Context *_context;
+    CacheReference<objects::RenderPass> _renderPass;
     std::unique_ptr<Swapchain> _swapchain;
     vk::UniqueSemaphore _imageAvailableSemaphore;
     vk::UniqueSemaphore _renderFinishedSemaphore;

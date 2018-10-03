@@ -33,6 +33,7 @@ struct SubpassDescriptor {
 class RenderPass {
 public:
     struct Descriptor {
+        typedef RenderPass Result;
         std::vector<vk::AttachmentDescription> attachments;
         std::vector<SubpassDescriptor> subpasses;
         std::vector<vk::SubpassDependency> subpassDependencies;

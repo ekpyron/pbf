@@ -30,6 +30,7 @@ public:
     const vk::Queue &graphicsQueue() const { return _graphicsQueue; }
     const vk::Queue &presentQueue() const { return _presentQueue; }
     const vk::CommandPool &commandPool() const { return *_commandPool; }
+    Cache &cache() { return _cache; }
 
 private:
 
@@ -106,7 +107,7 @@ private:
 
     vk::UniqueCommandPool _commandPool;
 
-    Cache<objects::RenderPass> _renderPassCache {100};
+    Cache _cache {100};
 
     std::unique_ptr<Renderer> _renderer;
 };

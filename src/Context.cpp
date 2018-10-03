@@ -129,6 +129,7 @@ Context::debugReportCallback(VkDebugReportFlagsEXT flags, VkDebugReportObjectTyp
 void Context::run() {
     while (!_window->shouldClose()) {
         _glfw.pollEvents();
+        _cache.frame();
         _renderer->render();
     }
 }

@@ -17,6 +17,9 @@ Renderer::Renderer(Context *context) : _context(context){
     _imageAvailableSemaphore = context->device().createSemaphoreUnique({});
     _renderFinishedSemaphore = context->device().createSemaphoreUnique({});
 
+    _renderPass = context->cache().fetch(objects::RenderPass::Descriptor{
+
+    });
 
     reset();
 }
