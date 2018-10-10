@@ -9,6 +9,7 @@
 #pragma once
 
 #include <pbf/common.h>
+#include <vulkan/vulkan.hpp>
 
 namespace pbf::objects {
 
@@ -19,9 +20,13 @@ public:
     public:
         using Result = GraphicsPipeline;
         Descriptor();
+
+        auto toDescription() const {
+            return vk::GraphicsPipelineCreateInfo({}, )
+        }
     };
 
-    GraphicsPipeline();
+    GraphicsPipeline(Context *context, const Descriptor &descriptor);
 };
 
 }

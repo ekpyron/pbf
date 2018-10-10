@@ -8,8 +8,10 @@
  */
 #pragma once
 
-#include "spdlog/spdlog.h"
-#include "spdlog/sinks/stdout_color_sinks.h"
+#include <spdlog/spdlog.h>
+#include <spdlog/sinks/stdout_color_sinks.h>
+
+#include <vulkan/vulkan.hpp>
 
 namespace pbf {
 class Context;
