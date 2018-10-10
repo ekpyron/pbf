@@ -7,3 +7,6 @@
 [submodule "contrib/glm"]
 	path = contrib/glm
 	url = https://github.com/g-truc/glm.git
+[submodule "contrib/crampl"]
+	path = contrib/crampl
+	url = https://github.com/ekpyron/crampl
