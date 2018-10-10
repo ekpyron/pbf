@@ -16,10 +16,8 @@ find_package(glfw3 REQUIRED)
 find_package(Vulkan REQUIRED)
 
 add_subdirectory(contrib/fmt)
-
 add_definitions(-DSPDLOG_FMT_EXTERNAL)
 add_subdirectory(contrib/spdlog)
-
 add_subdirectory(contrib/glm)
 add_subdirectory(contrib/crampl)
 

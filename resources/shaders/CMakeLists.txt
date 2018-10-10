@@ -7,7 +7,7 @@ macro(add_shader OUTPUT_NAME)
 
 
     add_custom_command(OUTPUT ${FULL_OUT}
-            DEPENDS ${ARGN}
+            DEPENDS ${ARGN} ${GLSLANG_VALIDATOR}
             COMMAND ${GLSLANG_VALIDATOR} --target-env vulkan1.1 -t -o ${FULL_OUT} ${ARGN}
             WORKING_DIRECTORY ${CMAKE_CURRENT_LIST_DIR}
             VERBATIM

@@ -105,11 +105,24 @@ public:
         return _obj->get();
     }
 
+    const T &operator*() const {
+        if (!_obj) throw std::runtime_error("Empty cache reference dereferenced");
+        return _obj->get();
+    }
+
     T *operator->() {
         return &**this;
     }
 
+    const T *operator->() const {
+        return &**this;
+    }
+
     void keepAlive() {
+        **this;
+    }
+
+    void keepAlive() const {
         **this;
     }
 

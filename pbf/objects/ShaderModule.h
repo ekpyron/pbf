@@ -21,6 +21,8 @@ public:
     };
 
     ShaderModule (Context* context, const Descriptor &descriptor);
+
+    const vk::ShaderModule & get() const { return *_shaderModule; }
 private:
     vk::UniqueShaderModule _shaderModule;
 };

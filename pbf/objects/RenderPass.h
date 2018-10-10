@@ -99,7 +99,7 @@ public:
 
     RenderPass(Context *context, const Descriptor &desc);
 
-    const vk::RenderPass &get() {
+    const vk::RenderPass &get() const {
         return *_renderPass;
     }
 private:
