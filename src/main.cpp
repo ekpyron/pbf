@@ -15,7 +15,6 @@ int main() {
     using namespace pbf;
     try {
         auto logger = spdlog::stdout_color_mt("console");
-        logger->error("Some error message with arg: {}", 1);
         Context context;
         context.run();
 

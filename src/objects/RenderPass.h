@@ -39,7 +39,7 @@ struct SubpassDescriptor {
 
     bool operator<(const SubpassDescriptor &rhs) const {
         using T = SubpassDescriptor;
-        return MemberComparator<&T::flags, &T::pipelineBindPoint, &T::inputAttachments, &T::colorAttachments, &T::resolveAttachments,
+        return DescriptorMemberComparator<&T::flags, &T::pipelineBindPoint, &T::inputAttachments, &T::colorAttachments, &T::resolveAttachments,
                 &T::depthStencilAttachment, &T::preserveAttachments>()(*this, rhs);
     }
 };
@@ -61,7 +61,7 @@ public:
 
         bool operator<(const Descriptor &rhs) const {
             using T = Descriptor;
-            return MemberComparator<&T::_flags, &T::_attachments, &T::_subpasses, &T::_subpassDependencies>()(
+            return DescriptorMemberComparator<&T::_flags, &T::_attachments, &T::_subpasses, &T::_subpassDependencies>()(
                     *this,rhs
             );
         }
