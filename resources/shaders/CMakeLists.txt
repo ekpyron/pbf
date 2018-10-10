@@ -15,5 +15,6 @@ macro(add_shader OUTPUT_NAME)
 endmacro()
 
 add_shader(test.spv test.vert)
+add_shader(test_frag.spv test.frag)
 
 add_custom_target(shaders-target DEPENDS "${shaders_out}")

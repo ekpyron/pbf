@@ -130,6 +130,10 @@ public:
         return _obj;
     }
 
+    bool operator<(const CacheReference &rhs) const {
+        return _obj < rhs._obj;
+    }
+
 private:
     const CachedObject<T> *_obj = nullptr;
 };

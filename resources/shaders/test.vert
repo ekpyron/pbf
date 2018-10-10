@@ -6,5 +6,10 @@ out gl_PerVertex {
 };
 
 void main() {
-    gl_Position = vec4(0, 0, 0, 0);
+    vec4 vertices[] = {
+        vec4(0, -0.5, 0, 1),
+        vec4(0.5, 0.5, 0, 1),
+        vec4(-0.5, 0.5, 0, 1)
+    };
+    gl_Position = vertices[gl_VertexIndex];
 }

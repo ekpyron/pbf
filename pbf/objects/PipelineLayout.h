@@ -17,6 +17,8 @@ public:
 
     struct Descriptor {
         using Result = PipelineLayout;
+
+        bool operator<(const Descriptor &rhs) const { return false; }
     };
 
     const vk::PipelineLayout &get() const {

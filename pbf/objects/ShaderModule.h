@@ -18,6 +18,10 @@ public:
         using Result = ShaderModule;
 
         std::string filename;
+
+        bool operator<(const Descriptor &rhs) const {
+            return filename < rhs.filename;
+        }
     };
 
     ShaderModule (Context* context, const Descriptor &descriptor);

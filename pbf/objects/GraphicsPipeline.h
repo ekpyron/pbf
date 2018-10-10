@@ -84,6 +84,10 @@ public:
             _subpass = value;
         }
 
+        void addDynamicState(vk::DynamicState state) {
+            _dynamicStates.push_back(state);
+        }
+
         bool operator<(const Descriptor &rhs) const {
             using T = Descriptor;
             return DescriptorMemberComparator<&T::_stages, &T::_bindingDescriptions, &T::_vertexInputAttributeDescriptions,
@@ -91,6 +95,14 @@ public:
                 &T::_multisampleStateCreateInfo, &T::_depthStencilStateCreateInfo, &T::_colorBlendAttachmentStates,
                 &T::_dynamicStates, &T::_blendConstants, &T::_blendLogicOpEnabled, &T::_blendLogicOp, &T::_subpass,
                 &T::_viewport, &T::_scissor, &T::_pipelineLayout, &T::_renderPass>()(*this, rhs);
+        }
+
+        void setPipelineLayout(CacheReference<PipelineLayout> layout) {
+            _pipelineLayout = layout;
+        }
+
+        void setRenderPass(CacheReference<RenderPass> renderPass) {
+            _renderPass = renderPass;
         }
 
     private:

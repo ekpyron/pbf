@@ -15,11 +15,10 @@
 
 namespace pbf {
 
+template<typename T, typename U>
+using enable_if_same_t = std::enable_if_t<std::is_same_v<T, U>>;
 
-template<typename T>
-struct DescriptorOrder;
-
-template<typename T>
+template<typename T, typename = void>
 struct DescriptorOrder {
     bool operator()(const T &lhs, const T &rhs) const {
         return lhs < rhs;
@@ -45,8 +44,36 @@ struct DescriptorOrder<std::vector<T>> {
     }
 };
 
+template<typename... Args>
+struct DescriptorOrder<std::tuple<Args...>> {
+
+    bool operator()(const std::tuple<Args...> &lhs, const std::tuple<Args...> &rhs) const {
+        return DescriptorOrderTupleElement<0>()(lhs, rhs);
+    }
+private:
+    template<std::size_t N>
+    struct DescriptorOrderTupleElement {
+        using tup = std::tuple<Args...>;
+
+        bool operator()(const tup& lhs, const tup &rhs) const {
+            if constexpr (N < sizeof...(Args)) {
+                DescriptorOrder<std::tuple_element_t<N, tup>> cmp;
+                if (cmp(std::get<N>(lhs), std::get<N>(rhs)))
+                    return true;
+                if (cmp(std::get<N>(rhs), std::get<N>(lhs)))
+                    return false;
+
+                return DescriptorOrderTupleElement<N + 1>()(lhs, rhs);
+            } else {
+                return false;
+            }
+        }
+    };
+
+};
+
 template<typename T>
-struct EnumDescriptorOrder {
+struct DescriptorOrder<T, std::enable_if_t<std::is_enum_v<T>>> {
     bool operator()(const T& lhs, const T& rhs) const {
         return static_cast<std::underlying_type_t<T>>(lhs) < static_cast<std::underlying_type_t<T>>(rhs);
     }
