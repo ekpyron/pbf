@@ -6,7 +6,9 @@ set(CMAKE_CXX_STANDARD 17)
 find_package(glfw3 REQUIRED)
 find_package(Vulkan REQUIRED)
 
+set(FMT_TEST OFF)
 add_subdirectory(contrib/fmt)
+
 add_definitions(-DSPDLOG_FMT_EXTERNAL)
 add_subdirectory(contrib/spdlog)
 add_subdirectory(contrib/glm)
