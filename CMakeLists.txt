@@ -22,4 +22,4 @@ add_subdirectory(contrib/spdlog)
 add_subdirectory(contrib/glm)
 add_subdirectory(contrib/crampl)
 
-add_subdirectory(src)
+add_subdirectory(pbf)

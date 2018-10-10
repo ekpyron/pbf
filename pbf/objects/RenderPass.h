@@ -9,15 +9,14 @@
 #pragma once
 
 #include <vector>
-#include <vulkan/vulkan.hpp>
 #include <optional>
-#include "DescriptorOrder.h"
 
-namespace pbf {
+#include <vulkan/vulkan.hpp>
 
-class Context;
+#include <pbf/common.h>
+#include <pbf/objects/DescriptorOrder.h>
 
-namespace objects {
+namespace pbf::objects {
 
 struct SubpassDescriptor {
     vk::SubpassDescriptionFlags flags;
@@ -109,5 +108,4 @@ private:
 
 };
 
-}
 }

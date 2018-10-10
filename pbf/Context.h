@@ -1,14 +1,12 @@
 #pragma once
 
 #include <vulkan/vulkan.hpp>
-#include "common.h"
-#include "glfw.h"
-#include "objects/RenderPass.h"
-#include "Cache.h"
+#include <pbf/common.h>
+#include <pbf/glfw.h>
+#include <pbf/objects/RenderPass.h>
+#include <pbf/Cache.h>
 
 namespace pbf {
-
-class Renderer;
 
 class Context {
 public:

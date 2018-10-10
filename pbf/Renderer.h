@@ -8,8 +8,8 @@
  */
 #pragma once
 
-#include "Context.h"
-#include "Swapchain.h"
+#include <pbf/Context.h>
+#include <pbf/Swapchain.h>
 
 namespace pbf {
 
