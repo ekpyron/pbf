@@ -14,16 +14,8 @@
 
 namespace pbf {
 
-template<typename T, typename>
-struct DescriptorOrder;
-
-namespace detail {
-template<typename T>
-using DescriptorOrder = DescriptorOrder<T, void>;
-}
-
 template<auto... M>
-using DescriptorMemberComparator = crampl::MemberComparatorTemplate <detail::DescriptorOrder, M...>;
+using DescriptorMemberComparator = crampl::MemberComparatorTemplate<DescriptorOrder, M...>;
 
 template<typename BitType, typename MaskType>
 struct DescriptorOrder<vk::Flags<BitType, MaskType>> {
@@ -33,44 +25,25 @@ struct DescriptorOrder<vk::Flags<BitType, MaskType>> {
 };
 
 template<auto PtrMember, auto SizeMember>
-constexpr auto DescriptorPointerRangeCompare() {
-    return crampl::PointerRangeCompare<DescriptorOrder, PtrMember, SizeMember>();
-}
+constexpr auto DescriptorPointerRangeCompare = crampl::PointerRangeCompare<DescriptorOrder, PtrMember, SizeMember>();
 
-template<> struct DescriptorOrder<vk::SubpassDescription> {
-    using T = vk::SubpassDescription;
-    bool operator()(const T& lhs, const T& rhs) const {
-        return DescriptorMemberComparator<&T::flags, &T::pipelineBindPoint,
-                DescriptorPointerRangeCompare<&T::pInputAttachments, &T::inputAttachmentCount>(),
-                DescriptorPointerRangeCompare<&T::pColorAttachments, &T::colorAttachmentCount>(),
-                DescriptorPointerRangeCompare<&T::pResolveAttachments, &T::colorAttachmentCount>(),
-                DescriptorPointerRangeCompare<&T::pDepthStencilAttachment, 1>(),
-                DescriptorPointerRangeCompare<&T::pPreserveAttachments, &T::preserveAttachmentCount>()>()(lhs, rhs);
-    }
-};
+template<typename T>
+struct DescriptorOrder<T, enable_if_same_t<T, vk::SubpassDescription>>
+    : DescriptorMemberComparator<&T::flags, &T::pipelineBindPoint,
+                                 DescriptorPointerRangeCompare<&T::pInputAttachments, &T::inputAttachmentCount>,
+                                 DescriptorPointerRangeCompare<&T::pColorAttachments, &T::colorAttachmentCount>,
+                                 DescriptorPointerRangeCompare<&T::pResolveAttachments, &T::colorAttachmentCount>,
+                                 DescriptorPointerRangeCompare<&T::pDepthStencilAttachment, 1>,
+                                 DescriptorPointerRangeCompare<&T::pPreserveAttachments, &T::preserveAttachmentCount>> {};
 
-template<> struct DescriptorOrder<vk::AttachmentReference> {
-    using T = vk::AttachmentReference;
-    bool operator()(const T& lhs, const T&rhs) const {
-        return DescriptorMemberComparator<&T::attachment, &T::layout>()(lhs, rhs);
-    }
-};
+template<typename T>
+struct DescriptorOrder<T, enable_if_same_t<T, vk::AttachmentReference>>
+        : DescriptorMemberComparator<&T::attachment, &T::layout> {};
 
-template<> struct DescriptorOrder<vk::AttachmentDescription> {
-    using T = vk::AttachmentDescription;
-    bool operator()(const T &lhs, const T &rhs) const {
-        return DescriptorMemberComparator<&T::flags, &T::format, &T::samples, &T::loadOp, &T::storeOp, &T::stencilLoadOp,
-                                        &T::stencilStoreOp, &T::initialLayout, &T::finalLayout>()(lhs, rhs);
-    }
-};
-
-template<> struct DescriptorOrder<vk::SubpassDependency> {
-    using T = vk::SubpassDependency;
-    bool operator()(const T &lhs, const T &rhs) const {
-        return DescriptorMemberComparator<&T::srcSubpass, &T::dstSubpass, &T::srcStageMask, &T::dstStageMask,
-                                        &T::srcAccessMask, &T::dstAccessMask, &T::dependencyFlags>()(lhs, rhs);
-    }
-};
+template<typename T>
+struct DescriptorOrder<T, enable_if_same_t<T, vk::AttachmentDescription>>
+        : DescriptorMemberComparator<&T::flags, &T::format, &T::samples, &T::loadOp, &T::storeOp, &T::stencilLoadOp,
+                                     &T::stencilStoreOp, &T::initialLayout, &T::finalLayout> {};
 
 template<typename T>
 struct DescriptorOrder<T, enable_if_same_t<T, vk::SubpassDependency>>
