@@ -3,6 +3,8 @@ project(pbf LANGUAGES CXX VERSION 0.0.0)
 
 set(CMAKE_CXX_STANDARD 17)
 
+set(BUILD_TESTING OFF)
+
 find_package(glfw3 REQUIRED)
 find_package(Vulkan REQUIRED)
 
