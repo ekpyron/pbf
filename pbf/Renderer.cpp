@@ -25,7 +25,7 @@ Renderer::Renderer(Context *context) : _context(context) {
                                           vk::AttachmentStoreOp::eStore, vk::AttachmentLoadOp::eDontCare,
                                           vk::AttachmentStoreOp::eDontCare, vk::ImageLayout::eUndefined,
                                           vk::ImageLayout::ePresentSrcKHR});
-        descriptor.addSubpass(descriptors::SubpassDescriptor{
+        descriptor.addSubpass({
                 .flags = {},
                 .pipelineBindPoint = vk::PipelineBindPoint::eGraphics,
                 .inputAttachments = {},

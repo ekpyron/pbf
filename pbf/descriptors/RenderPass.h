@@ -18,33 +18,24 @@
 
 namespace pbf::descriptors {
 
-struct SubpassDescriptor {
-    vk::SubpassDescriptionFlags flags;
-    vk::PipelineBindPoint pipelineBindPoint;
-    std::vector<vk::AttachmentReference> inputAttachments;
-    std::vector<vk::AttachmentReference> colorAttachments;
-    std::vector<vk::AttachmentReference> resolveAttachments;
-    std::optional<vk::AttachmentReference> depthStencilAttachment;
-    std::vector<std::uint32_t> preserveAttachments;
-
-    auto toDescription() const {
-        return vk::SubpassDescription(flags, pipelineBindPoint, static_cast<uint32_t>(inputAttachments.size()),
-                                      inputAttachments.data(), static_cast<uint32_t>(colorAttachments.size()),
-                                      colorAttachments.data(),
-                                      resolveAttachments.empty() ? nullptr : resolveAttachments.data(),
-                                      depthStencilAttachment ? &*depthStencilAttachment : nullptr,
-                                      static_cast<uint32_t>(preserveAttachments.size()), preserveAttachments.data());
-    }
-
-    bool operator<(const SubpassDescriptor &rhs) const {
-        using T = SubpassDescriptor;
-        return MemberComparator<&T::flags, &T::pipelineBindPoint, &T::inputAttachments, &T::colorAttachments, &T::resolveAttachments,
-                &T::depthStencilAttachment, &T::preserveAttachments>()(*this, rhs);
-    }
-};
-
 class RenderPass {
 public:
+    struct Subpass {
+        vk::SubpassDescriptionFlags flags;
+        vk::PipelineBindPoint pipelineBindPoint;
+        std::vector<vk::AttachmentReference> inputAttachments;
+        std::vector<vk::AttachmentReference> colorAttachments;
+        std::vector<vk::AttachmentReference> resolveAttachments;
+        std::optional<vk::AttachmentReference> depthStencilAttachment;
+        std::vector<std::uint32_t> preserveAttachments;
+
+        bool operator<(const Subpass &rhs) const {
+            using T = Subpass;
+            return MemberComparator<&T::flags, &T::pipelineBindPoint, &T::inputAttachments, &T::colorAttachments, &T::resolveAttachments,
+                    &T::depthStencilAttachment, &T::preserveAttachments>()(*this, rhs);
+        }
+    };
+
     vk::UniqueRenderPass realize(Context *context) const;
 
     bool operator<(const RenderPass &rhs) const {
@@ -52,10 +43,8 @@ public:
         return MemberComparator<&T::_attachments, &T::_subpasses, &T::_subpassDependencies>()(*this, rhs);
     }
 
-    template<typename ... Args>
-    void addSubpass(Args&&... args) {
-        _subpasses.emplace_back(std::forward<Args>(args)...);
-        _subpassDescriptions.push_back(_subpasses.back().toDescription());
+    void addSubpass(Subpass&& subpass) {
+        _subpasses.emplace_back(std::move(subpass));
     }
 
     template<typename... Args>
@@ -70,8 +59,7 @@ public:
 
 private:
     std::vector<vk::AttachmentDescription> _attachments;
-    std::vector<vk::SubpassDescription> _subpassDescriptions;
-    std::vector<SubpassDescriptor> _subpasses;
+    std::vector<Subpass> _subpasses;
     std::vector<vk::SubpassDependency> _subpassDependencies;
 };
 
