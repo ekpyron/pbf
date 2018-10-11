@@ -11,7 +11,7 @@ namespace pbf {
 class Context {
 public:
     Context();
-    ~Context();
+    virtual ~Context();
 
     Context(const Context&) = delete;
     Context& operator=(const Context&) = delete;
@@ -30,42 +30,52 @@ public:
     const vk::CommandPool &commandPool() const { return *_commandPool; }
     Cache &cache() { return _cache; }
     const Renderer &renderer() const { return *_renderer; }
+protected:
+	virtual int ratePhysicalDevice(const vk::PhysicalDevice &physicalDevice) const {
+    	int rating = 0;
+		if (physicalDevice.getProperties().deviceType == vk::PhysicalDeviceType::eDiscreteGpu)
+			rating += 1000;
+		return rating;
+    }
 private:
-
     auto getPhysicalDevice() {
-        for(auto &physicalDevice : _instance->enumeratePhysicalDevices()) {
-            if(physicalDevice.getProperties().deviceType == vk::PhysicalDeviceType::eDiscreteGpu) {
-                {
-                    const auto &properties = physicalDevice.enumerateDeviceExtensionProperties();
-                    auto it = std::find_if(properties.begin(), properties.end(), [](const auto &prop) {
-                        return prop.extensionName == std::string(VK_KHR_SWAPCHAIN_EXTENSION_NAME);
-                    });
-                    if (it == properties.end()) continue;
-                }
-                int graphicsFamily = -1;
-                int presentFamily = -1;
-                {
-                    const auto& queueFamilyProperties = physicalDevice.getQueueFamilyProperties();
-                    for(std::size_t i = 0; i < queueFamilyProperties.size(); ++i) {
-                        const auto& qf = queueFamilyProperties[i];
-                        if(qf.queueFlags & vk::QueueFlagBits::eGraphics) {
-                            graphicsFamily = static_cast<int>(i);
-                        }
-                        if(physicalDevice.getSurfaceSupportKHR(static_cast<uint32_t>(i), *_surface)) {
-                            presentFamily = static_cast<int>(i);
-                        }
-                        if(graphicsFamily >= 0 && presentFamily >= 0) break;
-                    }
-
-                    if(!(graphicsFamily >= 0 && presentFamily >= 0)) continue;
-                }
-                {
-                    if(physicalDevice.getSurfaceFormatsKHR(*_surface).empty()) continue;
-                    if(physicalDevice.getSurfacePresentModesKHR(*_surface).empty()) continue;
-                }
-                return std::make_tuple(physicalDevice,
-                        static_cast<std::uint32_t>(graphicsFamily), static_cast<std::uint32_t>(presentFamily));
+        auto devices = _instance->enumeratePhysicalDevices();
+        std::map<int, const vk::PhysicalDevice*> ratedDevices;
+        for(const auto &physicalDevice : devices) {
+            ratedDevices.emplace(ratePhysicalDevice(physicalDevice), &physicalDevice);
+        }
+        for (auto it = ratedDevices.rbegin(); it != ratedDevices.rend(); ++it) {
+            const auto &physicalDevice = *it->second;
+            {
+                const auto &properties = physicalDevice.enumerateDeviceExtensionProperties();
+                auto it = std::find_if(properties.begin(), properties.end(), [](const auto &prop) {
+                    return prop.extensionName == std::string(VK_KHR_SWAPCHAIN_EXTENSION_NAME);
+                });
+                if (it == properties.end()) continue;
             }
+            int graphicsFamily = -1;
+            int presentFamily = -1;
+            {
+                const auto& queueFamilyProperties = physicalDevice.getQueueFamilyProperties();
+                for(std::size_t i = 0; i < queueFamilyProperties.size(); ++i) {
+                    const auto& qf = queueFamilyProperties[i];
+                    if(qf.queueFlags & vk::QueueFlagBits::eGraphics) {
+                        graphicsFamily = static_cast<int>(i);
+                    }
+                    if(physicalDevice.getSurfaceSupportKHR(static_cast<uint32_t>(i), *_surface)) {
+                        presentFamily = static_cast<int>(i);
+                    }
+                    if(graphicsFamily >= 0 && presentFamily >= 0) break;
+                }
+
+                if(!(graphicsFamily >= 0 && presentFamily >= 0)) continue;
+            }
+            {
+                if(physicalDevice.getSurfaceFormatsKHR(*_surface).empty()) continue;
+                if(physicalDevice.getSurfacePresentModesKHR(*_surface).empty()) continue;
+            }
+            return std::make_tuple(physicalDevice,
+                    static_cast<std::uint32_t>(graphicsFamily), static_cast<std::uint32_t>(presentFamily));
         }
         throw std::runtime_error("No suitable discrete GPU found.");
     }
