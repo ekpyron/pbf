@@ -18,8 +18,7 @@
 
 namespace pbf::descriptors {
 
-class RenderPass {
-public:
+struct RenderPass {
     struct Subpass {
         vk::SubpassDescriptionFlags flags;
         vk::PipelineBindPoint pipelineBindPoint;
@@ -40,27 +39,12 @@ public:
 
     bool operator<(const RenderPass &rhs) const {
         using T = RenderPass;
-        return MemberComparator<&T::_attachments, &T::_subpasses, &T::_subpassDependencies>()(*this, rhs);
+        return MemberComparator<&T::attachments, &T::subpasses, &T::subpassDependencies>()(*this, rhs);
     }
 
-    void addSubpass(Subpass&& subpass) {
-        _subpasses.emplace_back(std::move(subpass));
-    }
-
-    template<typename... Args>
-    void addAttachment(Args&&... args) {
-        _attachments.emplace_back(std::forward<Args>(args)...);
-    }
-
-    template<typename... Args>
-    void addSubpassDependency(Args&&... args) {
-        _subpassDependencies.emplace_back(std::forward<Args>(args)...);
-    }
-
-private:
-    std::vector<vk::AttachmentDescription> _attachments;
-    std::vector<Subpass> _subpasses;
-    std::vector<vk::SubpassDependency> _subpassDependencies;
+    std::vector<vk::AttachmentDescription> attachments;
+    std::vector<Subpass> subpasses;
+    std::vector<vk::SubpassDependency> subpassDependencies;
 };
 
 }

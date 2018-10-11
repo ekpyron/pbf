@@ -19,42 +19,60 @@ Renderer::Renderer(Context *context) : _context(context) {
     _renderFinishedSemaphore = context->device().createSemaphoreUnique({});
 
     {
-        auto descriptor = descriptors::RenderPass{};
-        descriptor.addAttachment(
-                vk::AttachmentDescription{{}, _context->surfaceFormat().format, vk::SampleCountFlagBits::e1, vk::AttachmentLoadOp::eClear,
-                                          vk::AttachmentStoreOp::eStore, vk::AttachmentLoadOp::eDontCare,
-                                          vk::AttachmentStoreOp::eDontCare, vk::ImageLayout::eUndefined,
-                                          vk::ImageLayout::ePresentSrcKHR});
-        descriptor.addSubpass({
-                .flags = {},
-                .pipelineBindPoint = vk::PipelineBindPoint::eGraphics,
-                .inputAttachments = {},
-                .colorAttachments = {{0, vk::ImageLayout::eColorAttachmentOptimal}},
-                .resolveAttachments = {},
-                .depthStencilAttachment = {},
-                .preserveAttachments = {}
+        _renderPass = context->cache().fetch(descriptors::RenderPass {
+            .attachments = {
+                    vk::AttachmentDescription {
+                        {},
+                        _context->surfaceFormat().format,
+                        vk::SampleCountFlagBits::e1,
+                        vk::AttachmentLoadOp::eClear,
+                        vk::AttachmentStoreOp::eStore,
+                        vk::AttachmentLoadOp::eDontCare,
+                        vk::AttachmentStoreOp::eDontCare,
+                        vk::ImageLayout::eUndefined,
+                        vk::ImageLayout::ePresentSrcKHR
+                    }
+            },
+            .subpasses = {
+                    {
+                            .flags = {},
+                            .pipelineBindPoint = vk::PipelineBindPoint::eGraphics,
+                            .inputAttachments = {},
+                            .colorAttachments = {{0, vk::ImageLayout::eColorAttachmentOptimal}},
+                            .resolveAttachments = {},
+                            .depthStencilAttachment = {},
+                            .preserveAttachments = {}
+                    }
+            }
         });
-        _renderPass = context->cache().fetch(std::move(descriptor));
     }
     {
-        auto descriptor = descriptors::GraphicsPipeline{};
-
-        descriptor.addDynamicState(vk::DynamicState::eViewport);
-        descriptor.addDynamicState(vk::DynamicState::eScissor);
-        descriptor.setTopology(vk::PrimitiveTopology::eTriangleList);
-
-        descriptor.addColorBlendAttachmentState(vk::PipelineColorBlendAttachmentState().setColorWriteMask(
-            vk::ColorComponentFlagBits::eR|vk::ColorComponentFlagBits::eG|vk::ColorComponentFlagBits::eB|vk::ColorComponentFlagBits::eA
-        ));
-        descriptor.setRenderPass(_renderPass);
-        descriptor.rasterizationStateCreateInfo().setLineWidth(1.0f);
-        descriptor.setPipelineLayout(context->cache().fetch(descriptors::PipelineLayout{}));
-        auto shaderModule = context->cache().fetch(descriptors::ShaderModule{.filename = "shaders/test.spv"});
-        descriptor.addShaderStage(vk::ShaderStageFlagBits::eVertex, shaderModule, "main");
-        auto fragShaderModule = context->cache().fetch(descriptors::ShaderModule{.filename = "shaders/test_frag.spv"});
-        descriptor.addShaderStage(vk::ShaderStageFlagBits::eFragment, fragShaderModule, "main");
-
-        _graphicsPipeline = context->cache().fetch(std::move(descriptor));
+        _graphicsPipeline = context->cache().fetch(descriptors::GraphicsPipeline{
+                .shaderStages = {
+                        {
+                                .stage = vk::ShaderStageFlagBits::eVertex,
+                                .module = context->cache().fetch(descriptors::ShaderModule{.filename = "shaders/test.spv"}),
+                                .entryPoint = "main"
+                        },
+                        {
+                                .stage = vk::ShaderStageFlagBits::eFragment,
+                                .module = context->cache().fetch(descriptors::ShaderModule{.filename = "shaders/test_frag.spv"}),
+                                .entryPoint = "main"
+                        }
+                },
+                .vertexBindingDescriptions = {},
+                .vertexInputAttributeDescriptions = {},
+                .primitiveTopology = vk::PrimitiveTopology::eTriangleList,
+                .rasterizationStateCreateInfo = vk::PipelineRasterizationStateCreateInfo().setLineWidth(1.0f),
+                .colorBlendAttachmentStates = {
+                        vk::PipelineColorBlendAttachmentState().setColorWriteMask(
+                                vk::ColorComponentFlagBits::eR|vk::ColorComponentFlagBits::eG|vk::ColorComponentFlagBits::eB|vk::ColorComponentFlagBits::eA
+                        )
+                },
+                .dynamicStates = { vk::DynamicState::eViewport, vk::DynamicState::eScissor },
+                .pipelineLayout = context->cache().fetch(descriptors::PipelineLayout{}),
+                .renderPass = _renderPass
+        });
     }
     reset();
 }

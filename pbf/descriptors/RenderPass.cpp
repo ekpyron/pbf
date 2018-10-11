@@ -15,7 +15,7 @@ using namespace pbf::descriptors;
 vk::UniqueRenderPass RenderPass::realize(Context *context) const {
     std::vector<vk::SubpassDescription> subpassDescriptions;
 
-    for (auto const& subpass: _subpasses)
+    for (auto const& subpass: subpasses)
     {
         subpassDescriptions.emplace_back(subpass.flags, subpass.pipelineBindPoint, static_cast<uint32_t>(subpass.inputAttachments.size()),
                                           subpass.inputAttachments.data(), static_cast<uint32_t>(subpass.colorAttachments.size()),
@@ -26,10 +26,10 @@ vk::UniqueRenderPass RenderPass::realize(Context *context) const {
 
     }
 
-    vk::RenderPassCreateInfo createInfo({}, static_cast<uint32_t>(_attachments.size()), _attachments.data(),
+    vk::RenderPassCreateInfo createInfo({}, static_cast<uint32_t>(attachments.size()), attachments.data(),
                                         static_cast<uint32_t>(subpassDescriptions.size()),
                                         subpassDescriptions.data(),
-                                        static_cast<uint32_t>(_subpassDependencies.size()),
-                                        _subpassDependencies.data());
+                                        static_cast<uint32_t>(subpassDependencies.size()),
+                                        subpassDependencies.data());
     return context->device().createRenderPassUnique(createInfo);
 }

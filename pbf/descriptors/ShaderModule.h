@@ -12,8 +12,7 @@
 
 namespace pbf::descriptors {
 
-class ShaderModule {
-public:
+struct ShaderModule {
     std::string filename;
 
     vk::UniqueShaderModule realize(Context* context) const;

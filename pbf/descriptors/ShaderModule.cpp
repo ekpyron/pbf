@@ -11,13 +11,14 @@
 #include <pbf/Context.h>
 #include <fstream>
 
-using namespace pbf;
-using namespace descriptors;
+using namespace pbf::descriptors;
 
 vk::UniqueShaderModule ShaderModule::realize(Context *context) const {
     const auto &device = context->device();
 
-    std::ifstream f(filename);
+    std::ifstream f;
+    f.exceptions(std::ios_base::failbit|std::ios_base::badbit);
+    f.open(filename);
     f.seekg(0, std::ios_base::end);
     auto length = static_cast<std::size_t>(f.tellg());
     f.seekg(0, std::ios_base::beg);

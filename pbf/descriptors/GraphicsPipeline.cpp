@@ -15,53 +15,64 @@ using namespace pbf::descriptors;
 vk::UniquePipeline GraphicsPipeline::realize(Context* context) const {
     auto const& device = context->device();
 
-    std::vector<vk::PipelineShaderStageCreateInfo> _stageCreateInfos;
-    vk::PipelineVertexInputStateCreateInfo _vertexInputStateCreateInfo;
-    vk::PipelineColorBlendStateCreateInfo _colorBlendStateCreateInfo;
-    vk::PipelineDynamicStateCreateInfo _dynamicStateCreateInfo;
+    std::vector<vk::PipelineShaderStageCreateInfo> stageCreateInfos;
+    vk::PipelineVertexInputStateCreateInfo vertexInputStateCreateInfo;
+    vk::PipelineColorBlendStateCreateInfo colorBlendStateCreateInfo;
+    vk::PipelineInputAssemblyStateCreateInfo assemblyStateCreateInfo {
+            {}, primitiveTopology, primitiveRestartEnable
+    };
+    vk::PipelineTessellationStateCreateInfo tesselationStateCreateInfo {
+            {}, tessellationPatchControlPoints
+    };
 
-    vk::PipelineViewportStateCreateInfo _viewportStateCreateInfo {{}, 1u, &_viewport, 1u, &_scissor};
+    vk::PipelineViewportStateCreateInfo viewportStateCreateInfo {{}, 1u, &viewport, 1u, &scissor };
 
     {
-        _stageCreateInfos.clear();
-        _stageCreateInfos.reserve(_stages.size());
-        for (const auto &stage : _stages) {
-            _stageCreateInfos.emplace_back(vk::PipelineShaderStageCreateInfo{
+        stageCreateInfos.reserve(shaderStages.size());
+        for (const auto &stage : shaderStages) {
+            stageCreateInfos.emplace_back(vk::PipelineShaderStageCreateInfo{
                     {}, // flags,
-                    std::get<0>(stage), // stage
-                    *std::get<1>(stage), // shader module
-                    std::get<2>(stage).c_str(), // entry point
+                    stage.stage, // stage
+                    *stage.module, // shader module
+                    stage.entryPoint.c_str(), // entry point
                     nullptr  // specialization info
             });
         }
     }
     {
-        _vertexInputStateCreateInfo
-                .setPVertexBindingDescriptions(_bindingDescriptions.data())
-                .setVertexBindingDescriptionCount(static_cast<uint32_t>(_bindingDescriptions.size()))
-                .setPVertexAttributeDescriptions(_vertexInputAttributeDescriptions.data())
-                .setVertexAttributeDescriptionCount(static_cast<uint32_t>(_vertexInputAttributeDescriptions.size()));
+        vertexInputStateCreateInfo
+                .setPVertexBindingDescriptions(vertexBindingDescriptions.data())
+                .setVertexBindingDescriptionCount(static_cast<uint32_t>(vertexBindingDescriptions.size()))
+                .setPVertexAttributeDescriptions(vertexInputAttributeDescriptions.data())
+                .setVertexAttributeDescriptionCount(static_cast<uint32_t>(vertexInputAttributeDescriptions.size()));
     }
     {
-        _colorBlendStateCreateInfo
-                .setAttachmentCount(static_cast<uint32_t>(_colorBlendAttachmentStates.size()))
-                .setPAttachments(_colorBlendAttachmentStates.data());
+        colorBlendStateCreateInfo
+                .setAttachmentCount(static_cast<uint32_t>(colorBlendAttachmentStates.size()))
+                .setPAttachments(colorBlendAttachmentStates.data());
     }
 
-    _dynamicStateCreateInfo.setDynamicStateCount(static_cast<uint32_t>(_dynamicStates.size()));
-    _dynamicStateCreateInfo.setPDynamicStates(_dynamicStates.empty() ? nullptr : _dynamicStates.data());
+    std::optional<vk::PipelineDynamicStateCreateInfo> dynamicStateCreateInfo;
+    if (!dynamicStates.empty()) {
+        dynamicStateCreateInfo = vk::PipelineDynamicStateCreateInfo {
+                {}, static_cast<uint32_t>(dynamicStates.size()), dynamicStates.data()
+        };
+    }
 
-    _colorBlendStateCreateInfo.setLogicOpEnable(static_cast<vk::Bool32>(_blendLogicOpEnabled)).setLogicOp(_blendLogicOp);
-    _colorBlendStateCreateInfo.setBlendConstants(_blendConstants);
+    colorBlendStateCreateInfo.setLogicOpEnable(blendLogicOp ? true : false);
+    if (blendLogicOp) {
+        colorBlendStateCreateInfo.setLogicOp(*blendLogicOp);
+    }
+    colorBlendStateCreateInfo.setBlendConstants(blendConstants);
 
 
     vk::GraphicsPipelineCreateInfo info({},
-                                        static_cast<uint32_t>(_stageCreateInfos.size()), _stageCreateInfos.data(),
-                                        &_vertexInputStateCreateInfo, &_assemblyStateCreateInfo, &_tesselationStateCreateInfo,
-                                        &_viewportStateCreateInfo, &_rasterizationStateCreateInfo, &_multisampleStateCreateInfo,
-                                        &_depthStencilStateCreateInfo, &_colorBlendStateCreateInfo,
-                                        _dynamicStates.empty() ? nullptr : &_dynamicStateCreateInfo, *_pipelineLayout,
-                                        *_renderPass, _subpass);
+                                        static_cast<uint32_t>(stageCreateInfos.size()), stageCreateInfos.data(),
+                                        &vertexInputStateCreateInfo, &assemblyStateCreateInfo, &tesselationStateCreateInfo,
+                                        &viewportStateCreateInfo, &rasterizationStateCreateInfo, &multisampleStateCreateInfo,
+                                        &depthStencilStateCreateInfo, &colorBlendStateCreateInfo,
+                                        dynamicStateCreateInfo ? &*dynamicStateCreateInfo : nullptr, *pipelineLayout,
+                                        *renderPass, subpass);
 
     return device.createGraphicsPipelineUnique(nullptr, info);
 }

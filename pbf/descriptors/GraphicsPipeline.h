@@ -16,113 +16,49 @@
 
 namespace pbf::descriptors {
 
-class GraphicsPipeline {
-public:
+struct GraphicsPipeline {
     vk::UniquePipeline realize(Context* context) const;
 
-    void
-    addShaderStage(vk::ShaderStageFlagBits stage, CacheReference<ShaderModule> shader, std::string_view entryPoint) {
-        _stages.emplace_back(stage, shader, entryPoint);
-    }
-
-    template<typename... Args>
-    void addVertexInputBindingDescriptions(Args&& ... args) {
-        _bindingDescriptions.emplace_back(std::forward<Args>(args)...);
-    }
-
-    template<typename... Args>
-    void addVertexInputAttributeDescriptions(Args&& ... args) {
-        _vertexInputAttributeDescriptions.emplace_back(std::forward<Args>(args)...);
-    }
-
-    void setTopology(vk::PrimitiveTopology topology) {
-        _assemblyStateCreateInfo.setTopology(topology);
-    }
-
-    void setPrimitiveRestart(bool value) {
-        _assemblyStateCreateInfo.setPrimitiveRestartEnable(static_cast<vk::Bool32>(value));
-    }
-
-    void setTesselationPatchControlPoints(std::uint32_t points) {
-        _tesselationStateCreateInfo.patchControlPoints = points;
-    }
-
-    vk::Viewport& viewport() {
-        return _viewport;
-    }
-
-    vk::Rect2D& scissor() {
-        return _scissor;
-    }
-
-    vk::PipelineRasterizationStateCreateInfo& rasterizationStateCreateInfo() {
-        return _rasterizationStateCreateInfo;
-    }
-
-    vk::PipelineDepthStencilStateCreateInfo& depthStencilStateCreateInfo() {
-        return _depthStencilStateCreateInfo;
-    }
-
-    template<typename... Args>
-    void addColorBlendAttachmentState(Args&& ... args) {
-        _colorBlendAttachmentStates.emplace_back(std::forward<Args>(args)...);
-    }
-
-    void setBlendConstants(std::array<float, 4> constants) {
-        _blendConstants = constants;
-    }
-
-    void setBlendLogicOp(bool logicOpEnable_, vk::LogicOp logicOp_ = vk::LogicOp::eClear) {
-        _blendLogicOpEnabled = logicOpEnable_;
-        _blendLogicOp = logicOp_;
-    }
-
-    void setSubpass(std::uint32_t value) {
-        _subpass = value;
-    }
-
-    void addDynamicState(vk::DynamicState state) {
-        _dynamicStates.push_back(state);
-    }
+    struct ShaderStage {
+        vk::ShaderStageFlagBits stage;
+        CacheReference<ShaderModule> module;
+        std::string entryPoint;
+        bool operator<(const ShaderStage &rhs) const {
+            using T = ShaderStage;
+            return MemberComparator<&T::stage, &T::module, &T::entryPoint>()(*this, rhs);
+        }
+    };
 
     bool operator<(const GraphicsPipeline& rhs) const {
         using T = GraphicsPipeline;
-        return MemberComparator<&T::_stages, &T::_bindingDescriptions, &T::_vertexInputAttributeDescriptions,
-                &T::_assemblyStateCreateInfo, &T::_tesselationStateCreateInfo, &T::_rasterizationStateCreateInfo,
-                &T::_multisampleStateCreateInfo, &T::_depthStencilStateCreateInfo, &T::_colorBlendAttachmentStates,
-                &T::_dynamicStates, &T::_blendConstants, &T::_blendLogicOpEnabled, &T::_blendLogicOp, &T::_subpass,
-                &T::_viewport, &T::_scissor, &T::_pipelineLayout, &T::_renderPass>()(*this, rhs);
+        return MemberComparator<&T::shaderStages, &T::vertexBindingDescriptions, &T::vertexInputAttributeDescriptions,
+                &T::primitiveTopology, &T::primitiveRestartEnable, &T::tessellationPatchControlPoints,
+                &T::rasterizationStateCreateInfo, &T::multisampleStateCreateInfo, &T::depthStencilStateCreateInfo,
+                &T::colorBlendAttachmentStates,
+                &T::dynamicStates, &T::blendConstants, &T::blendLogicOp, &T::subpass,
+                &T::viewport, &T::scissor, &T::pipelineLayout, &T::renderPass>()(*this, rhs);
     }
 
-    void setPipelineLayout(CacheReference<PipelineLayout> layout) {
-        _pipelineLayout = layout;
-    }
+    std::vector<ShaderStage> shaderStages;
+    std::vector<vk::VertexInputBindingDescription> vertexBindingDescriptions;
+    std::vector<vk::VertexInputAttributeDescription> vertexInputAttributeDescriptions;
+    vk::PrimitiveTopology primitiveTopology = vk::PrimitiveTopology::eTriangleList;
+    bool primitiveRestartEnable = false;
+    std::uint32_t tessellationPatchControlPoints = 0;
+    vk::PipelineRasterizationStateCreateInfo rasterizationStateCreateInfo = vk::PipelineRasterizationStateCreateInfo().setLineWidth(1.0f);
+    vk::PipelineMultisampleStateCreateInfo multisampleStateCreateInfo;
+    vk::PipelineDepthStencilStateCreateInfo depthStencilStateCreateInfo;
+    std::vector<vk::PipelineColorBlendAttachmentState> colorBlendAttachmentStates;
+    std::vector<vk::DynamicState> dynamicStates;
+    std::array<float, 4> blendConstants = {{ 0, 0, 0, 0 }};
+    std::optional<vk::LogicOp> blendLogicOp = {};
 
-    void setRenderPass(CacheReference<RenderPass> renderPass) {
-        _renderPass = renderPass;
-    }
+    std::uint32_t subpass { 0 };
+    vk::Viewport viewport = {};
+    vk::Rect2D scissor = { {}, { static_cast<std::uint32_t>(viewport.width), static_cast<std::uint32_t>(viewport.height) } };
 
-private:
-    std::vector<std::tuple<vk::ShaderStageFlagBits, CacheReference<ShaderModule>, std::string>> _stages;
-    std::vector<vk::VertexInputBindingDescription> _bindingDescriptions;
-    std::vector<vk::VertexInputAttributeDescription> _vertexInputAttributeDescriptions;
-    vk::PipelineInputAssemblyStateCreateInfo _assemblyStateCreateInfo;
-    vk::PipelineTessellationStateCreateInfo _tesselationStateCreateInfo;
-    vk::PipelineRasterizationStateCreateInfo _rasterizationStateCreateInfo;
-    vk::PipelineMultisampleStateCreateInfo _multisampleStateCreateInfo;
-    vk::PipelineDepthStencilStateCreateInfo _depthStencilStateCreateInfo;
-    std::vector<vk::PipelineColorBlendAttachmentState> _colorBlendAttachmentStates;
-    std::vector<vk::DynamicState> _dynamicStates;
-    std::array<float, 4> _blendConstants = {{ 0, 0, 0, 0 }};
-    bool _blendLogicOpEnabled = false;
-    vk::LogicOp _blendLogicOp = vk::LogicOp::eClear;
-
-    std::uint32_t _subpass { 0 };
-    vk::Viewport _viewport;
-    vk::Rect2D _scissor;
-
-    CacheReference<PipelineLayout> _pipelineLayout;
-    CacheReference<RenderPass> _renderPass;
+    CacheReference<PipelineLayout> pipelineLayout;
+    CacheReference<RenderPass> renderPass;
 };
 
 }
