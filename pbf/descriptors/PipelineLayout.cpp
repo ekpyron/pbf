@@ -9,12 +9,11 @@
 #include "PipelineLayout.h"
 #include <pbf/Context.h>
 
-using namespace pbf;
-using namespace objects;
+using namespace pbf::descriptors;
 
-PipelineLayout::PipelineLayout(Context *context, const PipelineLayout::Descriptor &descriptor) {
+vk::UniquePipelineLayout PipelineLayout::realize(Context *context) const {
     const auto &device = context->device();
-    _layout = device.createPipelineLayoutUnique({
+    return device.createPipelineLayoutUnique({
             {}, 0, nullptr, 0, nullptr
     });
 }

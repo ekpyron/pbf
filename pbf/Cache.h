@@ -26,7 +26,6 @@ class CacheReference;
 class TypedCacheBase {
 public:
     virtual ~TypedCacheBase() = default;
-
     virtual void frame() = 0;
 };
 
@@ -36,7 +35,7 @@ public:
     explicit Cache(Context *context, std::size_t lifetime) : _context(context), _lifetime(lifetime) {}
 
     template<typename T>
-    CacheReference<typename T::Result> fetch(T &&descriptor);
+    CacheReference<T> fetch(T &&descriptor);
 
     void frame();
 
@@ -63,15 +62,15 @@ private:
 template<typename T>
 class CachedObject {
 public:
-    CachedObject(Cache *cache, typename T::Descriptor &&objdesc) : _cache(cache), _objdesc(std::move(objdesc)) {}
+    CachedObject(Cache *cache, T &&objdesc) : _cache(cache), _objdesc(std::move(objdesc)) {}
 
     CachedObject(const CachedObject &) = delete;
 
     CachedObject &operator=(const CachedObject &) = delete;
 
-    T &get() const {
+    auto &get() const {
         if (!_obj)
-            _obj = std::make_unique<T>(_cache->context(), _objdesc);
+            _obj = _objdesc.realize(_cache->context());
         _lastUsedFrameNumber = _cache->currentFrame();
         return *_obj;
     }
@@ -82,15 +81,15 @@ public:
         }
     }
 
-    const typename T::Descriptor &descriptor() const {
+    const T &descriptor() const {
         return _objdesc;
     }
 
 private:
-    typename T::Descriptor _objdesc;
+    T _objdesc;
     Cache *_cache = nullptr;
     mutable std::size_t _lastUsedFrameNumber = 0;
-    mutable std::unique_ptr<T> _obj;
+    mutable decltype(_objdesc.realize(_cache->context())) _obj;
 };
 
 template<typename T>
@@ -100,21 +99,12 @@ public:
 
     CacheReference(const CachedObject<T> *obj) : _obj(obj) {}
 
-    T &operator*() {
+    const auto &operator*() const {
         if (!_obj) throw std::runtime_error("Empty cache reference dereferenced");
         return _obj->get();
     }
 
-    const T &operator*() const {
-        if (!_obj) throw std::runtime_error("Empty cache reference dereferenced");
-        return _obj->get();
-    }
-
-    T *operator->() {
-        return &**this;
-    }
-
-    const T *operator->() const {
+    const auto *operator->() const {
         return &**this;
     }
 
@@ -138,23 +128,12 @@ private:
     const CachedObject<T> *_obj = nullptr;
 };
 
-template<typename Descriptor>
+template<typename T>
 class TypedCache : public TypedCacheBase {
 public:
-    using T = typename Descriptor::Result;
-
     TypedCache(Cache *cache) : _cache(cache) {}
-/*
-    template<typename D>
-    CacheReference<T> fetch(D&& descriptor) {
-        auto it = _set.find(descriptor);
-        if (it == _set.end())
-            it = _set.emplace(_cache, std::forward<D>(descriptor)).first;
-        return {&*it};
-    }
-*/
 
-    CacheReference<T> fetch(Descriptor &&descriptor) {
+    CacheReference<T> fetch(T &&descriptor) {
         auto it = _set.find(descriptor);
         if (it == _set.end())
             it = _set.emplace(_cache, std::move(descriptor)).first;
@@ -174,11 +153,11 @@ private:
             return lhs.descriptor() < rhs.descriptor();
         }
 
-        bool operator()(const CachedObject<T> &lhs, const Descriptor &descriptor) const {
+        bool operator()(const CachedObject<T> &lhs, const T &descriptor) const {
             return lhs.descriptor() < descriptor;
         }
 
-        bool operator()(const Descriptor &descriptor, const CachedObject<T> &rhs) const {
+        bool operator()(const T &descriptor, const CachedObject<T> &rhs) const {
             return descriptor < rhs.descriptor();
         }
     };
@@ -187,14 +166,14 @@ private:
     Cache *_cache = nullptr;
 };
 
-template<typename Descriptor>
-inline CacheReference<typename Descriptor::Result> Cache::fetch(Descriptor&& descriptor) {
-    auto typedCache = _map.find(std::type_index(typeid(Descriptor)));
+template<typename T>
+inline CacheReference<T> Cache::fetch(T&& descriptor) {
+    auto typedCache = _map.find(std::type_index(typeid(T)));
     if (typedCache == _map.end()) {
-        typedCache = _map.emplace(std::type_index(typeid(Descriptor)),
-                                  std::make_unique<TypedCache<Descriptor>>(this)).first;
+        typedCache = _map.emplace(std::type_index(typeid(T)),
+                                  std::make_unique<TypedCache<T>>(this)).first;
     }
-    return static_cast<TypedCache<Descriptor> *>(typedCache->second.get())->fetch(std::forward<Descriptor>(descriptor));
+    return static_cast<TypedCache<T> *>(typedCache->second.get())->fetch(std::forward<T>(descriptor));
 }
 
 inline void Cache::frame() {

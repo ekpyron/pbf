@@ -17,7 +17,7 @@ namespace pbf {
 class Context;
 class Renderer;
 
-namespace objects {
+namespace descriptors {
 class GraphicsPipeline;
 }
 }

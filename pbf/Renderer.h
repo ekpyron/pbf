@@ -19,7 +19,7 @@ public:
 
     void render();
 
-    CacheReference<objects::RenderPass> renderPass() const {
+    CacheReference<descriptors::RenderPass> renderPass() const {
         return _renderPass;
     }
 private:
@@ -32,8 +32,8 @@ private:
     vk::UniqueSemaphore _renderFinishedSemaphore;
     std::vector<vk::UniqueCommandBuffer> _commandBuffers;
 
-    CacheReference<objects::RenderPass> _renderPass;
-    CacheReference<objects::GraphicsPipeline> _graphicsPipeline;
+    CacheReference<descriptors::RenderPass> _renderPass;
+    CacheReference<descriptors::GraphicsPipeline> _graphicsPipeline;
 };
 
 }
