@@ -92,8 +92,9 @@ void Renderer::render() {
     _graphicsPipeline.keepAlive();
 
     const auto &device = _context->device();
-    auto[result, imageIndex] = device.acquireNextImageKHR(_swapchain->swapchain(), TIMEOUT, *_imageAvailableSemaphore,
-                                                          nullptr);
+    uint32_t imageIndex = 0;
+    auto result = device.acquireNextImageKHR(_swapchain->swapchain(), TIMEOUT, *_imageAvailableSemaphore,
+                                             nullptr, &imageIndex);
 
     switch (result) {
         case vk::Result::eErrorOutOfDateKHR: {
