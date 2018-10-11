@@ -15,6 +15,7 @@
 #include <memory>
 #include <unordered_map>
 #include <set>
+#include <pbf/descriptors/Order.h>
 
 namespace pbf {
 
@@ -108,12 +109,9 @@ public:
         return &**this;
     }
 
-    void keepAlive() {
-        **this;
-    }
-
     void keepAlive() const {
         **this;
+        keepDependenciesAlive<T>()(_obj->descriptor());
     }
 
     operator bool() const {
@@ -125,6 +123,20 @@ public:
     }
 
 private:
+
+    template<typename Q, typename = void>
+    struct keepDependenciesAlive {
+        void operator()(const T&) const {}
+    };
+    template<typename Q>
+    struct keepDependenciesAlive<Q, std::void_t<typename Q::template Depends<Q>>> {
+        void operator()(const T& obj) const {
+            crampl::ForEachMemberInList<typename T::template Depends<T>>::call(obj, [](const auto &ref) {
+                ref.keepAlive();
+            });
+        }
+    };
+
     const CachedObject<T> *_obj = nullptr;
 };
 
@@ -150,15 +162,15 @@ private:
     struct CachedObjectCompare {
         using is_transparent = void;
         bool operator()(const CachedObject<T> &lhs, const CachedObject<T> &rhs) const {
-            return lhs.descriptor() < rhs.descriptor();
+            return descriptors::Order<T>()(lhs.descriptor(), rhs.descriptor());
         }
 
         bool operator()(const CachedObject<T> &lhs, const T &descriptor) const {
-            return lhs.descriptor() < descriptor;
+            return descriptors::Order<T>()(lhs.descriptor(), descriptor);
         }
 
         bool operator()(const T &descriptor, const CachedObject<T> &rhs) const {
-            return descriptor < rhs.descriptor();
+            return descriptors::Order<T>()(descriptor, rhs.descriptor());
         }
     };
 

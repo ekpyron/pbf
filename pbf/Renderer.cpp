@@ -109,7 +109,7 @@ void Renderer::render() {
         frameCount = 0;
     }
 
-    _renderPass.keepAlive();
+//    _renderPass.keepAlive();
     _graphicsPipeline.keepAlive();
 
     uint32_t imageIndex = 0;

@@ -16,7 +16,7 @@ class PipelineLayout {
 public:
     vk::UniquePipelineLayout realize(Context *context) const;
 
-    bool operator<(const PipelineLayout &rhs) const { return false; }
+    struct Compare { bool operator()(...) const { return false; }};
 };
 
 }

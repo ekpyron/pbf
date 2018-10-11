@@ -9,6 +9,7 @@
 #pragma once
 
 #include <pbf/common.h>
+#include <pbf/descriptors/Order.h>
 
 namespace pbf::descriptors {
 
@@ -17,9 +18,7 @@ struct ShaderModule {
 
     vk::UniqueShaderModule realize(Context* context) const;
 
-    bool operator<(const ShaderModule &rhs) const {
-        return filename < rhs.filename;
-    }
+    using Compare = MemberComparator<&ShaderModule::filename>;
 };
 
 }

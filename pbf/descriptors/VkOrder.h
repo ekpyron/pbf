@@ -75,7 +75,7 @@ struct Order<T, enable_if_same_t<T, vk::PipelineRasterizationStateCreateInfo>>
 // todo implement this at some point
 template<typename T>
 struct Order<T, enable_if_same_t<T, vk::PipelineMultisampleStateCreateInfo>>
-{ bool operator()(const T &lhs, const T &rhs) const { return false; } };
+{ bool operator()(...) const { return false; } };
 
 template<typename T>
 struct Order<T, enable_if_same_t<T, vk::PipelineDepthStencilStateCreateInfo>>
