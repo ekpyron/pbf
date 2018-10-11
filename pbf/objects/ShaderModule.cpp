@@ -14,10 +14,10 @@
 using namespace pbf;
 using namespace objects;
 
-ShaderModule::ShaderModule(Context *context, const ShaderModule::Descriptor &descriptor) {
+vk::UniqueShaderModule ShaderModule::realize(Context *context) const {
     const auto &device = context->device();
 
-    std::ifstream f(descriptor.filename);
+    std::ifstream f(filename);
     f.seekg(0, std::ios_base::end);
     auto length = static_cast<std::size_t>(f.tellg());
     f.seekg(0, std::ios_base::beg);
@@ -27,5 +27,5 @@ ShaderModule::ShaderModule(Context *context, const ShaderModule::Descriptor &des
 
     f.read(reinterpret_cast<char *>(v.data()), length);
 
-    _shaderModule = device.createShaderModuleUnique(vk::ShaderModuleCreateInfo({}, v.size(), v.data()));
+    return device.createShaderModuleUnique(vk::ShaderModuleCreateInfo({}, v.size(), v.data()));
 }

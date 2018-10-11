@@ -10,15 +10,11 @@
 
 #include <pbf/Context.h>
 
-namespace pbf::objects {
+using namespace pbf::objects;
 
+vk::UniquePipeline GraphicsPipeline::realize(Context* context) const {
+    auto const& device = context->device();
 
-GraphicsPipeline::GraphicsPipeline(Context *context, const GraphicsPipeline::Descriptor &descriptor) {
-    const auto &device = context->device();
-    _pipeline = descriptor.realize(device);
-}
-
-vk::UniquePipeline GraphicsPipeline::Descriptor::realize(const vk::Device &device) const {
     std::vector<vk::PipelineShaderStageCreateInfo> _stageCreateInfos;
     vk::PipelineVertexInputStateCreateInfo _vertexInputStateCreateInfo;
     vk::PipelineColorBlendStateCreateInfo _colorBlendStateCreateInfo;
@@ -33,7 +29,7 @@ vk::UniquePipeline GraphicsPipeline::Descriptor::realize(const vk::Device &devic
             _stageCreateInfos.emplace_back(vk::PipelineShaderStageCreateInfo{
                     {}, // flags,
                     std::get<0>(stage), // stage
-                    std::get<1>(stage)->get(), // shader module
+                    *std::get<1>(stage), // shader module
                     std::get<2>(stage).c_str(), // entry point
                     nullptr  // specialization info
             });
@@ -64,10 +60,8 @@ vk::UniquePipeline GraphicsPipeline::Descriptor::realize(const vk::Device &devic
                                         &_vertexInputStateCreateInfo, &_assemblyStateCreateInfo, &_tesselationStateCreateInfo,
                                         &_viewportStateCreateInfo, &_rasterizationStateCreateInfo, &_multisampleStateCreateInfo,
                                         &_depthStencilStateCreateInfo, &_colorBlendStateCreateInfo,
-                                        _dynamicStates.empty() ? nullptr : &_dynamicStateCreateInfo, _pipelineLayout->get(),
-                                        _renderPass->get(), _subpass);
+                                        _dynamicStates.empty() ? nullptr : &_dynamicStateCreateInfo, *_pipelineLayout,
+                                        *_renderPass, _subpass);
 
     return device.createGraphicsPipelineUnique(nullptr, info);
 }
-}
-

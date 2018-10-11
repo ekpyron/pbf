@@ -45,67 +45,34 @@ struct SubpassDescriptor {
 
 class RenderPass {
 public:
-    class Descriptor {
-    public:
-        typedef RenderPass Result;
+    vk::UniqueRenderPass realize(Context *context) const;
 
-        Descriptor(const vk::RenderPassCreateFlags &flags) : _flags(flags) {}
-
-        Descriptor (const Descriptor&) = delete;
-        Descriptor &operator=(const Descriptor &) = delete;
-        Descriptor (Descriptor &&) = default;
-        Descriptor &operator=(Descriptor &&) = default;
-        ~Descriptor() = default;
-
-
-        bool operator<(const Descriptor &rhs) const {
-            using T = Descriptor;
-            return DescriptorMemberComparator<&T::_flags, &T::_attachments, &T::_subpasses, &T::_subpassDependencies>()(
-                    *this,rhs
-            );
-        }
-
-        auto toCreateInfo() const {
-            return vk::RenderPassCreateInfo(_flags, static_cast<uint32_t>(_attachments.size()), _attachments.data(),
-                                            static_cast<uint32_t>(_subpassDescriptions.size()),
-                                            _subpassDescriptions.data(),
-                                            static_cast<uint32_t>(_subpassDependencies.size()),
-                                            _subpassDependencies.data());
-        }
-
-        template<typename ... Args>
-        void addSubpass(Args&&... args) {
-            _subpasses.emplace_back(std::forward<Args>(args)...);
-            _subpassDescriptions.push_back(_subpasses.back().toDescription());
-        }
-
-        template<typename... Args>
-        void addAttachment(Args&&... args) {
-            _attachments.emplace_back(std::forward<Args>(args)...);
-        }
-
-        template<typename... Args>
-        void addSubpassDependency(Args&&... args) {
-            _subpassDependencies.emplace_back(std::forward<Args>(args)...);
-        }
-
-    private:
-        vk::RenderPassCreateFlags _flags;
-        std::vector<vk::AttachmentDescription> _attachments;
-        std::vector<vk::SubpassDescription> _subpassDescriptions;
-        std::vector<SubpassDescriptor> _subpasses;
-        std::vector<vk::SubpassDependency> _subpassDependencies;
-    };
-
-    RenderPass(Context *context, const Descriptor &desc);
-
-    const vk::RenderPass &get() const {
-        return *_renderPass;
+    bool operator<(const RenderPass &rhs) const {
+        using T = RenderPass;
+        return DescriptorMemberComparator<&T::_attachments, &T::_subpasses, &T::_subpassDependencies>()(*this, rhs);
     }
+
+    template<typename ... Args>
+    void addSubpass(Args&&... args) {
+        _subpasses.emplace_back(std::forward<Args>(args)...);
+        _subpassDescriptions.push_back(_subpasses.back().toDescription());
+    }
+
+    template<typename... Args>
+    void addAttachment(Args&&... args) {
+        _attachments.emplace_back(std::forward<Args>(args)...);
+    }
+
+    template<typename... Args>
+    void addSubpassDependency(Args&&... args) {
+        _subpassDependencies.emplace_back(std::forward<Args>(args)...);
+    }
+
 private:
-
-    vk::UniqueRenderPass _renderPass;
-
+    std::vector<vk::AttachmentDescription> _attachments;
+    std::vector<vk::SubpassDescription> _subpassDescriptions;
+    std::vector<SubpassDescriptor> _subpasses;
+    std::vector<vk::SubpassDependency> _subpassDependencies;
 };
 
 }

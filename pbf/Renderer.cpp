@@ -19,7 +19,7 @@ Renderer::Renderer(Context *context) : _context(context) {
     _renderFinishedSemaphore = context->device().createSemaphoreUnique({});
 
     {
-        auto descriptor = objects::RenderPass::Descriptor{{}};
+        auto descriptor = objects::RenderPass{};
         descriptor.addAttachment(
                 vk::AttachmentDescription{{}, _context->surfaceFormat().format, vk::SampleCountFlagBits::e1, vk::AttachmentLoadOp::eClear,
                                           vk::AttachmentStoreOp::eStore, vk::AttachmentLoadOp::eDontCare,
@@ -37,7 +37,7 @@ Renderer::Renderer(Context *context) : _context(context) {
         _renderPass = context->cache().fetch(std::move(descriptor));
     }
     {
-        auto descriptor = objects::GraphicsPipeline::Descriptor{};
+        auto descriptor = objects::GraphicsPipeline{};
 
         descriptor.addDynamicState(vk::DynamicState::eViewport);
         descriptor.addDynamicState(vk::DynamicState::eScissor);
@@ -48,10 +48,10 @@ Renderer::Renderer(Context *context) : _context(context) {
         ));
         descriptor.setRenderPass(_renderPass);
         descriptor.rasterizationStateCreateInfo().setLineWidth(1.0f);
-        descriptor.setPipelineLayout(context->cache().fetch(objects::PipelineLayout::Descriptor {}));
-        auto shaderModule = context->cache().fetch(objects::ShaderModule::Descriptor {.filename = "shaders/test.spv"});
+        descriptor.setPipelineLayout(context->cache().fetch(objects::PipelineLayout{}));
+        auto shaderModule = context->cache().fetch(objects::ShaderModule{.filename = "shaders/test.spv"});
         descriptor.addShaderStage(vk::ShaderStageFlagBits::eVertex, shaderModule, "main");
-        auto fragShaderModule = context->cache().fetch(objects::ShaderModule::Descriptor {.filename = "shaders/test_frag.spv"});
+        auto fragShaderModule = context->cache().fetch(objects::ShaderModule{.filename = "shaders/test_frag.spv"});
         descriptor.addShaderStage(vk::ShaderStageFlagBits::eFragment, fragShaderModule, "main");
 
         _graphicsPipeline = context->cache().fetch(std::move(descriptor));
@@ -103,7 +103,7 @@ void Renderer::render() {
 }
 
 void Renderer::reset() {
-    _swapchain = std::make_unique<Swapchain>(_context, _renderPass->get(), _swapchain ? _swapchain->swapchain() : nullptr);
+    _swapchain = std::make_unique<Swapchain>(_context, *_renderPass, _swapchain ? _swapchain->swapchain() : nullptr);
     const auto &images = _swapchain->images();
     const auto &imageViews = _swapchain->imageViews();
     const auto &framebuffers = _swapchain->frameBuffers();
@@ -121,34 +121,11 @@ void Renderer::reset() {
         buf->setViewport(0, {vk::Viewport{0, 0, float(_swapchain->extent().width), float(_swapchain->extent().height), 0.0f, 1.0f}});
         buf->setScissor(0, {vk::Rect2D{vk::Offset2D(), _swapchain->extent()}});
         buf->beginRenderPass(vk::RenderPassBeginInfo{
-                                     (*_renderPass).get(), *framebuffers[i], vk::Rect2D{{}, _swapchain->extent()}, 1, &clearValue
+                                     *_renderPass, *framebuffers[i], vk::Rect2D{{}, _swapchain->extent()}, 1, &clearValue
         }, vk::SubpassContents::eInline);
-        buf->bindPipeline(vk::PipelineBindPoint::eGraphics, _graphicsPipeline->get());
+        buf->bindPipeline(vk::PipelineBindPoint::eGraphics, *_graphicsPipeline);
         buf->draw(3, 1, 0, 0);
         buf->endRenderPass();
-        /*{
-            auto imb = vk::ImageMemoryBarrier().setOldLayout(vk::ImageLayout::ePresentSrcKHR)
-                    .setNewLayout(vk::ImageLayout::eGeneral)
-                    .setSrcQueueFamilyIndex(_context->families().present)
-                    .setDstQueueFamilyIndex(_context->families().graphics)
-                    .setImage(images[i])
-                    .setSubresourceRange(vk::ImageSubresourceRange{vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1});
-            buf->pipelineBarrier(vk::PipelineStageFlagBits::eTopOfPipe, vk::PipelineStageFlagBits::eTopOfPipe, {}, {},
-                                 {}, {{imb}});
-        }
-        buf->clearColorImage(images[i], vk::ImageLayout::eGeneral,
-                             vk::ClearColorValue(std::array<float, 4>{{1.f, 0.f, 0.f, 1.f}}),
-                             {{vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1}});
-        {
-            auto imb = vk::ImageMemoryBarrier().setOldLayout(vk::ImageLayout::eGeneral)
-                    .setNewLayout(vk::ImageLayout::ePresentSrcKHR)
-                    .setSrcQueueFamilyIndex(_context->families().graphics)
-                    .setDstQueueFamilyIndex(_context->families().present)
-                    .setImage(images[i])
-                    .setSubresourceRange(vk::ImageSubresourceRange{vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1});
-            buf->pipelineBarrier(vk::PipelineStageFlagBits::eTopOfPipe, vk::PipelineStageFlagBits::eTopOfPipe, {}, {},
-                                 {}, {{imb}});
-        }*/
         buf->end();
     }
 }

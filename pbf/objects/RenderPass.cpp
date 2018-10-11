@@ -10,10 +10,13 @@
 #include "RenderPass.h"
 #include "../Context.h"
 
-namespace pbf {
+using namespace pbf::objects;
 
-objects::RenderPass::RenderPass(Context *context, const objects::RenderPass::Descriptor &desc) {
-    auto info = desc.toCreateInfo();
-    _renderPass = context->device().createRenderPassUnique(info);
-}
+vk::UniqueRenderPass RenderPass::realize(Context *context) const {
+    vk::RenderPassCreateInfo createInfo({}, static_cast<uint32_t>(_attachments.size()), _attachments.data(),
+                                        static_cast<uint32_t>(_subpassDescriptions.size()),
+                                        _subpassDescriptions.data(),
+                                        static_cast<uint32_t>(_subpassDependencies.size()),
+                                        _subpassDependencies.data());
+    return context->device().createRenderPassUnique(createInfo);
 }

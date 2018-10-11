@@ -14,21 +14,13 @@ namespace pbf::objects {
 
 class ShaderModule {
 public:
-    struct Descriptor {
-        using Result = ShaderModule;
+    std::string filename;
 
-        std::string filename;
+    vk::UniqueShaderModule realize(Context* context) const;
 
-        bool operator<(const Descriptor &rhs) const {
-            return filename < rhs.filename;
-        }
-    };
-
-    ShaderModule (Context* context, const Descriptor &descriptor);
-
-    const vk::ShaderModule & get() const { return *_shaderModule; }
-private:
-    vk::UniqueShaderModule _shaderModule;
+    bool operator<(const ShaderModule &rhs) const {
+        return filename < rhs.filename;
+    }
 };
 
 }
