@@ -10,7 +10,7 @@
 #include "RenderPass.h"
 #include "../Context.h"
 
-using namespace pbf::objects;
+using namespace pbf::descriptors;
 
 vk::UniqueRenderPass RenderPass::realize(Context *context) const {
     vk::RenderPassCreateInfo createInfo({}, static_cast<uint32_t>(_attachments.size()), _attachments.data(),

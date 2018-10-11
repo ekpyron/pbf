@@ -10,11 +10,11 @@
 
 #include <pbf/common.h>
 #include <pbf/Cache.h>
-#include <pbf/objects/ShaderModule.h>
-#include <pbf/objects/PipelineLayout.h>
-#include <pbf/objects/RenderPass.h>
+#include <pbf/descriptors/ShaderModule.h>
+#include <pbf/descriptors/PipelineLayout.h>
+#include <pbf/descriptors/RenderPass.h>
 
-namespace pbf::objects {
+namespace pbf::descriptors {
 
 class GraphicsPipeline {
 public:

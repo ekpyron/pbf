@@ -14,9 +14,9 @@
 #include <vulkan/vulkan.hpp>
 
 #include <pbf/common.h>
-#include <pbf/objects/DescriptorOrder.h>
+#include <pbf/descriptors/DescriptorOrder.h>
 
-namespace pbf::objects {
+namespace pbf::descriptors {
 
 struct SubpassDescriptor {
     vk::SubpassDescriptionFlags flags;

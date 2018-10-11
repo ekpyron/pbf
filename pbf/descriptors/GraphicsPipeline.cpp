@@ -10,7 +10,7 @@
 
 #include <pbf/Context.h>
 
-using namespace pbf::objects;
+using namespace pbf::descriptors;
 
 vk::UniquePipeline GraphicsPipeline::realize(Context* context) const {
     auto const& device = context->device();

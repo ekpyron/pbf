@@ -10,7 +10,7 @@
 
 #include <pbf/common.h>
 
-namespace pbf::objects {
+namespace pbf::descriptors {
 
 class ShaderModule {
 public:

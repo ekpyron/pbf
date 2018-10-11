@@ -12,7 +12,7 @@
 #include <fstream>
 
 using namespace pbf;
-using namespace objects;
+using namespace descriptors;
 
 vk::UniqueShaderModule ShaderModule::realize(Context *context) const {
     const auto &device = context->device();

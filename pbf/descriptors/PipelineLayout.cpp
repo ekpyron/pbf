@@ -9,7 +9,7 @@
 #include "PipelineLayout.h"
 #include <pbf/Context.h>
 
-using namespace pbf::objects;
+using namespace pbf::descriptors;
 
 vk::UniquePipelineLayout PipelineLayout::realize(Context *context) const {
     const auto &device = context->device();

@@ -3,7 +3,7 @@
 #include <vulkan/vulkan.hpp>
 #include <pbf/common.h>
 #include <pbf/glfw.h>
-#include <pbf/objects/RenderPass.h>
+#include <pbf/descriptors/RenderPass.h>
 #include <pbf/Cache.h>
 
 namespace pbf {

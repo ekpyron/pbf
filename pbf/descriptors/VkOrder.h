@@ -10,7 +10,7 @@
 
 #include <vulkan/vulkan.hpp>
 #include <crampl/crampl.h>
-#include <pbf/objects/DescriptorOrder.h>
+#include <pbf/descriptors/DescriptorOrder.h>
 
 namespace pbf {
 

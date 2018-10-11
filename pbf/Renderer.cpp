@@ -6,7 +6,7 @@
  * @author clonker
  * @date 9/26/18
  */
-#include <pbf/objects/GraphicsPipeline.h>
+#include <pbf/descriptors/GraphicsPipeline.h>
 #include "Renderer.h"
 
 static constexpr std::uint64_t TIMEOUT = std::numeric_limits<std::uint64_t>::max();
@@ -19,13 +19,13 @@ Renderer::Renderer(Context *context) : _context(context) {
     _renderFinishedSemaphore = context->device().createSemaphoreUnique({});
 
     {
-        auto descriptor = objects::RenderPass{};
+        auto descriptor = descriptors::RenderPass{};
         descriptor.addAttachment(
                 vk::AttachmentDescription{{}, _context->surfaceFormat().format, vk::SampleCountFlagBits::e1, vk::AttachmentLoadOp::eClear,
                                           vk::AttachmentStoreOp::eStore, vk::AttachmentLoadOp::eDontCare,
                                           vk::AttachmentStoreOp::eDontCare, vk::ImageLayout::eUndefined,
                                           vk::ImageLayout::ePresentSrcKHR});
-        descriptor.addSubpass(objects::SubpassDescriptor{
+        descriptor.addSubpass(descriptors::SubpassDescriptor{
                 .flags = {},
                 .pipelineBindPoint = vk::PipelineBindPoint::eGraphics,
                 .inputAttachments = {},
@@ -37,7 +37,7 @@ Renderer::Renderer(Context *context) : _context(context) {
         _renderPass = context->cache().fetch(std::move(descriptor));
     }
     {
-        auto descriptor = objects::GraphicsPipeline{};
+        auto descriptor = descriptors::GraphicsPipeline{};
 
         descriptor.addDynamicState(vk::DynamicState::eViewport);
         descriptor.addDynamicState(vk::DynamicState::eScissor);
@@ -48,10 +48,10 @@ Renderer::Renderer(Context *context) : _context(context) {
         ));
         descriptor.setRenderPass(_renderPass);
         descriptor.rasterizationStateCreateInfo().setLineWidth(1.0f);
-        descriptor.setPipelineLayout(context->cache().fetch(objects::PipelineLayout{}));
-        auto shaderModule = context->cache().fetch(objects::ShaderModule{.filename = "shaders/test.spv"});
+        descriptor.setPipelineLayout(context->cache().fetch(descriptors::PipelineLayout{}));
+        auto shaderModule = context->cache().fetch(descriptors::ShaderModule{.filename = "shaders/test.spv"});
         descriptor.addShaderStage(vk::ShaderStageFlagBits::eVertex, shaderModule, "main");
-        auto fragShaderModule = context->cache().fetch(objects::ShaderModule{.filename = "shaders/test_frag.spv"});
+        auto fragShaderModule = context->cache().fetch(descriptors::ShaderModule{.filename = "shaders/test_frag.spv"});
         descriptor.addShaderStage(vk::ShaderStageFlagBits::eFragment, fragShaderModule, "main");
 
         _graphicsPipeline = context->cache().fetch(std::move(descriptor));
