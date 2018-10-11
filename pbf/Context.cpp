@@ -131,6 +131,7 @@ void Context::run() {
         _cache.frame();
         _renderer->render();
     }
+    _device->waitIdle();
 }
 
 }

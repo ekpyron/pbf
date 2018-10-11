@@ -28,8 +28,13 @@ private:
 
     Context *_context;
     std::unique_ptr<Swapchain> _swapchain;
-    vk::UniqueSemaphore _imageAvailableSemaphore;
-    vk::UniqueSemaphore _renderFinishedSemaphore;
+    struct FrameSync {
+        vk::UniqueSemaphore imageAvailableSemaphore;
+        vk::UniqueSemaphore renderFinishedSemaphore;
+        vk::UniqueFence fence;
+    };
+    std::vector<FrameSync> _frameSync;
+    std::size_t _currentFrameSync = 0;
     std::vector<vk::UniqueCommandBuffer> _commandBuffers;
 
     CacheReference<descriptors::RenderPass> _renderPass;

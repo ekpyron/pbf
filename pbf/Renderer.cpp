@@ -14,9 +14,16 @@ static constexpr std::uint64_t TIMEOUT = std::numeric_limits<std::uint64_t>::max
 namespace pbf {
 
 Renderer::Renderer(Context *context) : _context(context) {
-
-    _imageAvailableSemaphore = context->device().createSemaphoreUnique({});
-    _renderFinishedSemaphore = context->device().createSemaphoreUnique({});
+    constexpr std::size_t FRAME_PRERENDER_COUNT = 3; // todo: choose this wisely
+    _frameSync.reserve(FRAME_PRERENDER_COUNT);
+    for (size_t i = 0; i < FRAME_PRERENDER_COUNT; i++)
+    {
+        _frameSync.emplace_back(FrameSync{
+                                        context->device().createSemaphoreUnique({}),
+                                        context->device().createSemaphoreUnique({}),
+                                        context->device().createFenceUnique({ vk::FenceCreateFlagBits::eSignaled })
+                                });
+    }
 
     {
         _renderPass = context->cache().fetch(descriptors::RenderPass {
@@ -42,6 +49,15 @@ Renderer::Renderer(Context *context) : _context(context) {
                             .resolveAttachments = {},
                             .depthStencilAttachment = {},
                             .preserveAttachments = {}
+                    }
+            },
+            .subpassDependencies = {
+                    vk::SubpassDependency {
+                        VK_SUBPASS_EXTERNAL,
+                        0,
+                        vk::PipelineStageFlagBits::eColorAttachmentOutput,
+                        vk::PipelineStageFlagBits::eColorAttachmentOutput,
+                        {}, {}, {}
                     }
             }
         });
@@ -78,6 +94,11 @@ Renderer::Renderer(Context *context) : _context(context) {
 }
 
 void Renderer::render() {
+    const auto &device = _context->device();
+    auto& currentFrameSync = _frameSync[_currentFrameSync];
+
+    device.waitForFences({ *currentFrameSync.fence }, true, TIMEOUT);
+
     static auto lastTime = std::chrono::steady_clock::now();
     static size_t frameCount = 0;
 
@@ -91,10 +112,11 @@ void Renderer::render() {
     _renderPass.keepAlive();
     _graphicsPipeline.keepAlive();
 
-    const auto &device = _context->device();
     uint32_t imageIndex = 0;
-    auto result = device.acquireNextImageKHR(_swapchain->swapchain(), TIMEOUT, *_imageAvailableSemaphore,
-                                             nullptr, &imageIndex);
+    auto result = device.acquireNextImageKHR(
+            _swapchain->swapchain(), TIMEOUT, *currentFrameSync.imageAvailableSemaphore,
+            nullptr, &imageIndex
+    );
 
     switch (result) {
         case vk::Result::eErrorOutOfDateKHR: {
@@ -109,24 +131,31 @@ void Renderer::render() {
         }
     }
 
+    device.resetFences({ *currentFrameSync.fence });
+
     vk::PipelineStageFlags waitStages[] = {
             vk::PipelineStageFlagBits::eColorAttachmentOutput
     };
     _context->graphicsQueue().submit({vk::SubmitInfo{
-            1, &*_imageAvailableSemaphore, waitStages, 1, &*_commandBuffers[imageIndex], 1, &*_renderFinishedSemaphore
-    }}, {});
+            1, &*currentFrameSync.imageAvailableSemaphore, waitStages,
+            1, &*_commandBuffers[imageIndex], 1, &*currentFrameSync.renderFinishedSemaphore
+    }}, *currentFrameSync.fence);
 
-    _context->presentQueue().presentKHR({1, &*_renderFinishedSemaphore, 1, &_swapchain->swapchain(), &imageIndex,
+    _context->presentQueue().presentKHR({1, &*currentFrameSync.renderFinishedSemaphore, 1, &_swapchain->swapchain(), &imageIndex,
                                          nullptr});
-    _context->presentQueue().waitIdle();
+
+    _currentFrameSync = (_currentFrameSync + 1) % _frameSync.size();
 }
 
 void Renderer::reset() {
+    auto const& device = _context->device();
+    if (_swapchain)
+        device.waitIdle();
     _swapchain = std::make_unique<Swapchain>(_context, *_renderPass, _swapchain ? _swapchain->swapchain() : nullptr);
     const auto &images = _swapchain->images();
     const auto &imageViews = _swapchain->imageViews();
     const auto &framebuffers = _swapchain->frameBuffers();
-    _commandBuffers = _context->device().allocateCommandBuffersUnique({
+    _commandBuffers = device.allocateCommandBuffersUnique({
                                                                               _context->commandPool(),
                                                                               vk::CommandBufferLevel::ePrimary,
                                                                               static_cast<uint32_t>(imageViews.size())
