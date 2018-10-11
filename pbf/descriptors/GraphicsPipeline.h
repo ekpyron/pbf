@@ -87,7 +87,7 @@ public:
 
     bool operator<(const GraphicsPipeline& rhs) const {
         using T = GraphicsPipeline;
-        return DescriptorMemberComparator<&T::_stages, &T::_bindingDescriptions, &T::_vertexInputAttributeDescriptions,
+        return MemberComparator<&T::_stages, &T::_bindingDescriptions, &T::_vertexInputAttributeDescriptions,
                 &T::_assemblyStateCreateInfo, &T::_tesselationStateCreateInfo, &T::_rasterizationStateCreateInfo,
                 &T::_multisampleStateCreateInfo, &T::_depthStencilStateCreateInfo, &T::_colorBlendAttachmentStates,
                 &T::_dynamicStates, &T::_blendConstants, &T::_blendLogicOpEnabled, &T::_blendLogicOp, &T::_subpass,

@@ -14,7 +14,7 @@
 #include <vulkan/vulkan.hpp>
 
 #include <pbf/common.h>
-#include <pbf/descriptors/DescriptorOrder.h>
+#include <pbf/descriptors/Order.h>
 
 namespace pbf::descriptors {
 
@@ -38,7 +38,7 @@ struct SubpassDescriptor {
 
     bool operator<(const SubpassDescriptor &rhs) const {
         using T = SubpassDescriptor;
-        return DescriptorMemberComparator<&T::flags, &T::pipelineBindPoint, &T::inputAttachments, &T::colorAttachments, &T::resolveAttachments,
+        return MemberComparator<&T::flags, &T::pipelineBindPoint, &T::inputAttachments, &T::colorAttachments, &T::resolveAttachments,
                 &T::depthStencilAttachment, &T::preserveAttachments>()(*this, rhs);
     }
 };
@@ -49,7 +49,7 @@ public:
 
     bool operator<(const RenderPass &rhs) const {
         using T = RenderPass;
-        return DescriptorMemberComparator<&T::_attachments, &T::_subpasses, &T::_subpassDependencies>()(*this, rhs);
+        return MemberComparator<&T::_attachments, &T::_subpasses, &T::_subpassDependencies>()(*this, rhs);
     }
 
     template<typename ... Args>
