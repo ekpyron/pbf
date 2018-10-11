@@ -33,6 +33,9 @@ private:
     std::vector<vk::Image> _images;
     std::vector<vk::UniqueImageView> _imageViews;
     std::vector<vk::UniqueFramebuffer> _frameBuffers;
+#ifndef NDEBUG
+    static std::uint64_t swapchainIncarnation;
+#endif
 };
 
 }

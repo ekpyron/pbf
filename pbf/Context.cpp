@@ -7,6 +7,7 @@
  * @date 9/26/18
  */
 
+#include <regex>
 #include "Context.h"
 #include "Renderer.h"
 
@@ -24,7 +25,7 @@ Context::Context() {
         std::vector<const char *> layers;
         auto extensions = _glfw.getRequiredInstanceExtensions();
 #ifndef NDEBUG
-        extensions.push_back("VK_EXT_debug_report");
+        extensions.push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
         //layers.push_back("VK_LAYER_LUNARG_standard_validation"); //leads to crash
 #endif
         vk::ApplicationInfo appInfo{
@@ -40,19 +41,22 @@ Context::Context() {
                                              });
     }
 #ifndef NDEBUG
-    auto debugFlags = vk::DebugReportFlagBitsEXT::eDebug | vk::DebugReportFlagBitsEXT::eError |
-                      vk::DebugReportFlagBitsEXT::eInformation | vk::DebugReportFlagBitsEXT::ePerformanceWarning |
-                      vk::DebugReportFlagBitsEXT::eWarning;
-    auto callback = [](VkDebugReportFlagsEXT flags, VkDebugReportObjectTypeEXT objectType, std::uint64_t object,
-                       std::size_t location, std::int32_t messageCode, const char *pLayerPrefix, const char *pMessage,
-                       void *userData) -> VkBool32 {
-        return static_cast<Context *>(userData)->debugReportCallback(flags, objectType, object, location, messageCode,
-                                                                     pLayerPrefix, pMessage);
-    };
     dldi = std::make_unique<vk::DispatchLoaderDynamic>(*_instance);
-    _debugReportCallback = _instance->createDebugReportCallbackEXTUnique(vk::DebugReportCallbackCreateInfoEXT{
-            debugFlags, callback, this
-    }, nullptr, *dldi);
+    _debugUtilsMessenger = _instance->createDebugUtilsMessengerEXTUnique(
+            vk::DebugUtilsMessengerCreateInfoEXT {
+                    {}, ~vk::DebugUtilsMessageSeverityFlagBitsEXT(), ~vk::DebugUtilsMessageTypeFlagBitsEXT(),
+                    [](VkDebugUtilsMessageSeverityFlagBitsEXT           messageSeverity,
+                       VkDebugUtilsMessageTypeFlagsEXT                  messageType,
+                       const VkDebugUtilsMessengerCallbackDataEXT*      pCallbackData,
+                       void*                                            pUserData) -> VkBool32 {
+                        return static_cast<Context *>(pUserData)->debugUtilMessengerCallback(
+                                vk::DebugUtilsMessageSeverityFlagBitsEXT(messageSeverity),
+                                vk::DebugUtilsMessageTypeFlagBitsEXT(messageType),
+                                *reinterpret_cast<const vk::DebugUtilsMessengerCallbackDataEXT*>(pCallbackData)
+                                );
+                        },
+                       this
+            }, nullptr, *dldi);
 #endif
 
     _surface = _window->createSurface(*_instance);
@@ -77,9 +81,22 @@ Context::Context() {
         _device = _physicalDevice.createDeviceUnique(
                 {{}, static_cast<uint32_t>(queueCreateInfos.size()), queueCreateInfos.data(),
                  static_cast<uint32_t>(layers.size()), layers.data(), 1, &extensionName, &features});
+        PBF_DEBUG_SET_OBJECT_NAME(this, _physicalDevice, "Physical Device");
+        PBF_DEBUG_SET_OBJECT_NAME(this, *_instance, "Main Vulkan Instance");
+        PBF_DEBUG_SET_OBJECT_NAME(this, *_surface, "Main Window");
+        PBF_DEBUG_SET_OBJECT_NAME(this, *_debugUtilsMessenger, "Debug Utils Messenger");
+        PBF_DEBUG_SET_OBJECT_NAME(this, *_device, "Main Device");
 
-        _graphicsQueue = _device->getQueue(static_cast<uint32_t>(_families.graphics), 0);
-        _presentQueue = _device->getQueue(static_cast<uint32_t>(_families.present), 0);
+        _graphicsQueue = _device->getQueue(_families.graphics, 0);
+        if (_families.graphics != _families.present) {
+            PBF_DEBUG_SET_OBJECT_NAME(this, _graphicsQueue, "Graphics Queue");
+            _presentQueue = _device->getQueue(_families.present, 0);
+            PBF_DEBUG_SET_OBJECT_NAME(this, _presentQueue, "Present Queue");
+
+        } else {
+            _presentQueue = _graphicsQueue;
+            PBF_DEBUG_SET_OBJECT_NAME(this, _presentQueue, "Graphics & Present Queue");
+        }
     }
 
     {
@@ -101,37 +118,65 @@ Context::Context() {
     }
 
     _commandPool = _device->createCommandPoolUnique({{}, _families.graphics});
+    PBF_DEBUG_SET_OBJECT_NAME(this, *_commandPool, "Main Command Pool");
     _renderer = std::make_unique<Renderer>(this);
 }
 
 Context::~Context() = default;
 
+#ifndef NDEBUG
 VkBool32
-Context::debugReportCallback(VkDebugReportFlagsEXT flags, VkDebugReportObjectTypeEXT objectType, std::uint64_t object,
-                             std::size_t location, std::int32_t messageCode, const char *pLayerPrefix,
-                             const char *pMessage) {
-    auto logger = spdlog::get("console");
-    if (flags & VK_DEBUG_REPORT_ERROR_BIT_EXT) {
-        logger->critical("Vulkan ({}): \"{}\", Object: {:#x}", pLayerPrefix, pMessage, object);
-    } else if (flags & VK_DEBUG_REPORT_WARNING_BIT_EXT) {
-        logger->warn("Vulkan ({}): \"{}\", Object: {:#x}", pLayerPrefix, pMessage, object);
-    } else if (flags & VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT) {
-        logger->warn("Vulkan performance ({}): \"{}\", Object: {:#x}", pLayerPrefix, pMessage, object);
-    } else if (flags & VK_DEBUG_REPORT_DEBUG_BIT_EXT) {
-        logger->debug("Vulkan ({}): \"{}\", Object: {:#x}", pLayerPrefix, pMessage, object);
-    } else if (flags & VK_DEBUG_REPORT_INFORMATION_BIT_EXT) {
-        logger->info("Vulkan ({}): \"{}\", Object: {:#x}", pLayerPrefix, pMessage, object);
+Context::debugUtilMessengerCallback(vk::DebugUtilsMessageSeverityFlagsEXT messageSeverity,
+    vk::DebugUtilsMessageTypeFlagsEXT messageType,
+    const vk::DebugUtilsMessengerCallbackDataEXT &callbackData) const {
+    auto logger = spdlog::get("vulkan");
+    std::string messageTypeString = "Unknown";
+    std::map<std::string, std::string> nameMap;
+    std::string message = callbackData.pMessage;
+    for (uint32_t i = 0; i < callbackData.objectCount; i++)
+    {
+        if (callbackData.pObjects[i].pObjectName)
+            message = std::regex_replace(message, std::regex(fmt::format("obj {:#x}", callbackData.pObjects[i].objectHandle)),
+                                                    fmt::format("[{} ({:#x})]", callbackData.pObjects[i].pObjectName,
+                                                            callbackData.pObjects[i].objectHandle));
+    }
+
+    if (messageType & vk::DebugUtilsMessageTypeFlagBitsEXT::eGeneral)
+        messageTypeString = "General";
+    else if (messageType & vk::DebugUtilsMessageTypeFlagBitsEXT::eValidation)
+        messageTypeString = "Validation";
+    else if (messageType & vk::DebugUtilsMessageTypeFlagBitsEXT::ePerformance)
+        messageTypeString = "Performance";
+    if (messageSeverity & vk::DebugUtilsMessageSeverityFlagBitsEXT::eError) {
+        logger->error("[{}] {}", messageTypeString, message);
+    } else if (messageSeverity & vk::DebugUtilsMessageSeverityFlagBitsEXT::eWarning) {
+        logger->warn("[{}] {}", messageTypeString, message);
+    } else if (messageSeverity & vk::DebugUtilsMessageSeverityFlagBitsEXT::eInfo) {
+        logger->info("[{}] {}", messageTypeString, message);
+    } else if (messageSeverity & vk::DebugUtilsMessageSeverityFlagBitsEXT::eVerbose) {
+        logger->debug("[{}] {}", messageTypeString, message);
     }
     return VK_FALSE;
 }
 
+void Context::setGenericObjectName(vk::ObjectType type, uint64_t obj, const std::string &name) const {
+    spdlog::get("vulkan")->info("Assign name [{}] = object {:#x}", name, obj);
+    _device->setDebugUtilsObjectNameEXT(vk::DebugUtilsObjectNameInfoEXT {
+            type, obj, name.c_str()
+    }, *dldi);
+}
+#endif
+
 void Context::run() {
+    spdlog::get("console")->debug("Entering main loop.");
     while (!_window->shouldClose()) {
         _glfw.pollEvents();
         _cache.frame();
         _renderer->render();
     }
+    spdlog::get("console")->debug("Exiting main loop. Waiting for idle device.");
     _device->waitIdle();
+    spdlog::get("console")->debug("Returning from main loop.");
 }
 
 }

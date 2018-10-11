@@ -23,6 +23,9 @@ Renderer::Renderer(Context *context) : _context(context) {
                                         context->device().createSemaphoreUnique({}),
                                         context->device().createFenceUnique({ vk::FenceCreateFlagBits::eSignaled })
                                 });
+        PBF_DEBUG_SET_OBJECT_NAME(context, *_frameSync.back().imageAvailableSemaphore, fmt::format("Image Available Semaphore #{}", i));
+        PBF_DEBUG_SET_OBJECT_NAME(context, *_frameSync.back().renderFinishedSemaphore, fmt::format("Render Finished Semaphore #{}", i));
+        PBF_DEBUG_SET_OBJECT_NAME(context, *_frameSync.back().fence, fmt::format("Frame Fence #{}", i));
     }
 
     {
@@ -59,7 +62,8 @@ Renderer::Renderer(Context *context) : _context(context) {
                         vk::PipelineStageFlagBits::eColorAttachmentOutput,
                         {}, {}, {}
                     }
-            }
+            },
+            PBF_DESC_DEBUG_NAME("Main Renderer RenderPass")
         });
     }
     {
@@ -67,12 +71,18 @@ Renderer::Renderer(Context *context) : _context(context) {
                 .shaderStages = {
                         {
                                 .stage = vk::ShaderStageFlagBits::eVertex,
-                                .module = context->cache().fetch(descriptors::ShaderModule{.filename = "shaders/test.spv"}),
+                                .module = context->cache().fetch(descriptors::ShaderModule{
+                                    .filename = "shaders/test.spv",
+                                    PBF_DESC_DEBUG_NAME("shaders/test.spv Vertex Shader")
+                                }),
                                 .entryPoint = "main"
                         },
                         {
                                 .stage = vk::ShaderStageFlagBits::eFragment,
-                                .module = context->cache().fetch(descriptors::ShaderModule{.filename = "shaders/test_frag.spv"}),
+                                .module = context->cache().fetch(descriptors::ShaderModule{
+                                    .filename = "shaders/test_frag.spv",
+                                    PBF_DESC_DEBUG_NAME("Fragment Shader shaders/test_frag.spv")
+                                }),
                                 .entryPoint = "main"
                         }
                 },
@@ -86,8 +96,11 @@ Renderer::Renderer(Context *context) : _context(context) {
                         )
                 },
                 .dynamicStates = { vk::DynamicState::eViewport, vk::DynamicState::eScissor },
-                .pipelineLayout = context->cache().fetch(descriptors::PipelineLayout{}),
-                .renderPass = _renderPass
+                .pipelineLayout = context->cache().fetch(descriptors::PipelineLayout{
+                    PBF_DESC_DEBUG_NAME("Dummy Pipeline Layout")
+                }),
+                .renderPass = _renderPass,
+                PBF_DESC_DEBUG_NAME("Main Renderer Graphics Pipeline")
         });
     }
     reset();
@@ -105,7 +118,7 @@ void Renderer::render() {
     frameCount++;
     if (std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - lastTime).count() >= 1000) {
         lastTime = std::chrono::steady_clock::now();
-        spdlog::get("console")->error("Frame count {}", frameCount);
+        spdlog::get("console")->debug("FPS {}", frameCount);
         frameCount = 0;
     }
 
@@ -161,8 +174,13 @@ void Renderer::reset() {
                                                                               static_cast<uint32_t>(imageViews.size())
                                                                       });
 
+#ifndef NDEBUG
+    static std::uint64_t commandBufferIncarnation = 0;
+    ++commandBufferIncarnation;
+#endif
     for (std::size_t i = 0; i < images.size(); ++i) {
         auto &buf = _commandBuffers[i];
+        PBF_DEBUG_SET_OBJECT_NAME(_context, *buf, fmt::format("Primary Command Buffer #{} <{}>", i, commandBufferIncarnation));
         buf->begin({vk::CommandBufferUsageFlagBits::eSimultaneousUse, nullptr});
         vk::ClearValue clearValue;
         clearValue.setColor({ std::array<float, 4> { 0.0f, 1.0f, 0.0f, 1.0f }});

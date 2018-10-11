@@ -56,6 +56,10 @@ struct GraphicsPipeline {
     CacheReference<PipelineLayout> pipelineLayout;
     CacheReference<RenderPass> renderPass;
 
+#ifndef NDEBUG
+    std::string debugName;
+#endif
+
     template<typename T = GraphicsPipeline>
     using Depends = crampl::NonTypeList<&T::renderPass>;
 };

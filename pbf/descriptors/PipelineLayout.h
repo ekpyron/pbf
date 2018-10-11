@@ -17,6 +17,10 @@ public:
     vk::UniquePipelineLayout realize(Context *context) const;
 
     struct Compare { bool operator()(...) const { return false; }};
+
+#ifndef NDEBUG
+    std::string debugName;
+#endif
 };
 
 }

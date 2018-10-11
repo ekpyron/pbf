@@ -41,6 +41,10 @@ struct RenderPass {
     std::vector<vk::AttachmentDescription> attachments;
     std::vector<Subpass> subpasses;
     std::vector<vk::SubpassDependency> subpassDependencies;
+
+#ifndef NDEBUG
+    std::string debugName;
+#endif
 };
 
 }
