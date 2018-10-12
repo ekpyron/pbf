@@ -72,16 +72,16 @@ Renderer::Renderer(Context *context) : _context(context) {
                         {
                                 .stage = vk::ShaderStageFlagBits::eVertex,
                                 .module = context->cache().fetch(descriptors::ShaderModule{
-                                    .filename = "shaders/test.spv",
-                                    PBF_DESC_DEBUG_NAME("shaders/test.spv Vertex Shader")
+                                    .filename = "shaders/test.vert.spv",
+                                    PBF_DESC_DEBUG_NAME("shaders/test.vert.spv Vertex Shader")
                                 }),
                                 .entryPoint = "main"
                         },
                         {
                                 .stage = vk::ShaderStageFlagBits::eFragment,
                                 .module = context->cache().fetch(descriptors::ShaderModule{
-                                    .filename = "shaders/test_frag.spv",
-                                    PBF_DESC_DEBUG_NAME("Fragment Shader shaders/test_frag.spv")
+                                    .filename = "shaders/test.frag.spv",
+                                    PBF_DESC_DEBUG_NAME("Fragment Shader shaders/test.frag.spv")
                                 }),
                                 .entryPoint = "main"
                         }
@@ -183,7 +183,7 @@ void Renderer::reset() {
         PBF_DEBUG_SET_OBJECT_NAME(_context, *buf, fmt::format("Primary Command Buffer #{} <{}>", i, commandBufferIncarnation));
         buf->begin({vk::CommandBufferUsageFlagBits::eSimultaneousUse, nullptr});
         vk::ClearValue clearValue;
-        clearValue.setColor({ std::array<float, 4> { 0.0f, 1.0f, 0.0f, 1.0f }});
+        clearValue.setColor({ std::array<float, 4> { 0.1f, 0.1f, 0.1f, 1.0f }});
         buf->setViewport(0, {vk::Viewport{0, 0, float(_swapchain->extent().width), float(_swapchain->extent().height), 0.0f, 1.0f}});
         buf->setScissor(0, {vk::Rect2D{vk::Offset2D(), _swapchain->extent()}});
         buf->beginRenderPass(vk::RenderPassBeginInfo{
