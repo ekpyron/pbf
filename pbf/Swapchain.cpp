@@ -34,26 +34,27 @@ Swapchain::Swapchain(Context *context, const vk::RenderPass& renderPass, vk::Swa
     {
         std::size_t nOffscreen = 1;
         auto minImageCount = static_cast<uint32_t>(surfaceCapabilities.minImageCount + nOffscreen);
-        vk::SwapchainCreateInfoKHR createInfo;
-        createInfo.setSurface(context->surface())
-                .setMinImageCount(minImageCount)
-                .setImageFormat(context->surfaceFormat().format)
-                .setImageColorSpace(context->surfaceFormat().colorSpace)
-                .setImageExtent(_extent)
-                .setImageArrayLayers(1)
-                .setImageUsage(vk::ImageUsageFlagBits::eColorAttachment)
-                .setPreTransform(surfaceCapabilities.currentTransform)
-                .setCompositeAlpha(vk::CompositeAlphaFlagBitsKHR::eOpaque)
-                .setPresentMode(context->presentMode())
-                .setClipped(VK_TRUE)
-                .setOldSwapchain(oldSwapChain);
+        vk::SwapchainCreateInfoKHR createInfo = {
+                .surface = context->surface(),
+                .minImageCount = minImageCount,
+                .imageFormat = context->surfaceFormat().format,
+                .imageColorSpace = context->surfaceFormat().colorSpace,
+                .imageExtent = _extent,
+                .imageArrayLayers = 1,
+                .imageUsage = vk::ImageUsageFlagBits::eColorAttachment,
+                .preTransform = surfaceCapabilities.currentTransform,
+                .compositeAlpha = vk::CompositeAlphaFlagBitsKHR::eOpaque,
+                .presentMode = context->presentMode(),
+                .clipped = true,
+                .oldSwapchain = oldSwapChain
+        };
 
         if(context->families().same()) {
-            createInfo.setImageSharingMode(vk::SharingMode::eExclusive);
+            createInfo.imageSharingMode = vk::SharingMode::eExclusive;
         } else {
-            createInfo.setImageSharingMode(vk::SharingMode::eConcurrent)
-                .setQueueFamilyIndexCount(context->families().arr.size())
-                .setPQueueFamilyIndices(context->families().arr.data());
+            createInfo.imageSharingMode = vk::SharingMode::eConcurrent;
+            createInfo.queueFamilyIndexCount = context->families().arr.size();
+            createInfo.pQueueFamilyIndices = context->families().arr.data();
         }
         _swapchain = device.createSwapchainKHRUnique(createInfo);
     }
@@ -61,19 +62,28 @@ Swapchain::Swapchain(Context *context, const vk::RenderPass& renderPass, vk::Swa
     _images = device.getSwapchainImagesKHR(*_swapchain);
     _imageViews.reserve(_images.size());
     for(const auto &image : _images) {
-        _imageViews.emplace_back(device.createImageViewUnique({
-            {}, image, vk::ImageViewType::e2D, context->surfaceFormat().format, {},
-            { vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1}
+        _imageViews.emplace_back(device.createImageViewUnique(vk::ImageViewCreateInfo {
+            .flags = {},
+            .image = image,
+            .viewType = vk::ImageViewType::e2D,
+            .format = context->surfaceFormat().format,
+            .components = {},
+            .subresourceRange = { vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1}
         }));
     }
 
     _frameBuffers.reserve(_images.size());
     for(const auto &iv : _imageViews) {
         _frameBuffers.emplace_back(device.createFramebufferUnique(
-                vk::FramebufferCreateInfo(
-                        {}, renderPass, 1, &*iv, _extent.width, _extent.height, 1
-                )
-                ));
+                vk::FramebufferCreateInfo {
+                    .flags = {},
+                    .renderPass = renderPass,
+                    .attachmentCount = 1,
+                    .pAttachments = &*iv,
+                    .width = _extent.width,
+                    .height = _extent.height,
+                    .layers = 1
+                }));
     }
 #ifndef NDEBUG
     ++swapchainIncarnation;

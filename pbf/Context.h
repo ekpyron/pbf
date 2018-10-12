@@ -62,7 +62,7 @@ private:
             {
                 const auto &properties = physicalDevice.enumerateDeviceExtensionProperties();
                 auto it = std::find_if(properties.begin(), properties.end(), [](const auto &prop) {
-                    return prop.extensionName == std::string(VK_KHR_SWAPCHAIN_EXTENSION_NAME);
+                    return prop.extensionName.data() == std::string(VK_KHR_SWAPCHAIN_EXTENSION_NAME);
                 });
                 if (it == properties.end()) continue;
             }

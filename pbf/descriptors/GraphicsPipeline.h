@@ -41,7 +41,9 @@ struct GraphicsPipeline {
     vk::PrimitiveTopology primitiveTopology = vk::PrimitiveTopology::eTriangleList;
     bool primitiveRestartEnable = false;
     std::uint32_t tessellationPatchControlPoints = 0;
-    vk::PipelineRasterizationStateCreateInfo rasterizationStateCreateInfo = vk::PipelineRasterizationStateCreateInfo().setLineWidth(1.0f);
+    vk::PipelineRasterizationStateCreateInfo rasterizationStateCreateInfo = {
+            .lineWidth = 1.0f
+    };
     vk::PipelineMultisampleStateCreateInfo multisampleStateCreateInfo;
     vk::PipelineDepthStencilStateCreateInfo depthStencilStateCreateInfo;
     std::vector<vk::PipelineColorBlendAttachmentState> colorBlendAttachmentStates;

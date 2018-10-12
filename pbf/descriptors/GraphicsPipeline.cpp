@@ -16,63 +16,77 @@ vk::UniquePipeline GraphicsPipeline::realize(Context* context) const {
     auto const& device = context->device();
 
     std::vector<vk::PipelineShaderStageCreateInfo> stageCreateInfos;
-    vk::PipelineVertexInputStateCreateInfo vertexInputStateCreateInfo;
-    vk::PipelineColorBlendStateCreateInfo colorBlendStateCreateInfo;
     vk::PipelineInputAssemblyStateCreateInfo assemblyStateCreateInfo {
-            {}, primitiveTopology, primitiveRestartEnable
+        .flags = {},
+        .topology = primitiveTopology,
+        .primitiveRestartEnable = primitiveRestartEnable
     };
     vk::PipelineTessellationStateCreateInfo tesselationStateCreateInfo {
-            {}, tessellationPatchControlPoints
+        .flags = {},
+        .patchControlPoints = tessellationPatchControlPoints
     };
 
-    vk::PipelineViewportStateCreateInfo viewportStateCreateInfo {{}, 1u, &viewport, 1u, &scissor };
+    vk::PipelineViewportStateCreateInfo viewportStateCreateInfo {
+        .flags = {},
+        .viewportCount = 1u,
+        .pViewports = &viewport,
+        .scissorCount = 1u,
+        .pScissors = &scissor
+    };
 
     {
         stageCreateInfos.reserve(shaderStages.size());
         for (const auto &stage : shaderStages) {
             stageCreateInfos.emplace_back(vk::PipelineShaderStageCreateInfo{
-                    {}, // flags,
-                    stage.stage, // stage
-                    *stage.module, // shader module
-                    stage.entryPoint.c_str(), // entry point
-                    nullptr  // specialization info
+                    .flags = {},
+                    .stage = stage.stage,
+                    .module = *stage.module,
+                    .pName = stage.entryPoint.c_str(),
+                    .pSpecializationInfo = nullptr
             });
         }
     }
-    {
-        vertexInputStateCreateInfo
-                .setPVertexBindingDescriptions(vertexBindingDescriptions.data())
-                .setVertexBindingDescriptionCount(static_cast<uint32_t>(vertexBindingDescriptions.size()))
-                .setPVertexAttributeDescriptions(vertexInputAttributeDescriptions.data())
-                .setVertexAttributeDescriptionCount(static_cast<uint32_t>(vertexInputAttributeDescriptions.size()));
-    }
-    {
-        colorBlendStateCreateInfo
-                .setAttachmentCount(static_cast<uint32_t>(colorBlendAttachmentStates.size()))
-                .setPAttachments(colorBlendAttachmentStates.data());
-    }
+    vk::PipelineVertexInputStateCreateInfo vertexInputStateCreateInfo = {
+            .vertexBindingDescriptionCount = static_cast<uint32_t>(vertexBindingDescriptions.size()),
+            .pVertexBindingDescriptions = vertexBindingDescriptions.data(),
+            .vertexAttributeDescriptionCount = static_cast<uint32_t>(vertexInputAttributeDescriptions.size()),
+            .pVertexAttributeDescriptions = vertexInputAttributeDescriptions.data()
+    };
+    vk::PipelineColorBlendStateCreateInfo colorBlendStateCreateInfo = {
+            .logicOpEnable = blendLogicOp ? true : false,
+            .logicOp = blendLogicOp ? *blendLogicOp : vk::LogicOp::eClear,
+            .attachmentCount = static_cast<uint32_t>(colorBlendAttachmentStates.size()),
+            .pAttachments = colorBlendAttachmentStates.data(),
+            .blendConstants = blendConstants
+    };
 
     std::optional<vk::PipelineDynamicStateCreateInfo> dynamicStateCreateInfo;
     if (!dynamicStates.empty()) {
         dynamicStateCreateInfo = vk::PipelineDynamicStateCreateInfo {
-                {}, static_cast<uint32_t>(dynamicStates.size()), dynamicStates.data()
+                .flags = {},
+                .dynamicStateCount = static_cast<uint32_t>(dynamicStates.size()),
+                .pDynamicStates = dynamicStates.data()
         };
     }
 
-    colorBlendStateCreateInfo.setLogicOpEnable(blendLogicOp ? true : false);
-    if (blendLogicOp) {
-        colorBlendStateCreateInfo.setLogicOp(*blendLogicOp);
-    }
-    colorBlendStateCreateInfo.setBlendConstants(blendConstants);
 
-
-    vk::GraphicsPipelineCreateInfo info({},
-                                        static_cast<uint32_t>(stageCreateInfos.size()), stageCreateInfos.data(),
-                                        &vertexInputStateCreateInfo, &assemblyStateCreateInfo, &tesselationStateCreateInfo,
-                                        &viewportStateCreateInfo, &rasterizationStateCreateInfo, &multisampleStateCreateInfo,
-                                        &depthStencilStateCreateInfo, &colorBlendStateCreateInfo,
-                                        dynamicStateCreateInfo ? &*dynamicStateCreateInfo : nullptr, *pipelineLayout,
-                                        *renderPass, subpass);
+    vk::GraphicsPipelineCreateInfo info {
+            .flags = {},
+            .stageCount = static_cast<uint32_t>(stageCreateInfos.size()),
+            .pStages = stageCreateInfos.data(),
+            .pVertexInputState = &vertexInputStateCreateInfo,
+            .pInputAssemblyState = &assemblyStateCreateInfo,
+            .pTessellationState = &tesselationStateCreateInfo,
+            .pViewportState = &viewportStateCreateInfo,
+            .pRasterizationState = &rasterizationStateCreateInfo,
+            .pMultisampleState = &multisampleStateCreateInfo,
+            .pDepthStencilState = &depthStencilStateCreateInfo,
+            .pColorBlendState = &colorBlendStateCreateInfo,
+            .pDynamicState = dynamicStateCreateInfo ? &*dynamicStateCreateInfo : nullptr,
+            .layout = *pipelineLayout,
+            .renderPass = *renderPass,
+            .subpass = subpass
+    };
 
     return device.createGraphicsPipelineUnique(nullptr, info);
 }

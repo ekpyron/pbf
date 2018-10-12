@@ -13,7 +13,6 @@ using namespace pbf::descriptors;
 
 vk::UniquePipelineLayout PipelineLayout::realize(Context *context) const {
     const auto &device = context->device();
-    return device.createPipelineLayoutUnique({
-            {}, 0, nullptr, 0, nullptr
+    return device.createPipelineLayoutUnique(vk::PipelineLayoutCreateInfo{
     });
 }

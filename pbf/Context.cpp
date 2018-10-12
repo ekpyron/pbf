@@ -35,17 +35,23 @@ Context::Context() {
                 .engineVersion = VK_MAKE_VERSION(0, 0, 0),
                 .apiVersion = VK_API_VERSION_1_1
         };
-        _instance = vk::createInstanceUnique({
-                                                     {}, &appInfo, static_cast<uint32_t>(layers.size()), layers.data(),
-                                                     static_cast<uint32_t>(extensions.size()), extensions.data()
-                                             });
+        _instance = vk::createInstanceUnique(vk::InstanceCreateInfo{
+            .flags = {},
+            .pApplicationInfo = &appInfo,
+            .enabledLayerCount = static_cast<uint32_t>(layers.size()),
+            .ppEnabledLayerNames = layers.data(),
+            .enabledExtensionCount = static_cast<uint32_t>(extensions.size()),
+            .ppEnabledExtensionNames = extensions.data()
+        });
     }
 #ifndef NDEBUG
     dldi = std::make_unique<vk::DispatchLoaderDynamic>(*_instance);
     _debugUtilsMessenger = _instance->createDebugUtilsMessengerEXTUnique(
             vk::DebugUtilsMessengerCreateInfoEXT {
-                    {}, ~vk::DebugUtilsMessageSeverityFlagBitsEXT(), ~vk::DebugUtilsMessageTypeFlagBitsEXT(),
-                    [](VkDebugUtilsMessageSeverityFlagBitsEXT           messageSeverity,
+                .flags = {},
+                .messageSeverity = ~vk::DebugUtilsMessageSeverityFlagBitsEXT(),
+                .messageType = ~vk::DebugUtilsMessageTypeFlagBitsEXT(),
+                .pfnUserCallback = [](VkDebugUtilsMessageSeverityFlagBitsEXT           messageSeverity,
                        VkDebugUtilsMessageTypeFlagsEXT                  messageType,
                        const VkDebugUtilsMessengerCallbackDataEXT*      pCallbackData,
                        void*                                            pUserData) -> VkBool32 {
@@ -55,7 +61,7 @@ Context::Context() {
                                 *reinterpret_cast<const vk::DebugUtilsMessengerCallbackDataEXT*>(pCallbackData)
                                 );
                         },
-                       this
+                .pUserData = this
             }, nullptr, *dldi);
 #endif
 
@@ -67,10 +73,24 @@ Context::Context() {
         std::vector<vk::DeviceQueueCreateInfo> queueCreateInfos;
         float queuePriority = 1.f;
         if (_families.same()) {
-            queueCreateInfos = {{{}, uint32_t(_families.graphics), 1, &queuePriority}};
+            queueCreateInfos = {vk::DeviceQueueCreateInfo{
+                .flags = {},
+                .queueFamilyIndex = _families.graphics,
+                .queueCount = 1,
+                .pQueuePriorities = &queuePriority
+            }};
         } else {
-            queueCreateInfos = {{{}, uint32_t(_families.graphics), 1, &queuePriority},
-                                {{}, uint32_t(_families.present),  1, &queuePriority}};
+            queueCreateInfos = {vk::DeviceQueueCreateInfo{
+                .flags = {},
+                .queueFamilyIndex = _families.graphics,
+                .queueCount = 1,
+                .pQueuePriorities = &queuePriority
+            }, vk::DeviceQueueCreateInfo{
+                .flags = {},
+                .queueFamilyIndex = _families.present,
+                .queueCount = 1,
+                .pQueuePriorities = &queuePriority
+            }};
         }
         vk::PhysicalDeviceFeatures features{};
         std::vector<const char *> layers;
@@ -78,9 +98,16 @@ Context::Context() {
         layers.push_back("VK_LAYER_LUNARG_standard_validation");
 #endif
         auto extensionName = VK_KHR_SWAPCHAIN_EXTENSION_NAME;
-        _device = _physicalDevice.createDeviceUnique(
-                {{}, static_cast<uint32_t>(queueCreateInfos.size()), queueCreateInfos.data(),
-                 static_cast<uint32_t>(layers.size()), layers.data(), 1, &extensionName, &features});
+        _device = _physicalDevice.createDeviceUnique(vk::DeviceCreateInfo{
+                    .flags = {},
+                    .queueCreateInfoCount = static_cast<uint32_t>(queueCreateInfos.size()),
+                    .pQueueCreateInfos = queueCreateInfos.data(),
+                    .enabledLayerCount = static_cast<uint32_t>(layers.size()),
+                    .ppEnabledLayerNames = layers.data(),
+                    .enabledExtensionCount = 1,
+                    .ppEnabledExtensionNames = &extensionName,
+                    .pEnabledFeatures = &features
+                });
         PBF_DEBUG_SET_OBJECT_NAME(this, _physicalDevice, "Physical Device");
         PBF_DEBUG_SET_OBJECT_NAME(this, *_instance, "Main Vulkan Instance");
         PBF_DEBUG_SET_OBJECT_NAME(this, *_surface, "Main Window");
@@ -117,7 +144,10 @@ Context::Context() {
         if(it != std::end(modes)) _presentMode = *it;
     }
 
-    _commandPool = _device->createCommandPoolUnique({{}, _families.graphics});
+    _commandPool = _device->createCommandPoolUnique(vk::CommandPoolCreateInfo {
+        .flags = {},
+        .queueFamilyIndex = _families.graphics
+    });
     PBF_DEBUG_SET_OBJECT_NAME(this, *_commandPool, "Main Command Pool");
     _renderer = std::make_unique<Renderer>(this);
 }
@@ -162,7 +192,9 @@ Context::debugUtilMessengerCallback(vk::DebugUtilsMessageSeverityFlagsEXT messag
 void Context::setGenericObjectName(vk::ObjectType type, uint64_t obj, const std::string &name) const {
     spdlog::get("vulkan")->info("Assign name [{}] = object {:#x}", name, obj);
     _device->setDebugUtilsObjectNameEXT(vk::DebugUtilsObjectNameInfoEXT {
-            type, obj, name.c_str()
+        .objectType = type,
+        .objectHandle = obj,
+        .pObjectName = name.c_str()
     }, *dldi);
 }
 #endif

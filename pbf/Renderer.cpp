@@ -21,7 +21,9 @@ Renderer::Renderer(Context *context) : _context(context) {
         _frameSync.emplace_back(FrameSync{
                                         context->device().createSemaphoreUnique({}),
                                         context->device().createSemaphoreUnique({}),
-                                        context->device().createFenceUnique({ vk::FenceCreateFlagBits::eSignaled })
+                                        context->device().createFenceUnique(vk::FenceCreateInfo {
+                                            .flags = vk::FenceCreateFlagBits::eSignaled
+                                        })
                                 });
         PBF_DEBUG_SET_OBJECT_NAME(context, *_frameSync.back().imageAvailableSemaphore, fmt::format("Image Available Semaphore #{}", i));
         PBF_DEBUG_SET_OBJECT_NAME(context, *_frameSync.back().renderFinishedSemaphore, fmt::format("Render Finished Semaphore #{}", i));
@@ -89,11 +91,12 @@ Renderer::Renderer(Context *context) : _context(context) {
                 .vertexBindingDescriptions = {},
                 .vertexInputAttributeDescriptions = {},
                 .primitiveTopology = vk::PrimitiveTopology::eTriangleList,
-                .rasterizationStateCreateInfo = vk::PipelineRasterizationStateCreateInfo().setLineWidth(1.0f),
+                .rasterizationStateCreateInfo = vk::PipelineRasterizationStateCreateInfo { .lineWidth = 1.0f },
                 .colorBlendAttachmentStates = {
-                        vk::PipelineColorBlendAttachmentState().setColorWriteMask(
-                                vk::ColorComponentFlagBits::eR|vk::ColorComponentFlagBits::eG|vk::ColorComponentFlagBits::eB|vk::ColorComponentFlagBits::eA
-                        )
+                        vk::PipelineColorBlendAttachmentState {
+                                .colorWriteMask = vk::ColorComponentFlagBits::eR | vk::ColorComponentFlagBits::eG |
+                                                  vk::ColorComponentFlagBits::eB | vk::ColorComponentFlagBits::eA
+                        }
                 },
                 .dynamicStates = { vk::DynamicState::eViewport, vk::DynamicState::eScissor },
                 .pipelineLayout = context->cache().fetch(descriptors::PipelineLayout{
@@ -149,13 +152,24 @@ void Renderer::render() {
     vk::PipelineStageFlags waitStages[] = {
             vk::PipelineStageFlagBits::eColorAttachmentOutput
     };
-    _context->graphicsQueue().submit({vk::SubmitInfo{
-            1, &*currentFrameSync.imageAvailableSemaphore, waitStages,
-            1, &*_commandBuffers[imageIndex], 1, &*currentFrameSync.renderFinishedSemaphore
+    _context->graphicsQueue().submit({ vk::SubmitInfo {
+        .waitSemaphoreCount = 1,
+        .pWaitSemaphores = &*currentFrameSync.imageAvailableSemaphore,
+        .pWaitDstStageMask = waitStages,
+        .commandBufferCount = 1,
+        .pCommandBuffers = &*_commandBuffers[imageIndex],
+        .signalSemaphoreCount = 1,
+        .pSignalSemaphores = &*currentFrameSync.renderFinishedSemaphore
     }}, *currentFrameSync.fence);
 
-    _context->presentQueue().presentKHR({1, &*currentFrameSync.renderFinishedSemaphore, 1, &_swapchain->swapchain(), &imageIndex,
-                                         nullptr});
+    _context->presentQueue().presentKHR(vk::PresentInfoKHR{
+        .waitSemaphoreCount = 1,
+        .pWaitSemaphores = &*currentFrameSync.renderFinishedSemaphore,
+        .swapchainCount = 1,
+        .pSwapchains = &_swapchain->swapchain(),
+        .pImageIndices = &imageIndex,
+        .pResults = nullptr
+    });
 
     _currentFrameSync = (_currentFrameSync + 1) % _frameSync.size();
 }
@@ -168,11 +182,11 @@ void Renderer::reset() {
     const auto &images = _swapchain->images();
     const auto &imageViews = _swapchain->imageViews();
     const auto &framebuffers = _swapchain->frameBuffers();
-    _commandBuffers = device.allocateCommandBuffersUnique({
-                                                                              _context->commandPool(),
-                                                                              vk::CommandBufferLevel::ePrimary,
-                                                                              static_cast<uint32_t>(imageViews.size())
-                                                                      });
+    _commandBuffers = device.allocateCommandBuffersUnique(vk::CommandBufferAllocateInfo {
+        .commandPool = _context->commandPool(),
+        .level = vk::CommandBufferLevel::ePrimary,
+        .commandBufferCount = static_cast<uint32_t>(imageViews.size())
+    });
 
 #ifndef NDEBUG
     static std::uint64_t commandBufferIncarnation = 0;
@@ -181,13 +195,20 @@ void Renderer::reset() {
     for (std::size_t i = 0; i < images.size(); ++i) {
         auto &buf = _commandBuffers[i];
         PBF_DEBUG_SET_OBJECT_NAME(_context, *buf, fmt::format("Primary Command Buffer #{} <{}>", i, commandBufferIncarnation));
-        buf->begin({vk::CommandBufferUsageFlagBits::eSimultaneousUse, nullptr});
+        buf->begin(vk::CommandBufferBeginInfo {
+            .flags = vk::CommandBufferUsageFlagBits::eSimultaneousUse,
+            .pInheritanceInfo = nullptr
+        });
         vk::ClearValue clearValue;
         clearValue.setColor({ std::array<float, 4> { 0.1f, 0.1f, 0.1f, 1.0f }});
         buf->setViewport(0, {vk::Viewport{0, 0, float(_swapchain->extent().width), float(_swapchain->extent().height), 0.0f, 1.0f}});
         buf->setScissor(0, {vk::Rect2D{vk::Offset2D(), _swapchain->extent()}});
-        buf->beginRenderPass(vk::RenderPassBeginInfo{
-                                     *_renderPass, *framebuffers[i], vk::Rect2D{{}, _swapchain->extent()}, 1, &clearValue
+        buf->beginRenderPass(vk::RenderPassBeginInfo {
+            .renderPass = *_renderPass,
+            .framebuffer = *framebuffers[i],
+            .renderArea = vk::Rect2D{{}, _swapchain->extent()},
+            .clearValueCount = 1,
+            .pClearValues = &clearValue
         }, vk::SubpassContents::eInline);
         buf->bindPipeline(vk::PipelineBindPoint::eGraphics, *_graphicsPipeline);
         buf->draw(3, 1, 0, 0);

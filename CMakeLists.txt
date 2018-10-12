@@ -15,6 +15,8 @@ set(GLM_TEST_ENABLE OFF CACHE BOOL "" FORCE)
 find_package(glfw3 REQUIRED)
 find_package(Vulkan REQUIRED)
 
+include_directories(contrib/vulkan-hpp)
+
 add_subdirectory(contrib/fmt)
 add_definitions(-DSPDLOG_FMT_EXTERNAL)
 add_subdirectory(contrib/spdlog)
