@@ -10,6 +10,15 @@
 #include <iostream>
 #include "Context.h"
 
+void print_exception(const std::exception &e, int level = 0)
+{
+    std::cerr << std::string(level, ' ') << "Exception: " << e.what() << std::endl;
+    try {
+        std::rethrow_if_nested(e);
+    } catch(const std::exception &e) {
+        print_exception(e, level + 1);
+    } catch(...) {}
+}
 
 int main() {
     using namespace pbf;
@@ -33,7 +42,7 @@ int main() {
 
         return 0;
     } catch (const std::exception& e) {
-        std::cerr << "Failed: " << e.what() << std::endl;
+        print_exception(e, 0);
         return -1;
     }
 }
