@@ -7,8 +7,8 @@
  * @date 9/26/18
  */
 #include "Swapchain.h"
-#include "glm/glm.hpp"
-#include "Renderer.h"
+#include <glm/glm.hpp>
+#include <pbf/Renderer.h>
 
 namespace pbf {
 
@@ -75,5 +75,19 @@ Swapchain::Swapchain(Context *context, const vk::RenderPass& renderPass, vk::Swa
                 )
                 ));
     }
+#ifndef NDEBUG
+    ++swapchainIncarnation;
+    PBF_DEBUG_SET_OBJECT_NAME(context, *_swapchain, fmt::format("Swapchain <{}>", swapchainIncarnation));
+    for (std::size_t i = 0; i < _images.size(); i++) {
+        PBF_DEBUG_SET_OBJECT_NAME(context, _images[i], fmt::format("Swapchain <{}> Image #{}", swapchainIncarnation, i));
+        PBF_DEBUG_SET_OBJECT_NAME(context, *_imageViews[i], fmt::format("Swapchain <{}> Image View #{}", swapchainIncarnation, i));
+        PBF_DEBUG_SET_OBJECT_NAME(context, *_frameBuffers[i], fmt::format("Swapchain <{}> Framebuffer #{}", swapchainIncarnation, i));
+    }
+#endif
 }
+
+#ifndef NDEBUG
+std::uint64_t Swapchain::swapchainIncarnation = 0;
+#endif
+
 }

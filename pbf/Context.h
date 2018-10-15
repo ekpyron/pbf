@@ -5,6 +5,7 @@
 #include <pbf/glfw.h>
 #include <pbf/descriptors/RenderPass.h>
 #include <pbf/Cache.h>
+#include <pbf/VulkanObjectType.h>
 
 namespace pbf {
 
@@ -30,6 +31,18 @@ public:
     const vk::CommandPool &commandPool() const { return *_commandPool; }
     Cache &cache() { return _cache; }
     const Renderer &renderer() const { return *_renderer; }
+
+#ifndef NDEBUG
+    template<typename T>
+    void setObjectName(const T &obj, const std::string &name) {
+        setGenericObjectName(VulkanObjectType<T>, reinterpret_cast<uint64_t>(static_cast<void*>(obj)), name);
+    }
+    void setGenericObjectName(vk::ObjectType type, uint64_t obj, const std::string &name) const;
+#define PBF_DEBUG_SET_OBJECT_NAME(context, object, name) do { context->setObjectName(object, name); } while(0)
+#else
+#define PBF_DEBUG_SET_OBJECT_NAME(context, object, name) do { } while(0)
+#endif
+
 protected:
 	virtual int ratePhysicalDevice(const vk::PhysicalDevice &physicalDevice) const {
     	int rating = 0;
@@ -80,19 +93,18 @@ private:
         throw std::runtime_error("No suitable discrete GPU found.");
     }
 
-    VkBool32
-    debugReportCallback(VkDebugReportFlagsEXT flags, VkDebugReportObjectTypeEXT objectType, std::uint64_t object,
-                        std::size_t location, std::int32_t messageCode, const char *pLayerPrefix, const char *pMessage);
-
     glfw::GLFW _glfw;
     std::unique_ptr<glfw::Window> _window;
 
-    vk::UniqueInstance _instance{nullptr};
+    vk::UniqueInstance _instance;
 #ifndef NDEBUG
+    VkBool32 debugUtilMessengerCallback(vk::DebugUtilsMessageSeverityFlagsEXT messageSeverity,
+            vk::DebugUtilsMessageTypeFlagsEXT messageType,
+            const vk::DebugUtilsMessengerCallbackDataEXT &callbackData) const;
+
     std::unique_ptr<vk::DispatchLoaderDynamic> dldi;
-    vk::UniqueHandle<vk::DebugReportCallbackEXT, vk::DispatchLoaderDynamic> _debugReportCallback;
+    vk::UniqueHandle<vk::DebugUtilsMessengerEXT, vk::DispatchLoaderDynamic> _debugUtilsMessenger;
 #endif
-    vk::UniqueSurfaceKHR _surface;
     vk::PhysicalDevice _physicalDevice;
 
     union {
@@ -108,6 +120,7 @@ private:
     } _families;
 
     vk::UniqueDevice _device;
+    vk::UniqueSurfaceKHR _surface;
     vk::Queue _graphicsQueue, _presentQueue;
 
     vk::SurfaceFormatKHR _surfaceFormat {vk::Format::eB8G8R8A8Unorm, vk::ColorSpaceKHR::eSrgbNonlinear};

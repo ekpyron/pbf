@@ -26,6 +26,20 @@ struct Order {
 };
 
 template<typename T>
+struct Order<T, std::void_t<typename T::template Compare<T>>> {
+    bool operator()(const T &lhs, const T &rhs) const {
+        return typename T::template Compare<T>()(lhs, rhs);
+    }
+};
+
+template<typename T>
+struct Order<T, std::void_t<typename T::Compare>> {
+    bool operator()(const T &lhs, const T &rhs) const {
+        return typename T::Compare()(lhs, rhs);
+    }
+};
+
+template<typename T>
 struct Order<std::optional<T>> {
 
     bool operator()(const std::optional<T> &lhs, const std::optional<T> &rhs) const {

@@ -1,6 +1,6 @@
 
 set(SOURCES main.cpp glfw.h Context.cpp Context.h common.h Swapchain.cpp Swapchain.h Renderer.cpp Renderer.h
-        Cache.h descriptors/RenderPass.h descriptors/Order.h descriptors/VkOrder.h descriptors/RenderPass.cpp
+        Cache.h Cache.cpp descriptors/RenderPass.h descriptors/Order.h descriptors/VkOrder.h descriptors/RenderPass.cpp
         descriptors/GraphicsPipeline.cpp descriptors/GraphicsPipeline.h descriptors/ShaderModule.cpp
         descriptors/ShaderModule.h descriptors/PipelineLayout.cpp descriptors/PipelineLayout.h)
 

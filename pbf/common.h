@@ -21,3 +21,9 @@ namespace descriptors {
 class GraphicsPipeline;
 }
 }
+
+#ifndef NDEBUG
+#define PBF_DESC_DEBUG_NAME(name) .debugName = name
+#else
+#define PBF_DESC_DEBUG_NAME(name)
+#endif

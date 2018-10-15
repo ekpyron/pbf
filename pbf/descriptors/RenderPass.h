@@ -28,23 +28,23 @@ struct RenderPass {
         std::optional<vk::AttachmentReference> depthStencilAttachment;
         std::vector<std::uint32_t> preserveAttachments;
 
-        bool operator<(const Subpass &rhs) const {
-            using T = Subpass;
-            return MemberComparator<&T::flags, &T::pipelineBindPoint, &T::inputAttachments, &T::colorAttachments, &T::resolveAttachments,
-                    &T::depthStencilAttachment, &T::preserveAttachments>()(*this, rhs);
-        }
+        template<typename T = Subpass>
+        using Compare = MemberComparator<&T::flags, &T::pipelineBindPoint, &T::inputAttachments, &T::colorAttachments, &T::resolveAttachments,
+                    &T::depthStencilAttachment, &T::preserveAttachments>;
     };
 
     vk::UniqueRenderPass realize(Context *context) const;
 
-    bool operator<(const RenderPass &rhs) const {
-        using T = RenderPass;
-        return MemberComparator<&T::attachments, &T::subpasses, &T::subpassDependencies>()(*this, rhs);
-    }
+    template<typename T = RenderPass>
+    using Compare = MemberComparator<&T::attachments, &T::subpasses, &T::subpassDependencies>;
 
     std::vector<vk::AttachmentDescription> attachments;
     std::vector<Subpass> subpasses;
     std::vector<vk::SubpassDependency> subpassDependencies;
+
+#ifndef NDEBUG
+    std::string debugName;
+#endif
 };
 
 }

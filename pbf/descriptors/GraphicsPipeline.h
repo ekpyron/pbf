@@ -23,21 +23,17 @@ struct GraphicsPipeline {
         vk::ShaderStageFlagBits stage;
         CacheReference<ShaderModule> module;
         std::string entryPoint;
-        bool operator<(const ShaderStage &rhs) const {
-            using T = ShaderStage;
-            return MemberComparator<&T::stage, &T::module, &T::entryPoint>()(*this, rhs);
-        }
+        template<typename T = ShaderStage>
+        using Compare = MemberComparator<&T::stage, &T::module, &T::entryPoint>;
     };
 
-    bool operator<(const GraphicsPipeline& rhs) const {
-        using T = GraphicsPipeline;
-        return MemberComparator<&T::shaderStages, &T::vertexBindingDescriptions, &T::vertexInputAttributeDescriptions,
+    template<typename T = GraphicsPipeline>
+    using Compare = MemberComparator<&T::shaderStages, &T::vertexBindingDescriptions, &T::vertexInputAttributeDescriptions,
                 &T::primitiveTopology, &T::primitiveRestartEnable, &T::tessellationPatchControlPoints,
                 &T::rasterizationStateCreateInfo, &T::multisampleStateCreateInfo, &T::depthStencilStateCreateInfo,
                 &T::colorBlendAttachmentStates,
                 &T::dynamicStates, &T::blendConstants, &T::blendLogicOp, &T::subpass,
-                &T::viewport, &T::scissor, &T::pipelineLayout, &T::renderPass>()(*this, rhs);
-    }
+                &T::viewport, &T::scissor, &T::pipelineLayout, &T::renderPass>;
 
     std::vector<ShaderStage> shaderStages;
     std::vector<vk::VertexInputBindingDescription> vertexBindingDescriptions;
@@ -59,6 +55,13 @@ struct GraphicsPipeline {
 
     CacheReference<PipelineLayout> pipelineLayout;
     CacheReference<RenderPass> renderPass;
+
+#ifndef NDEBUG
+    std::string debugName;
+#endif
+
+    template<typename T = GraphicsPipeline>
+    using Depends = crampl::NonTypeList<&T::renderPass>;
 };
 
 }
