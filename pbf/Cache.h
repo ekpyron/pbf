@@ -150,9 +150,10 @@ public:
         return &**this;
     }
 
-    void keepAlive() const {
+    void keepAlive(bool dependencies = true) const {
         **this;
-        keepDependenciesAlive<T>()(_obj->descriptor());
+        if (dependencies)
+            keepDependenciesAlive<T>()(_obj->descriptor());
     }
 
     operator bool() const {
