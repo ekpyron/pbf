@@ -29,9 +29,10 @@ public:
     const auto &families() const { return _families; }
     const vk::Queue &graphicsQueue() const { return _graphicsQueue; }
     const vk::Queue &presentQueue() const { return _presentQueue; }
-    const vk::CommandPool &commandPool() const { return *_commandPool; }
+    const vk::CommandPool &commandPool(bool transient) const { return *(transient ? _commandPoolTransient : _commandPool); }
     Cache &cache() { return _cache; }
     const Renderer &renderer() const { return *_renderer; }
+    Scene &scene() { return *_scene; }
     MemoryManager &memoryManager() { return *_memoryManager; }
 
 #ifndef NDEBUG
@@ -129,11 +130,14 @@ private:
     vk::PresentModeKHR _presentMode {vk::PresentModeKHR::eFifo};
 
     vk::UniqueCommandPool _commandPool;
+    vk::UniqueCommandPool _commandPoolTransient;
 
     std::unique_ptr<MemoryManager> _memoryManager;
     Cache _cache { this, 100 };
 
     std::unique_ptr<Renderer> _renderer;
+
+    std::unique_ptr<Scene> _scene;
 };
 
 }

@@ -15,6 +15,9 @@ namespace pbf {
 
 class Renderer {
 public:
+
+    using StagingFunctor = std::function<void(vk::CommandBuffer&)>;
+
     explicit Renderer(Context *context);
 
     void render();
@@ -22,6 +25,11 @@ public:
     CacheReference<descriptors::RenderPass> renderPass() const {
         return _renderPass;
     }
+
+    void stage(StagingFunctor &&f) {
+        _stagingFunctorQueue.emplace_back(std::move(f));
+    }
+
 private:
 
     void reset();
@@ -32,10 +40,14 @@ private:
         vk::UniqueSemaphore imageAvailableSemaphore;
         vk::UniqueSemaphore renderFinishedSemaphore;
         vk::UniqueFence fence;
+        vk::UniqueCommandBuffer commandBuffer {};
     };
     std::vector<FrameSync> _frameSync;
     std::size_t _currentFrameSync = 0;
     std::vector<vk::UniqueCommandBuffer> _commandBuffers;
+
+    vk::UniqueCommandBuffer _stagingCommandBuffer;
+    std::vector<StagingFunctor> _stagingFunctorQueue;
 
     CacheReference<descriptors::RenderPass> _renderPass;
     CacheReference<descriptors::GraphicsPipeline> _graphicsPipeline;

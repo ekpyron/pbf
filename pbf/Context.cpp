@@ -10,6 +10,7 @@
 #include <regex>
 #include "Context.h"
 #include "Renderer.h"
+#include "Scene.h"
 
 namespace pbf {
 
@@ -119,8 +120,11 @@ Context::Context() {
 
     _memoryManager = std::make_unique<MemoryManager>(this);
     _commandPool = _device->createCommandPoolUnique({{}, _families.graphics});
+    _commandPoolTransient = _device->createCommandPoolUnique({vk::CommandPoolCreateFlagBits::eTransient,
+                                                              _families.graphics});
     PBF_DEBUG_SET_OBJECT_NAME(this, *_commandPool, "Main Command Pool");
     _renderer = std::make_unique<Renderer>(this);
+    _scene = std::make_unique<Scene>(this);
 }
 
 Context::~Context() = default;
@@ -161,7 +165,7 @@ Context::debugUtilMessengerCallback(vk::DebugUtilsMessageSeverityFlagsEXT messag
 }
 
 void Context::setGenericObjectName(vk::ObjectType type, uint64_t obj, const std::string &name) const {
-    spdlog::get("vulkan")->info("Assign name [{}] = object {:#x}", name, obj);
+    //spdlog::get("vulkan")->info("Assign name [{}] = object {:#x}", name, obj);
     _device->setDebugUtilsObjectNameEXT(vk::DebugUtilsObjectNameInfoEXT {
             type, obj, name.c_str()
     }, *dldi);
@@ -172,8 +176,8 @@ void Context::run() {
     spdlog::get("console")->debug("Entering main loop.");
     while (!_window->shouldClose()) {
         _glfw.pollEvents();
-        _cache.frame();
         _renderer->render();
+        _cache.frame();
     }
     spdlog::get("console")->debug("Exiting main loop. Waiting for idle device.");
     _device->waitIdle();

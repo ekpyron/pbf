@@ -20,6 +20,7 @@ namespace pbf {
 class Context;
 class Renderer;
 class MemoryManager;
+class Scene;
 
 namespace descriptors {
 class GraphicsPipeline;

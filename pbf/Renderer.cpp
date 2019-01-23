@@ -8,6 +8,7 @@
  */
 #include <pbf/descriptors/GraphicsPipeline.h>
 #include "Renderer.h"
+#include "Scene.h"
 
 static constexpr std::uint64_t TIMEOUT = std::numeric_limits<std::uint64_t>::max();
 
@@ -108,9 +109,11 @@ Renderer::Renderer(Context *context) : _context(context) {
 
 void Renderer::render() {
     const auto &device = _context->device();
+
     auto& currentFrameSync = _frameSync[_currentFrameSync];
 
     device.waitForFences({ *currentFrameSync.fence }, static_cast<vk::Bool32>(true), TIMEOUT);
+    currentFrameSync.commandBuffer.reset();
 
     static auto lastTime = std::chrono::steady_clock::now();
     static size_t frameCount = 0;
@@ -144,6 +147,34 @@ void Renderer::render() {
         }
     }
 
+    auto buffer = std::move(device.allocateCommandBuffersUnique({
+                                                                        _context->commandPool(true), vk::CommandBufferLevel::ePrimary, 1U
+                                                                }).front());
+    {
+
+#ifndef NDEBUG
+        static std::size_t __counter {0};
+        PBF_DEBUG_SET_OBJECT_NAME(_context, *buffer, fmt::format("Scene Command Buffer #{}", __counter++));
+#endif
+
+        buffer->begin({vk::CommandBufferUsageFlagBits::eOneTimeSubmit, nullptr});
+        vk::ClearValue clearValue;
+        clearValue.setColor({ std::array<float, 4> { 0.1f, 0.1f, 0.1f, 1.0f }});
+        buffer->setViewport(0, {vk::Viewport{0, 0, float(_swapchain->extent().width), float(_swapchain->extent().height), 0.0f, 1.0f}});
+        buffer->setScissor(0, {vk::Rect2D{vk::Offset2D(), _swapchain->extent()}});
+        buffer->beginRenderPass(vk::RenderPassBeginInfo{
+                *_renderPass, *_swapchain->frameBuffers()[imageIndex], vk::Rect2D{{}, _swapchain->extent()}, 1, &clearValue
+        }, vk::SubpassContents::eInline);
+        buffer->bindPipeline(vk::PipelineBindPoint::eGraphics, *_graphicsPipeline);
+        buffer->draw(3, 1, 0, 0);
+
+        _context->scene().enqueueCommands(*buffer);
+
+        buffer->endRenderPass();
+        buffer->end();
+    }
+
+
     device.resetFences({ *currentFrameSync.fence });
 
     vk::PipelineStageFlags waitStages[] = {
@@ -151,8 +182,10 @@ void Renderer::render() {
     };
     _context->graphicsQueue().submit({vk::SubmitInfo{
             1, &*currentFrameSync.imageAvailableSemaphore, waitStages,
-            1, &*_commandBuffers[imageIndex], 1, &*currentFrameSync.renderFinishedSemaphore
+            1, &*buffer, 1, &*currentFrameSync.renderFinishedSemaphore
     }}, *currentFrameSync.fence);
+
+    currentFrameSync.commandBuffer = std::move(buffer);
 
     _context->presentQueue().presentKHR({1, &*currentFrameSync.renderFinishedSemaphore, 1, &_swapchain->swapchain(), &imageIndex,
                                          nullptr});
@@ -165,35 +198,6 @@ void Renderer::reset() {
     if (_swapchain)
         device.waitIdle();
     _swapchain = std::make_unique<Swapchain>(_context, *_renderPass, _swapchain ? _swapchain->swapchain() : nullptr);
-    const auto &images = _swapchain->images();
-    const auto &imageViews = _swapchain->imageViews();
-    const auto &framebuffers = _swapchain->frameBuffers();
-    _commandBuffers = device.allocateCommandBuffersUnique({
-                                                                              _context->commandPool(),
-                                                                              vk::CommandBufferLevel::ePrimary,
-                                                                              static_cast<uint32_t>(imageViews.size())
-                                                                      });
-
-#ifndef NDEBUG
-    static std::uint64_t commandBufferIncarnation = 0;
-    ++commandBufferIncarnation;
-#endif
-    for (std::size_t i = 0; i < images.size(); ++i) {
-        auto &buf = _commandBuffers[i];
-        PBF_DEBUG_SET_OBJECT_NAME(_context, *buf, fmt::format("Primary Command Buffer #{} <{}>", i, commandBufferIncarnation));
-        buf->begin({vk::CommandBufferUsageFlagBits::eSimultaneousUse, nullptr});
-        vk::ClearValue clearValue;
-        clearValue.setColor({ std::array<float, 4> { 0.1f, 0.1f, 0.1f, 1.0f }});
-        buf->setViewport(0, {vk::Viewport{0, 0, float(_swapchain->extent().width), float(_swapchain->extent().height), 0.0f, 1.0f}});
-        buf->setScissor(0, {vk::Rect2D{vk::Offset2D(), _swapchain->extent()}});
-        buf->beginRenderPass(vk::RenderPassBeginInfo{
-                                     *_renderPass, *framebuffers[i], vk::Rect2D{{}, _swapchain->extent()}, 1, &clearValue
-        }, vk::SubpassContents::eInline);
-        buf->bindPipeline(vk::PipelineBindPoint::eGraphics, *_graphicsPipeline);
-        buf->draw(3, 1, 0, 0);
-        buf->endRenderPass();
-        buf->end();
-    }
 }
 
 }
