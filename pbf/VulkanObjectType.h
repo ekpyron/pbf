@@ -45,7 +45,7 @@ template<> struct VulkanObjectType<vk::ObjectTableNVX> : std::integral_constant<
 template<> struct VulkanObjectType<vk::IndirectCommandsLayoutNVX> : std::integral_constant<vk::ObjectType, vk::ObjectType::eIndirectCommandsLayoutNVX> {};
 template<> struct VulkanObjectType<vk::DebugUtilsMessengerEXT> : std::integral_constant<vk::ObjectType, vk::ObjectType::eDebugUtilsMessengerEXT> {};
 template<> struct VulkanObjectType<vk::ValidationCacheEXT> : std::integral_constant<vk::ObjectType, vk::ObjectType::eValidationCacheEXT> {};
-template<> struct VulkanObjectType<vk::AccelerationStructureNVX> : std::integral_constant<vk::ObjectType, vk::ObjectType::eAccelerationStructureNVX> {};
+template<> struct VulkanObjectType<vk::AccelerationStructureNV> : std::integral_constant<vk::ObjectType, vk::ObjectType::eAccelerationStructureNV> {};
 
 template<typename T, typename = void>
 struct IsKnownVulkanObject : std::false_type {};

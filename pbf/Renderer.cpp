@@ -110,7 +110,7 @@ void Renderer::render() {
     const auto &device = _context->device();
     auto& currentFrameSync = _frameSync[_currentFrameSync];
 
-    device.waitForFences({ *currentFrameSync.fence }, true, TIMEOUT);
+    device.waitForFences({ *currentFrameSync.fence }, static_cast<vk::Bool32>(true), TIMEOUT);
 
     static auto lastTime = std::chrono::steady_clock::now();
     static size_t frameCount = 0;
@@ -122,7 +122,7 @@ void Renderer::render() {
         frameCount = 0;
     }
 
-//    _renderPass.keepAlive();
+//    _renderPass.keepAlive(); --> is kept alive by graphics pipeline (probably)
     _graphicsPipeline.keepAlive();
 
     uint32_t imageIndex = 0;

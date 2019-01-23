@@ -38,7 +38,7 @@ public:
         setGenericObjectName(VulkanObjectType<T>, reinterpret_cast<uint64_t>(static_cast<void*>(obj)), name);
     }
     void setGenericObjectName(vk::ObjectType type, uint64_t obj, const std::string &name) const;
-#define PBF_DEBUG_SET_OBJECT_NAME(context, object, name) do { context->setObjectName(object, name); } while(0)
+#define PBF_DEBUG_SET_OBJECT_NAME(context, object, name) context->setObjectName(object, name)
 #else
 #define PBF_DEBUG_SET_OBJECT_NAME(context, object, name) do { } while(0)
 #endif
@@ -61,10 +61,10 @@ private:
             const auto &physicalDevice = *it->second;
             {
                 const auto &properties = physicalDevice.enumerateDeviceExtensionProperties();
-                auto it = std::find_if(properties.begin(), properties.end(), [](const auto &prop) {
+                auto propertyIt = std::find_if(properties.begin(), properties.end(), [](const auto &prop) {
                     return prop.extensionName == std::string(VK_KHR_SWAPCHAIN_EXTENSION_NAME);
                 });
-                if (it == properties.end()) continue;
+                if (propertyIt == properties.end()) continue;
             }
             int graphicsFamily = -1;
             int presentFamily = -1;
