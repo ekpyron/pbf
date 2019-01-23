@@ -6,6 +6,7 @@
 #include <pbf/descriptors/RenderPass.h>
 #include <pbf/Cache.h>
 #include <pbf/VulkanObjectType.h>
+#include "MemoryManager.h"
 
 namespace pbf {
 
@@ -31,6 +32,7 @@ public:
     const vk::CommandPool &commandPool() const { return *_commandPool; }
     Cache &cache() { return _cache; }
     const Renderer &renderer() const { return *_renderer; }
+    MemoryManager &memoryManager() { return *_memoryManager; }
 
 #ifndef NDEBUG
     template<typename T>
@@ -128,6 +130,7 @@ private:
 
     vk::UniqueCommandPool _commandPool;
 
+    std::unique_ptr<MemoryManager> _memoryManager;
     Cache _cache { this, 100 };
 
     std::unique_ptr<Renderer> _renderer;

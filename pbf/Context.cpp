@@ -117,6 +117,7 @@ Context::Context() {
         if(it != std::end(modes)) _presentMode = *it;
     }
 
+    _memoryManager = std::make_unique<MemoryManager>(this);
     _commandPool = _device->createCommandPoolUnique({{}, _families.graphics});
     PBF_DEBUG_SET_OBJECT_NAME(this, *_commandPool, "Main Command Pool");
     _renderer = std::make_unique<Renderer>(this);

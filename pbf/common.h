@@ -8,7 +8,10 @@
  */
 #pragma once
 
+#include <ostream>
+
 #include <spdlog/spdlog.h>
+#include <spdlog/fmt/ostr.h>
 #include <spdlog/sinks/stdout_color_sinks.h>
 
 #include <vulkan/vulkan.hpp>
@@ -16,10 +19,24 @@
 namespace pbf {
 class Context;
 class Renderer;
+class MemoryManager;
 
 namespace descriptors {
 class GraphicsPipeline;
 }
+
+enum class MemoryType {
+    STATIC, TRANSIENT
+};
+
+inline std::ostream& operator<<(std::ostream &os, const MemoryType& memoryType) {
+    switch (memoryType) {
+        case MemoryType::STATIC: { os << "STATIC"; break; }
+        case MemoryType::TRANSIENT:{ os << "TRANSIENT"; break; }
+    }
+    return os;
+}
+
 }
 
 #ifndef NDEBUG
