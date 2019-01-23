@@ -59,7 +59,8 @@ DeviceMemory MemoryManager::allocateBufferMemory(MemoryType memoryType, vk::Buff
     auto memoryRequirements = device.getBufferMemoryRequirements(buffer);
     auto memoryIndex = chooseAdequateMemoryIndex(memoryType, memoryRequirements.memoryTypeBits);
 
-    auto deviceMemory = allocate(memoryIndex, memoryRequirements.size, memoryRequirements.alignment);
+    auto deviceMemory = allocate(memoryIndex, memoryRequirements.size, memoryRequirements.alignment,
+            static_cast<bool>(_memoryTypes[memoryIndex].propertyFlags & vk::MemoryPropertyFlagBits::eHostVisible));
 
     device.bindBufferMemory(buffer, deviceMemory.vkMemory(), deviceMemory.offset());
 
@@ -70,12 +71,12 @@ DeviceMemory MemoryManager::allocateBufferMemory(MemoryType memoryType, vk::Buff
 HeapManager::HeapManager(Context* context, std::uint32_t memoryTypeIndex)
         : _memoryTypeIndex(memoryTypeIndex), _context(context) {}
 
-DeviceMemory HeapManager::allocate(std::size_t size, std::size_t alignment) {
+DeviceMemory HeapManager::allocate(std::size_t size, std::size_t alignment, bool hostVisible) {
     const auto &device = _context->device();
     auto memory = device.allocateMemory({
         size, _memoryTypeIndex
     });
-    return {size, memory, 0, this};
+    return {size, memory, 0, this, hostVisible};
 }
 
 void HeapManager::free(const DeviceMemory &deviceMemory) {
@@ -84,4 +85,17 @@ void HeapManager::free(const DeviceMemory &deviceMemory) {
 }
 
 
+DeviceMemory::DeviceMemory(std::size_t size, vk::DeviceMemory memory, std::size_t offset, HeapManager *heapManager, bool hostVisible)
+        : _size(size), _memory(memory), _offset(offset), _mgr(heapManager){
+    const auto &device = _mgr->context()->device();
+    if (hostVisible) {
+        ptr = device.mapMemory(vkMemory(), offset, size, {});
+    }
+}
+
+void DeviceMemory::flush() {
+    const auto &device = _mgr->context()->device();
+
+    device.flushMappedMemoryRanges({vk::MappedMemoryRange{_memory, _offset, _size}});
+}
 }

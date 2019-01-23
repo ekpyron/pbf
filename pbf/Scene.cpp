@@ -10,12 +10,12 @@
 
 namespace pbf {
 
-Scene::Scene(Context *context) : context(context) {
+Scene::Scene(Context *context) : _context(context) {
 
 }
 
 void Scene::enqueueCommands(vk::CommandBuffer &buf) {
-    const auto &device = context->device();
+    const auto &device = _context->device();
 
 
 }

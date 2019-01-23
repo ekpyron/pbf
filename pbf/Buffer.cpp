@@ -18,7 +18,6 @@ pbf::Buffer::Buffer(pbf::Context *context, std::size_t size, vk::BufferUsageFlag
                          queueFamilyIndices.empty() ? vk::SharingMode::eExclusive : vk::SharingMode::eConcurrent,
                          static_cast<uint32_t>(queueFamilyIndices.size()), queueFamilyIndices.data()});
     mmgr.allocateBufferMemory(memoryType,_buffer);
-
 }
 
 pbf::Buffer &pbf::Buffer::operator=(pbf::Buffer &&rhs) noexcept {

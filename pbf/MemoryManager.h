@@ -23,8 +23,10 @@ public:
     HeapManager(HeapManager &&) noexcept = default;
     HeapManager&operator=(HeapManager &&) noexcept = default;
 
-    DeviceMemory allocate(std::size_t size, std::size_t alignment);
+    DeviceMemory allocate(std::size_t size, std::size_t alignment, bool hostVisible);
     void free(const DeviceMemory &);
+
+    Context* context() { return _context; }
 private:
     std::uint32_t _memoryTypeIndex;
     //std::vector<vk::DeviceMemory> _blocks;
@@ -35,8 +37,7 @@ class DeviceMemory {
 public:
     DeviceMemory() = default;
 
-    DeviceMemory(std::size_t size, vk::DeviceMemory memory, std::size_t offset, HeapManager *heapManager)
-            : _size(size), _memory(memory), _offset(offset), _mgr(heapManager) {};
+    DeviceMemory(std::size_t size, vk::DeviceMemory memory, std::size_t offset, HeapManager *heapManager, bool hostVisible);
 
     DeviceMemory(const DeviceMemory &) = delete;
     DeviceMemory &operator=(const DeviceMemory &) = delete;
@@ -63,11 +64,17 @@ public:
     auto offset() const { return _offset; }
     auto vkMemory() const { return _memory; }
 
+    void* data() { return ptr; }
+    const void* data() const { return ptr; }
+
+    void flush();
+
 private:
     vk::DeviceMemory _memory {};
     std::size_t _offset {0};
     std::size_t _size {0};
     HeapManager *_mgr {nullptr};
+    void* ptr {nullptr};
 };
 
 class MemoryManager {
@@ -87,8 +94,8 @@ private:
 
     std::uint32_t chooseAdequateMemoryIndex(MemoryType type, std::uint32_t memoryTypeBitRequirements);
 
-    DeviceMemory allocate(std::uint32_t memoryTypeIndex, std::size_t size, std::size_t alignment) {
-        return _memoryHeaps.at(memoryTypeIndex).allocate(size, alignment);
+    DeviceMemory allocate(std::uint32_t memoryTypeIndex, std::size_t size, std::size_t alignment, bool hostVisible) {
+        return _memoryHeaps.at(memoryTypeIndex).allocate(size, alignment, hostVisible);
     }
 
     Context * _context;
