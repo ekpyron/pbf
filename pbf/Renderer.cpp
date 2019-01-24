@@ -17,54 +17,55 @@ namespace pbf {
 Renderer::Renderer(Context *context) : _context(context) {
     constexpr std::size_t FRAME_PRERENDER_COUNT = 3; // todo: choose this wisely
     _frameSync.reserve(FRAME_PRERENDER_COUNT);
-    for (size_t i = 0; i < FRAME_PRERENDER_COUNT; i++)
-    {
+    for (size_t i = 0; i < FRAME_PRERENDER_COUNT; i++) {
         _frameSync.emplace_back(FrameSync{
-                                        context->device().createSemaphoreUnique({}),
-                                        context->device().createSemaphoreUnique({}),
-                                        context->device().createFenceUnique({ vk::FenceCreateFlagBits::eSignaled })
-                                });
-        PBF_DEBUG_SET_OBJECT_NAME(context, *_frameSync.back().imageAvailableSemaphore, fmt::format("Image Available Semaphore #{}", i));
-        PBF_DEBUG_SET_OBJECT_NAME(context, *_frameSync.back().renderFinishedSemaphore, fmt::format("Render Finished Semaphore #{}", i));
+                context->device().createSemaphoreUnique({}),
+                context->device().createSemaphoreUnique({}),
+                context->device().createFenceUnique({vk::FenceCreateFlagBits::eSignaled})
+        });
+        PBF_DEBUG_SET_OBJECT_NAME(context, *_frameSync.back().imageAvailableSemaphore,
+                                  fmt::format("Image Available Semaphore #{}", i));
+        PBF_DEBUG_SET_OBJECT_NAME(context, *_frameSync.back().renderFinishedSemaphore,
+                                  fmt::format("Render Finished Semaphore #{}", i));
         PBF_DEBUG_SET_OBJECT_NAME(context, *_frameSync.back().fence, fmt::format("Frame Fence #{}", i));
     }
 
     {
-        _renderPass = context->cache().fetch(descriptors::RenderPass {
-            .attachments = {
-                    vk::AttachmentDescription {
-                        {},
-                        _context->surfaceFormat().format,
-                        vk::SampleCountFlagBits::e1,
-                        vk::AttachmentLoadOp::eClear,
-                        vk::AttachmentStoreOp::eStore,
-                        vk::AttachmentLoadOp::eDontCare,
-                        vk::AttachmentStoreOp::eDontCare,
-                        vk::ImageLayout::eUndefined,
-                        vk::ImageLayout::ePresentSrcKHR
-                    }
-            },
-            .subpasses = {
-                    {
-                            .flags = {},
-                            .pipelineBindPoint = vk::PipelineBindPoint::eGraphics,
-                            .inputAttachments = {},
-                            .colorAttachments = {{0, vk::ImageLayout::eColorAttachmentOptimal}},
-                            .resolveAttachments = {},
-                            .depthStencilAttachment = {},
-                            .preserveAttachments = {}
-                    }
-            },
-            .subpassDependencies = {
-                    vk::SubpassDependency {
-                        VK_SUBPASS_EXTERNAL,
-                        0,
-                        vk::PipelineStageFlagBits::eColorAttachmentOutput,
-                        vk::PipelineStageFlagBits::eColorAttachmentOutput,
-                        {}, {}, {}
-                    }
-            },
-            PBF_DESC_DEBUG_NAME("Main Renderer RenderPass")
+        _renderPass = context->cache().fetch(descriptors::RenderPass{
+                .attachments = {
+                        vk::AttachmentDescription{
+                                {},
+                                _context->surfaceFormat().format,
+                                vk::SampleCountFlagBits::e1,
+                                vk::AttachmentLoadOp::eClear,
+                                vk::AttachmentStoreOp::eStore,
+                                vk::AttachmentLoadOp::eDontCare,
+                                vk::AttachmentStoreOp::eDontCare,
+                                vk::ImageLayout::eUndefined,
+                                vk::ImageLayout::ePresentSrcKHR
+                        }
+                },
+                .subpasses = {
+                        {
+                                .flags = {},
+                                .pipelineBindPoint = vk::PipelineBindPoint::eGraphics,
+                                .inputAttachments = {},
+                                .colorAttachments = {{0, vk::ImageLayout::eColorAttachmentOptimal}},
+                                .resolveAttachments = {},
+                                .depthStencilAttachment = {},
+                                .preserveAttachments = {}
+                        }
+                },
+                .subpassDependencies = {
+                        vk::SubpassDependency{
+                                VK_SUBPASS_EXTERNAL,
+                                0,
+                                vk::PipelineStageFlagBits::eColorAttachmentOutput,
+                                vk::PipelineStageFlagBits::eColorAttachmentOutput,
+                                {}, {}, {}
+                        }
+                },
+                PBF_DESC_DEBUG_NAME("Main Renderer RenderPass")
         });
     }
     {
@@ -73,16 +74,16 @@ Renderer::Renderer(Context *context) : _context(context) {
                         {
                                 .stage = vk::ShaderStageFlagBits::eVertex,
                                 .module = context->cache().fetch(descriptors::ShaderModule{
-                                    .filename = "shaders/test.vert.spv",
-                                    PBF_DESC_DEBUG_NAME("shaders/test.vert.spv Vertex Shader")
+                                        .filename = "shaders/test.vert.spv",
+                                        PBF_DESC_DEBUG_NAME("shaders/test.vert.spv Vertex Shader")
                                 }),
                                 .entryPoint = "main"
                         },
                         {
                                 .stage = vk::ShaderStageFlagBits::eFragment,
                                 .module = context->cache().fetch(descriptors::ShaderModule{
-                                    .filename = "shaders/test.frag.spv",
-                                    PBF_DESC_DEBUG_NAME("Fragment Shader shaders/test.frag.spv")
+                                        .filename = "shaders/test.frag.spv",
+                                        PBF_DESC_DEBUG_NAME("Fragment Shader shaders/test.frag.spv")
                                 }),
                                 .entryPoint = "main"
                         }
@@ -93,12 +94,13 @@ Renderer::Renderer(Context *context) : _context(context) {
                 .rasterizationStateCreateInfo = vk::PipelineRasterizationStateCreateInfo().setLineWidth(1.0f),
                 .colorBlendAttachmentStates = {
                         vk::PipelineColorBlendAttachmentState().setColorWriteMask(
-                                vk::ColorComponentFlagBits::eR|vk::ColorComponentFlagBits::eG|vk::ColorComponentFlagBits::eB|vk::ColorComponentFlagBits::eA
+                                vk::ColorComponentFlagBits::eR | vk::ColorComponentFlagBits::eG |
+                                vk::ColorComponentFlagBits::eB | vk::ColorComponentFlagBits::eA
                         )
                 },
-                .dynamicStates = { vk::DynamicState::eViewport, vk::DynamicState::eScissor },
+                .dynamicStates = {vk::DynamicState::eViewport, vk::DynamicState::eScissor},
                 .pipelineLayout = context->cache().fetch(descriptors::PipelineLayout{
-                    PBF_DESC_DEBUG_NAME("Dummy Pipeline Layout")
+                        PBF_DESC_DEBUG_NAME("Dummy Pipeline Layout")
                 }),
                 .renderPass = _renderPass,
                 PBF_DESC_DEBUG_NAME("Main Renderer Graphics Pipeline")
@@ -110,9 +112,9 @@ Renderer::Renderer(Context *context) : _context(context) {
 void Renderer::render() {
     const auto &device = _context->device();
 
-    auto& currentFrameSync = _frameSync[_currentFrameSync];
+    auto &currentFrameSync = _frameSync[_currentFrameSync];
 
-    device.waitForFences({ *currentFrameSync.fence }, static_cast<vk::Bool32>(true), TIMEOUT);
+    device.waitForFences({*currentFrameSync.fence}, static_cast<vk::Bool32>(true), TIMEOUT);
     currentFrameSync.commandBuffer.reset();
 
     static auto lastTime = std::chrono::steady_clock::now();
@@ -148,22 +150,27 @@ void Renderer::render() {
     }
 
     auto buffer = std::move(device.allocateCommandBuffersUnique({
-                                                                        _context->commandPool(true), vk::CommandBufferLevel::ePrimary, 1U
-                                                                }).front());
+        _context->commandPool(true), vk::CommandBufferLevel::ePrimary, 1U
+    }).front());
     {
 
 #ifndef NDEBUG
-        static std::size_t __counter {0};
+        static std::size_t __counter{0};
         PBF_DEBUG_SET_OBJECT_NAME(_context, *buffer, fmt::format("Scene Command Buffer #{}", __counter++));
 #endif
 
         buffer->begin({vk::CommandBufferUsageFlagBits::eOneTimeSubmit, nullptr});
         vk::ClearValue clearValue;
-        clearValue.setColor({ std::array<float, 4> { 0.1f, 0.1f, 0.1f, 1.0f }});
-        buffer->setViewport(0, {vk::Viewport{0, 0, float(_swapchain->extent().width), float(_swapchain->extent().height), 0.0f, 1.0f}});
+        clearValue.setColor({std::array<float, 4>{0.1f, 0.1f, 0.1f, 1.0f}});
+        buffer->setViewport(0, {
+            vk::Viewport{
+                0, 0, float(_swapchain->extent().width), float(_swapchain->extent().height), 0.0f, 1.0f
+            }
+        });
         buffer->setScissor(0, {vk::Rect2D{vk::Offset2D(), _swapchain->extent()}});
         buffer->beginRenderPass(vk::RenderPassBeginInfo{
-                *_renderPass, *_swapchain->frameBuffers()[imageIndex], vk::Rect2D{{}, _swapchain->extent()}, 1, &clearValue
+                *_renderPass, *_swapchain->frameBuffers()[imageIndex],
+                vk::Rect2D{{}, _swapchain->extent()}, 1, &clearValue
         }, vk::SubpassContents::eInline);
         buffer->bindPipeline(vk::PipelineBindPoint::eGraphics, *_graphicsPipeline);
         buffer->draw(3, 1, 0, 0);
@@ -175,7 +182,7 @@ void Renderer::render() {
     }
 
 
-    device.resetFences({ *currentFrameSync.fence });
+    device.resetFences({*currentFrameSync.fence});
 
     vk::PipelineStageFlags waitStages[] = {
             vk::PipelineStageFlagBits::eColorAttachmentOutput
@@ -187,14 +194,16 @@ void Renderer::render() {
 
     currentFrameSync.commandBuffer = std::move(buffer);
 
-    _context->presentQueue().presentKHR({1, &*currentFrameSync.renderFinishedSemaphore, 1, &_swapchain->swapchain(), &imageIndex,
-                                         nullptr});
+    _context->presentQueue().presentKHR({
+        1, &*currentFrameSync.renderFinishedSemaphore, 1,
+        &_swapchain->swapchain(), &imageIndex, nullptr
+    });
 
     _currentFrameSync = (_currentFrameSync + 1) % _frameSync.size();
 }
 
 void Renderer::reset() {
-    auto const& device = _context->device();
+    auto const &device = _context->device();
     if (_swapchain)
         device.waitIdle();
     _swapchain = std::make_unique<Swapchain>(_context, *_renderPass, _swapchain ? _swapchain->swapchain() : nullptr);
