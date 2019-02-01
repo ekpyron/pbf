@@ -74,6 +74,7 @@ Context::Context() {
                                 {{}, uint32_t(_families.present),  1, &queuePriority}};
         }
         vk::PhysicalDeviceFeatures features{};
+        features.setMultiDrawIndirect(static_cast<vk::Bool32>(true));
         std::vector<const char *> layers;
 #ifndef NDEBUG
         layers.push_back("VK_LAYER_LUNARG_standard_validation");
