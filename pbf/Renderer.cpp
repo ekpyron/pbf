@@ -69,7 +69,7 @@ Renderer::Renderer(Context *context) : _context(context) {
         });
     }
     {
-        _graphicsPipeline = context->cache().fetch(descriptors::GraphicsPipeline{
+        /*_graphicsPipeline = context->cache().fetch(descriptors::GraphicsPipeline{
                 .shaderStages = {
                         {
                                 .stage = vk::ShaderStageFlagBits::eVertex,
@@ -104,7 +104,7 @@ Renderer::Renderer(Context *context) : _context(context) {
                 }),
                 .renderPass = _renderPass,
                 PBF_DESC_DEBUG_NAME("Main Renderer Graphics Pipeline")
-        });
+        });*/
     }
     reset();
 }
@@ -128,7 +128,7 @@ void Renderer::render() {
     }
 
 //    _renderPass.keepAlive(); --> is kept alive by graphics pipeline (probably)
-    _graphicsPipeline.keepAlive();
+//    _graphicsPipeline.keepAlive();
 
     uint32_t imageIndex = 0;
     auto result = device.acquireNextImageKHR(

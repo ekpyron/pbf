@@ -50,7 +50,7 @@ private:
     std::vector<StagingFunctor> _stagingFunctorQueue;
 
     CacheReference<descriptors::RenderPass> _renderPass;
-    CacheReference<descriptors::GraphicsPipeline> _graphicsPipeline;
+    //CacheReference<descriptors::GraphicsPipeline> _graphicsPipeline;
 };
 
 }

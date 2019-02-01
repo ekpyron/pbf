@@ -140,7 +140,7 @@ public:
             });
             enqueueBuffer.copyBuffer(initializeBuffer.buffer(), indexBuffer.buffer(), {
                     vk::BufferCopy {
-                            sizeof(VertexData) * 3, 0, buffer.size()
+                            sizeof(VertexData) * 3, 0, indexBuffer.size()
                     }
             });
             enqueueBuffer.setEvent(*initializedEvent, vk::PipelineStageFlagBits::eTransfer);

@@ -27,7 +27,7 @@ public:
 
     void* data() { return _deviceMemory.data(); }
     const void* data() const { return _deviceMemory.data(); }
-    auto size() const { return _size; }
+    std::size_t size() const { return _size; }
     vk::Buffer buffer() const { return _buffer; }
 
     void flush() {

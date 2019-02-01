@@ -72,6 +72,7 @@ void Scene::enqueueCommands(vk::CommandBuffer &buf) {
                 std::transform(std::begin(vertexBuffers), std::end(vertexBuffers),
                         std::back_inserter(vkBuffers), [](const auto& vb) {return vb.buffer->buffer();});
                 std::vector<vk::DeviceSize> offsets (vertexBuffers.size(), vk::DeviceSize{0});
+                assert(offsets.size() == vertexBuffers.size());
                 buf.bindVertexBuffers(0, vkBuffers, offsets);
 
                 {
@@ -100,11 +101,11 @@ void Scene::enqueueCommands(vk::CommandBuffer &buf) {
 
 Triangle::Triangle(Scene *scene)  :scene(scene) {
 
-    buffer = {scene->context(), sizeof(VertexData),
+    buffer = {scene->context(), sizeof(VertexData)*3,
               vk::BufferUsageFlagBits::eTransferDst | vk::BufferUsageFlagBits::eVertexBuffer, MemoryType::STATIC};
     indexBuffer = {scene->context(), sizeof(std::uint16_t)*3, vk::BufferUsageFlagBits::eTransferDst
                    | vk::BufferUsageFlagBits::eIndexBuffer, MemoryType::STATIC};
-    initializeBuffer = {scene->context(), sizeof(VertexData)*3 + sizeof(std::uint16_t) * 3, vk::BufferUsageFlagBits::eTransferSrc, MemoryType::TRANSIENT};
+    initializeBuffer = {scene->context(), sizeof(VertexData)*3 + sizeof(std::uint16_t) * 4, vk::BufferUsageFlagBits::eTransferSrc, MemoryType::TRANSIENT};
 
     VertexData *data = reinterpret_cast<VertexData *>(initializeBuffer.data());
     data[0].vertices[0]= 0.0f;
@@ -117,7 +118,9 @@ Triangle::Triangle(Scene *scene)  :scene(scene) {
     data[2].vertices[1]= -1.0f;
     data[2].vertices[2] = 0.0f;
     std::uint16_t *indices = reinterpret_cast<std::uint16_t*>(reinterpret_cast<std::intptr_t>(initializeBuffer.data()) + sizeof(VertexData) * 3);
-    std::iota(indices, indices+3, 0);
+    indices[0] = 0;
+    indices[1] = 1;
+    indices[2] = 2;
     initializeBuffer.flush();
 
     const auto &graphicsPipeline = scene->context()->cache().fetch(descriptors::GraphicsPipeline{
@@ -139,8 +142,8 @@ Triangle::Triangle(Scene *scene)  :scene(scene) {
                             .entryPoint = "main"
                     }
             },
-            .vertexBindingDescriptions = {{0, sizeof(VertexData), vk::VertexInputRate::eVertex}},
-            .vertexInputAttributeDescriptions = {{0, 0, vk::Format::eR32G32B32Sfloat, 0}},
+            .vertexBindingDescriptions = {vk::VertexInputBindingDescription{0, sizeof(VertexData), vk::VertexInputRate::eVertex}},
+            .vertexInputAttributeDescriptions = {vk::VertexInputAttributeDescription{0, 0, vk::Format::eR32G32B32Sfloat, 0}},
             .primitiveTopology = vk::PrimitiveTopology::eTriangleList,
             .rasterizationStateCreateInfo = vk::PipelineRasterizationStateCreateInfo().setLineWidth(1.0f),
             .colorBlendAttachmentStates = {
