@@ -44,6 +44,12 @@ MemoryManager::chooseAdequateMemoryIndex(MemoryType memoryType, uint32_t memoryT
                     }
                     break;
                 }
+                case MemoryType::DYNAMIC: {
+                    if((type.propertyFlags & vk::MemoryPropertyFlagBits::eHostVisible) && (type.propertyFlags & vk::MemoryPropertyFlagBits::eHostCoherent)) {
+                        return memoryIndex;
+                    }
+                    break;
+                }
             }
         }
 

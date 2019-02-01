@@ -13,6 +13,7 @@
 namespace pbf {
 
 class DeviceMemory;
+class Buffer;
 
 class HeapManager {
 public:
@@ -45,12 +46,17 @@ public:
         *this = std::move(rhs);
     }
     DeviceMemory &operator=(DeviceMemory &&rhs) noexcept {
+        if(_mgr) {
+            _mgr->free(*this);
+        }
         _memory = rhs._memory;
         _offset = rhs._offset;
         _size = rhs._size;
         _mgr = rhs._mgr;
+        ptr = rhs.ptr;
         rhs._size = 0;
         rhs._mgr = nullptr;
+        rhs.ptr = nullptr;
         return *this;
     }
 

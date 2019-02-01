@@ -17,7 +17,7 @@ pbf::Buffer::Buffer(pbf::Context *context, std::size_t size, vk::BufferUsageFlag
     _buffer = device.createBuffer({{}, size, usageFlags,
                          queueFamilyIndices.empty() ? vk::SharingMode::eExclusive : vk::SharingMode::eConcurrent,
                          static_cast<uint32_t>(queueFamilyIndices.size()), queueFamilyIndices.data()});
-    mmgr.allocateBufferMemory(memoryType,_buffer);
+    _deviceMemory = mmgr.allocateBufferMemory(memoryType,_buffer);
 }
 
 pbf::Buffer &pbf::Buffer::operator=(pbf::Buffer &&rhs) noexcept {

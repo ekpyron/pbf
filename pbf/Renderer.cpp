@@ -160,6 +160,9 @@ void Renderer::render() {
 #endif
 
         buffer->begin({vk::CommandBufferUsageFlagBits::eOneTimeSubmit, nullptr});
+
+        _context->scene().frame(*buffer);
+
         vk::ClearValue clearValue;
         clearValue.setColor({std::array<float, 4>{0.1f, 0.1f, 0.1f, 1.0f}});
         buffer->setViewport(0, {
@@ -172,8 +175,8 @@ void Renderer::render() {
                 *_renderPass, *_swapchain->frameBuffers()[imageIndex],
                 vk::Rect2D{{}, _swapchain->extent()}, 1, &clearValue
         }, vk::SubpassContents::eInline);
-        buffer->bindPipeline(vk::PipelineBindPoint::eGraphics, *_graphicsPipeline);
-        buffer->draw(3, 1, 0, 0);
+        /*buffer->bindPipeline(vk::PipelineBindPoint::eGraphics, *_graphicsPipeline);
+        buffer->draw(3, 1, 0, 0);*/
 
         _context->scene().enqueueCommands(*buffer);
 

@@ -27,13 +27,14 @@ class GraphicsPipeline;
 }
 
 enum class MemoryType {
-    STATIC, TRANSIENT
+    STATIC, TRANSIENT, DYNAMIC
 };
 
 inline std::ostream& operator<<(std::ostream &os, const MemoryType& memoryType) {
     switch (memoryType) {
         case MemoryType::STATIC: { os << "STATIC"; break; }
         case MemoryType::TRANSIENT:{ os << "TRANSIENT"; break; }
+        case MemoryType::DYNAMIC:{ os << "DYNAMIC"; break; }
     }
     return os;
 }

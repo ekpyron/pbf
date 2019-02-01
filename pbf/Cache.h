@@ -64,6 +64,12 @@ private:
     std::unordered_map<std::type_index, std::unique_ptr<TypedCacheBase>> _map;
 };
 
+template<typename T, typename = void>
+struct HasDescriptor: std::false_type {};
+
+template<typename T>
+struct HasDescriptor<T, std::void_t<decltype(std::declval<T*>()->descriptor())>>: std::true_type {};
+
 template<typename T>
 class CachedObject {
 public:
@@ -81,6 +87,7 @@ public:
     CachedObject &operator=(const CachedObject &) = delete;
 
     auto &get() const {
+        keepDepsAlive();
         if (!_obj) {
 #ifndef NDEBUG
             _objectIncarnation++;
@@ -132,6 +139,27 @@ private:
         }
     }
 #endif
+
+    template<typename Q, typename = void>
+    struct keepDependenciesAlive {
+        void operator()(const T&) const {}
+    };
+    template<typename Q>
+    struct keepDependenciesAlive<Q, std::void_t<typename Q::template Depends<Q>>> {
+        void operator()(const T& obj) const {
+            crampl::ForEachMemberInList<typename T::template Depends<T>>::call(obj, [](const auto &ref) {
+                ref.keepAlive();
+            });
+        }
+    };
+
+
+    void keepDepsAlive(std::enable_if_t<HasDescriptor<T>::value>* = nullptr) const {
+        keepDependenciesAlive<T>()(_obj->descriptor());
+    }
+    void keepDepsAlive(std::enable_if_t<!HasDescriptor<T>::value>* = nullptr) const {
+    }
+
 };
 
 template<typename T>
@@ -150,10 +178,8 @@ public:
         return &**this;
     }
 
-    void keepAlive(bool dependencies = true) const {
+    void keepAlive() const {
         **this;
-        if (dependencies)
-            keepDependenciesAlive<T>()(_obj->descriptor());
     }
 
     operator bool() const {
@@ -165,19 +191,6 @@ public:
     }
 
 private:
-
-    template<typename Q, typename = void>
-    struct keepDependenciesAlive {
-        void operator()(const T&) const {}
-    };
-    template<typename Q>
-    struct keepDependenciesAlive<Q, std::void_t<typename Q::template Depends<Q>>> {
-        void operator()(const T& obj) const {
-            crampl::ForEachMemberInList<typename T::template Depends<T>>::call(obj, [](const auto &ref) {
-                ref.keepAlive();
-            });
-        }
-    };
 
     const CachedObject<T> *_obj = nullptr;
 };

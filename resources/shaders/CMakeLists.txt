@@ -17,4 +17,7 @@ endmacro()
 add_shader(test.vert.spv test.vert)
 add_shader(test.frag.spv test.frag)
 
+add_shader(triangle.vert.spv triangle.vert)
+add_shader(triangle.frag.spv triangle.frag)
+
 add_custom_target(shaders-target DEPENDS "${shaders_out}")

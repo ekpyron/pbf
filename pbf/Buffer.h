@@ -34,10 +34,22 @@ public:
         _deviceMemory.flush();
     };
 
+    bool operator<(const Buffer& rhs) const {
+        return _buffer < rhs._buffer;
+    }
+
 private:
     Context *context {nullptr};
     std::size_t _size {0};
     vk::Buffer _buffer {};
     DeviceMemory _deviceMemory {};
 };
+
+struct BufferRef {
+    Buffer* buffer;
+    bool operator<(const BufferRef& rhs) const {
+        return (buffer && rhs.buffer) ? *buffer < *rhs.buffer : buffer < rhs.buffer;
+    }
+};
+
 }
