@@ -42,7 +42,7 @@ Context::Context() {
                                              });
     }
 #ifndef NDEBUG
-    dldi = std::make_unique<vk::DispatchLoaderDynamic>(*_instance);
+    dldi = std::make_unique<vk::DispatchLoaderDynamic>(*_instance, vkGetInstanceProcAddr);
     _debugUtilsMessenger = _instance->createDebugUtilsMessengerEXTUnique(
             vk::DebugUtilsMessengerCreateInfoEXT {
                     {}, ~vk::DebugUtilsMessageSeverityFlagBitsEXT(), ~vk::DebugUtilsMessageTypeFlagBitsEXT(),
