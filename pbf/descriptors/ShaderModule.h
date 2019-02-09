@@ -18,7 +18,7 @@ struct ShaderModule {
 
     vk::UniqueShaderModule realize(Context* context) const;
 
-    using Compare = MemberComparator<&ShaderModule::filename>;
+    using Compare = PBFMemberComparator<&ShaderModule::filename>;
 
 #ifndef NDEBUG
     std::string debugName;

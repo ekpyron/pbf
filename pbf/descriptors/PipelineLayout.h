@@ -8,19 +8,30 @@
  */
 #pragma once
 
+#include <vector>
+
 #include <pbf/common.h>
+#include <pbf/Cache.h>
+
+#include "Order.h"
+#include "DescriptorSetLayout.h"
 
 namespace pbf::descriptors {
 
-class PipelineLayout {
-public:
+struct PipelineLayout {
+
     vk::UniquePipelineLayout realize(Context *context) const;
 
-    struct Compare { bool operator()(...) const { return false; }};
+    template<typename T = PipelineLayout>
+    using Compare = PBFMemberComparator<&T::pushConstants>;
 
+    vector32<CacheReference<DescriptorSetLayout>> setLayouts;
+    vector32<vk::PushConstantRange> pushConstants;
 #ifndef NDEBUG
     std::string debugName;
 #endif
+
+
 };
 
 }

@@ -129,6 +129,16 @@ private:
     vk::SurfaceFormatKHR _surfaceFormat {vk::Format::eB8G8R8A8Unorm, vk::ColorSpaceKHR::eSrgbNonlinear};
     vk::PresentModeKHR _presentMode {vk::PresentModeKHR::eFifo};
 
+    static const auto &globalDescriptorPoolSizes() {
+        static std::array<vk::DescriptorPoolSize, 1> sizes {{{ vk::DescriptorType::eUniformBuffer, 1 }}};
+        return sizes;
+    }
+    static constexpr std::uint32_t numGlobalDescriptorSets = 1;
+    vk::UniqueDescriptorPool _globalDescriptorPool;
+
+    //std::array<vk::UniqueDescriptorSetLayout, numGlobalDescriptorSets> _globalDescriptorSetLayouts;
+    std::array<vk::DescriptorSet, numGlobalDescriptorSets> _globalDescriptorSet;
+
     vk::UniqueCommandPool _commandPool;
     vk::UniqueCommandPool _commandPoolTransient;
 

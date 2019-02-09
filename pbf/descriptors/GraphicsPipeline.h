@@ -24,11 +24,11 @@ struct GraphicsPipeline {
         CacheReference<ShaderModule> module;
         std::string entryPoint;
         template<typename T = ShaderStage>
-        using Compare = MemberComparator<&T::stage, &T::module, &T::entryPoint>;
+        using Compare = PBFMemberComparator<&T::stage, &T::module, &T::entryPoint>;
     };
 
     template<typename T = GraphicsPipeline>
-    using Compare = MemberComparator<&T::shaderStages, &T::vertexBindingDescriptions, &T::vertexInputAttributeDescriptions,
+    using Compare = PBFMemberComparator<&T::shaderStages, &T::vertexBindingDescriptions, &T::vertexInputAttributeDescriptions,
                 &T::primitiveTopology, &T::primitiveRestartEnable, &T::tessellationPatchControlPoints,
                 &T::rasterizationStateCreateInfo, &T::multisampleStateCreateInfo, &T::depthStencilStateCreateInfo,
                 &T::colorBlendAttachmentStates,

@@ -13,7 +13,12 @@ using namespace pbf::descriptors;
 
 vk::UniquePipelineLayout PipelineLayout::realize(Context *context) const {
     const auto &device = context->device();
+    std::vector<vk::DescriptorSetLayout> vkSetLayouts;
+    vkSetLayouts.reserve(setLayouts.size());
+    std::transform(setLayouts.begin(), setLayouts.end(), std::back_inserter(vkSetLayouts), [](const auto& _layout) {
+        return *_layout;
+    });
     return device.createPipelineLayoutUnique({
-            {}, 0, nullptr, 0, nullptr
+            {}, setLayouts.size(), vkSetLayouts.data(), pushConstants.size(), pushConstants.data()
     });
 }

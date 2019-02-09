@@ -29,14 +29,14 @@ struct RenderPass {
         std::vector<std::uint32_t> preserveAttachments;
 
         template<typename T = Subpass>
-        using Compare = MemberComparator<&T::flags, &T::pipelineBindPoint, &T::inputAttachments, &T::colorAttachments, &T::resolveAttachments,
+        using Compare = PBFMemberComparator<&T::flags, &T::pipelineBindPoint, &T::inputAttachments, &T::colorAttachments, &T::resolveAttachments,
                     &T::depthStencilAttachment, &T::preserveAttachments>;
     };
 
     vk::UniqueRenderPass realize(Context *context) const;
 
     template<typename T = RenderPass>
-    using Compare = MemberComparator<&T::attachments, &T::subpasses, &T::subpassDependencies>;
+    using Compare = PBFMemberComparator<&T::attachments, &T::subpasses, &T::subpassDependencies>;
 
     std::vector<vk::AttachmentDescription> attachments;
     std::vector<Subpass> subpasses;

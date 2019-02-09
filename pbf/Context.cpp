@@ -8,6 +8,7 @@
  */
 
 #include <regex>
+#include <pbf/descriptors/DescriptorSetLayout.h>
 #include "Context.h"
 #include "Renderer.h"
 #include "Scene.h"
@@ -117,6 +118,38 @@ Context::Context() {
         const auto &modes = _physicalDevice.getSurfacePresentModesKHR(*_surface);
         auto it = std::find(std::begin(modes), std::end(modes), vk::PresentModeKHR::eMailbox);
         if(it != std::end(modes)) _presentMode = *it;
+    }
+
+    _globalDescriptorPool = _device->createDescriptorPoolUnique(vk::DescriptorPoolCreateInfo{
+        {}, numGlobalDescriptorSets,
+        static_cast<std::uint32_t>(globalDescriptorPoolSizes().size()), globalDescriptorPoolSizes().data()});
+
+    {
+        std::array<descriptors::DescriptorSetLayout, numGlobalDescriptorSets> setLayoutDescriptors {
+                {
+                        {
+                            .createFlags = {},
+                            .bindings = {{
+                                    .binding = 0,
+                                    .descriptorType = vk::DescriptorType::eUniformBuffer,
+                                    .descriptorCount = 1,
+                                    .stageFlags = vk::ShaderStageFlagBits::eAll
+                            }}
+#ifndef NDEBUG
+                            ,.debugName = "Global Descriptor Set Layout"
+#endif
+                        }
+                }
+        };
+        std::array<vk::UniqueDescriptorSetLayout, numGlobalDescriptorSets> globalDescriptorUniqueSetLayouts;
+        for(auto [it1, it2] = std::make_tuple(globalDescriptorUniqueSetLayouts.begin(), setLayoutDescriptors.begin()); it1 != globalDescriptorUniqueSetLayouts.end(); ++it1, ++it2) {
+            *it1 = it2->realize(this);
+        }
+        std::array<vk::DescriptorSetLayout, numGlobalDescriptorSets> globalDescriptorSetLayouts;
+        std::transform(globalDescriptorUniqueSetLayouts.begin(), globalDescriptorUniqueSetLayouts.end(),
+                globalDescriptorSetLayouts.begin(), [](const auto& f) {return *f;});
+        _device->allocateDescriptorSets({*_globalDescriptorPool, numGlobalDescriptorSets,
+                                         globalDescriptorSetLayouts.data()});
     }
 
     _memoryManager = std::make_unique<MemoryManager>(this);

@@ -15,7 +15,7 @@
 namespace pbf::descriptors {
 
 template<auto... M>
-using MemberComparator = crampl::MemberComparatorTemplate<Order, M...>;
+using PBFMemberComparator = crampl::MemberComparatorTemplate<Order, M...>;
 
 template<typename BitType, typename MaskType>
 struct Order<vk::Flags<BitType, MaskType>> {
@@ -29,7 +29,7 @@ constexpr auto PointerRangeCompare = crampl::PointerRangeCompare<Order, PtrMembe
 
 template<typename T>
 struct Order<T, enable_if_same_t<T, vk::SubpassDescription>>
-    : MemberComparator<&T::flags, &T::pipelineBindPoint,
+    : PBFMemberComparator<&T::flags, &T::pipelineBindPoint,
                        PointerRangeCompare<&T::pInputAttachments, &T::inputAttachmentCount>,
                        PointerRangeCompare<&T::pColorAttachments, &T::colorAttachmentCount>,
                        PointerRangeCompare<&T::pResolveAttachments, &T::colorAttachmentCount>,
@@ -38,37 +38,37 @@ struct Order<T, enable_if_same_t<T, vk::SubpassDescription>>
 
 template<typename T>
 struct Order<T, enable_if_same_t<T, vk::AttachmentReference>>
-        : MemberComparator<&T::attachment, &T::layout> {};
+        : PBFMemberComparator<&T::attachment, &T::layout> {};
 
 template<typename T>
 struct Order<T, enable_if_same_t<T, vk::AttachmentDescription>>
-        : MemberComparator<&T::flags, &T::format, &T::samples, &T::loadOp, &T::storeOp, &T::stencilLoadOp,
+        : PBFMemberComparator<&T::flags, &T::format, &T::samples, &T::loadOp, &T::storeOp, &T::stencilLoadOp,
                            &T::stencilStoreOp, &T::initialLayout, &T::finalLayout> {};
 
 template<typename T>
 struct Order<T, enable_if_same_t<T, vk::SubpassDependency>>
-        : MemberComparator<&T::srcSubpass, &T::dstSubpass, &T::srcStageMask, &T::dstStageMask,
+        : PBFMemberComparator<&T::srcSubpass, &T::dstSubpass, &T::srcStageMask, &T::dstStageMask,
                            &T::srcAccessMask, &T::dstAccessMask, &T::dependencyFlags> {};
 
 template<typename T>
 struct Order<T, enable_if_same_t<T, vk::PipelineInputAssemblyStateCreateInfo>>
-        : MemberComparator<&T::topology, &T::primitiveRestartEnable> {};
+        : PBFMemberComparator<&T::topology, &T::primitiveRestartEnable> {};
 
 template<typename T>
 struct Order<T, enable_if_same_t<T, vk::VertexInputBindingDescription>>
-        : MemberComparator<&T::binding, &T::stride, &T::inputRate> {};
+        : PBFMemberComparator<&T::binding, &T::stride, &T::inputRate> {};
 
 template<typename T>
 struct Order<T, enable_if_same_t<T, vk::PipelineTessellationStateCreateInfo>>
-        : MemberComparator<&T::patchControlPoints> {};
+        : PBFMemberComparator<&T::patchControlPoints> {};
 
 template<typename T>
 struct Order<T, enable_if_same_t<T, vk::VertexInputAttributeDescription>>
-        : MemberComparator<&T::location, &T::binding, &T::format, &T::offset> {};
+        : PBFMemberComparator<&T::location, &T::binding, &T::format, &T::offset> {};
 
 template<typename T>
 struct Order<T, enable_if_same_t<T, vk::PipelineRasterizationStateCreateInfo>>
-        : MemberComparator<&T::depthClampEnable, &T::rasterizerDiscardEnable, &T::polygonMode, &T::cullMode,
+        : PBFMemberComparator<&T::depthClampEnable, &T::rasterizerDiscardEnable, &T::polygonMode, &T::cullMode,
                            &T::frontFace, &T::depthBiasEnable, &T::depthBiasConstantFactor, &T::depthBiasClamp,
                            &T::depthBiasSlopeFactor, &T::lineWidth> {};
 
@@ -79,32 +79,35 @@ struct Order<T, enable_if_same_t<T, vk::PipelineMultisampleStateCreateInfo>>
 
 template<typename T>
 struct Order<T, enable_if_same_t<T, vk::PipelineDepthStencilStateCreateInfo>>
-        : MemberComparator<&T::depthTestEnable, &T::depthWriteEnable, &T::depthCompareOp, &T::depthBoundsTestEnable,
+        : PBFMemberComparator<&T::depthTestEnable, &T::depthWriteEnable, &T::depthCompareOp, &T::depthBoundsTestEnable,
                            &T::stencilTestEnable, &T::front, &T::back, &T::minDepthBounds, &T::maxDepthBounds> {};
 
 template<typename T>
 struct Order<T, enable_if_same_t<T, vk::PipelineColorBlendAttachmentState>>
-        : MemberComparator<&T::blendEnable, &T::srcColorBlendFactor, &T::dstColorBlendFactor, &T::colorBlendOp,
+        : PBFMemberComparator<&T::blendEnable, &T::srcColorBlendFactor, &T::dstColorBlendFactor, &T::colorBlendOp,
                            &T::srcAlphaBlendFactor, &T::dstAlphaBlendFactor, &T::alphaBlendOp, &T::colorWriteMask> {};
 
 template<typename T>
 struct Order<T, enable_if_same_t<T, vk::StencilOpState>>
-        : MemberComparator<&T::failOp, &T::passOp, &T::depthFailOp, &T::compareOp, &T::compareMask,
+        : PBFMemberComparator<&T::failOp, &T::passOp, &T::depthFailOp, &T::compareOp, &T::compareMask,
                            &T::writeMask, &T::reference> {};
 
 template<typename T>
 struct Order<T, enable_if_same_t<T, vk::Viewport>>
-        : MemberComparator<&T::x, &T::y, &T::width, &T::height, &T::minDepth, &T::maxDepth> {};
+        : PBFMemberComparator<&T::x, &T::y, &T::width, &T::height, &T::minDepth, &T::maxDepth> {};
 
 template<typename T>
 struct Order<T, enable_if_same_t<T, vk::Rect2D>>
-        : MemberComparator<&T::offset, &T::extent> {};
+        : PBFMemberComparator<&T::offset, &T::extent> {};
 
 template<typename T>
 struct Order<T, enable_if_same_t<T, vk::Offset2D>>
-        : MemberComparator<&T::x, &T::y> {};
+        : PBFMemberComparator<&T::x, &T::y> {};
 
 template<typename T>
 struct Order<T, enable_if_same_t<T, vk::Extent2D>>
-        : MemberComparator<&T::width, &T::height> {};
-}
+        : PBFMemberComparator<&T::width, &T::height> {};
+template<typename T>
+struct Order<T, enable_if_same_t<T, vk::PushConstantRange>> : PBFMemberComparator<&T::stageFlags, &T::offset, &T::size> {};
+
+} // namespace pbf::descriptors

@@ -16,7 +16,7 @@
 namespace pbf::descriptors {
 
 template<typename T, typename U>
-using enable_if_same_t = std::enable_if_t<std::is_same_v<T, U>>;
+using enable_if_same_t = std::enable_if_t<std::is_same_v<std::decay_t<T>, std::decay_t<U>>>;
 
 template<typename T, typename = void>
 struct Order {
@@ -53,10 +53,13 @@ template<typename T>
 struct Order<std::vector<T>> {
 
     bool operator()(const std::vector<T> &lhs, const std::vector<T> &rhs) const {
-        Order<T> compare;
+        Order<std::decay_t<T>> compare;
         return std::lexicographical_compare(lhs.begin(), lhs.end(), rhs.begin(), rhs.end(), compare);
     }
 };
+
+template<typename T>
+struct Order<vector32<T>>: Order<std::vector<T>> {};
 
 template<typename... Args>
 struct Order<std::tuple<Args...>> {
