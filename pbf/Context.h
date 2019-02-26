@@ -3,7 +3,6 @@
 #include <vulkan/vulkan.hpp>
 #include <pbf/common.h>
 #include <pbf/glfw.h>
-#include <pbf/descriptors/RenderPass.h>
 #include <pbf/Cache.h>
 #include <pbf/VulkanObjectType.h>
 #include "MemoryManager.h"
@@ -34,6 +33,11 @@ public:
     const Renderer &renderer() const { return *_renderer; }
     Scene &scene() { return *_scene; }
     MemoryManager &memoryManager() { return *_memoryManager; }
+
+    CacheReference<descriptors::DescriptorSetLayout> globalDescriptorSetLayout() const {
+        return _globalDescriptorSetLayout;
+    };
+    const vk::DescriptorSet &globalDescriptorSet() const { return _globalDescriptorSet; }
 
 #ifndef NDEBUG
     template<typename T>
@@ -99,13 +103,14 @@ private:
     glfw::GLFW _glfw;
     std::unique_ptr<glfw::Window> _window;
 
+    vk::DispatchLoaderStatic dls;
     vk::UniqueInstance _instance;
 #ifndef NDEBUG
+    std::unique_ptr<vk::DispatchLoaderDynamic> dldi;
     VkBool32 debugUtilMessengerCallback(vk::DebugUtilsMessageSeverityFlagsEXT messageSeverity,
             vk::DebugUtilsMessageTypeFlagsEXT messageType,
             const vk::DebugUtilsMessengerCallbackDataEXT &callbackData) const;
 
-    std::unique_ptr<vk::DispatchLoaderDynamic> dldi;
     vk::UniqueHandle<vk::DebugUtilsMessengerEXT, vk::DispatchLoaderDynamic> _debugUtilsMessenger;
 #endif
     vk::PhysicalDevice _physicalDevice;
@@ -136,13 +141,14 @@ private:
     static constexpr std::uint32_t numGlobalDescriptorSets = 1;
     vk::UniqueDescriptorPool _globalDescriptorPool;
 
-    //std::array<vk::UniqueDescriptorSetLayout, numGlobalDescriptorSets> _globalDescriptorSetLayouts;
-    std::array<vk::DescriptorSet, numGlobalDescriptorSets> _globalDescriptorSet;
+    CacheReference<descriptors::DescriptorSetLayout> _globalDescriptorSetLayout;
+    vk::DescriptorSet _globalDescriptorSet;
 
     vk::UniqueCommandPool _commandPool;
     vk::UniqueCommandPool _commandPoolTransient;
 
     std::unique_ptr<MemoryManager> _memoryManager;
+    std::unique_ptr<Buffer> _globalUniformBuffer;
     Cache _cache { this, 100 };
 
     std::unique_ptr<Renderer> _renderer;

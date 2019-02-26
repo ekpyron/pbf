@@ -27,6 +27,10 @@ public:
 
     void* data() { return _deviceMemory.data(); }
     const void* data() const { return _deviceMemory.data(); }
+    template<typename T>
+    T* as() { return reinterpret_cast<T*>(data()); }
+    template<typename T>
+    const T* as() const { return reinterpret_cast<const T*>(data()); }
     std::size_t size() const { return _size; }
     vk::Buffer buffer() const { return _buffer; }
 

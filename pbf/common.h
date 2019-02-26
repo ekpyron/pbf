@@ -11,9 +11,12 @@
 #include <ostream>
 #include <vector>
 
+#include <glm/glm.hpp>
+
+#include <crampl/crampl.h>
+
 #include <spdlog/spdlog.h>
 #include <spdlog/fmt/ostr.h>
-#include <spdlog/sinks/stdout_color_sinks.h>
 
 #include <vulkan/vulkan.hpp>
 
@@ -40,6 +43,8 @@ using vector32 = SizeAdjustedContainer<std::vector,T...>;
 
 namespace descriptors {
 class GraphicsPipeline;
+class RenderPass;
+class DescriptorSetLayout;
 }
 
 enum class MemoryType {

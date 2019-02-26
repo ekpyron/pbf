@@ -8,7 +8,9 @@
  */
 
 #include <regex>
+#include <pbf/descriptors/RenderPass.h>
 #include <pbf/descriptors/DescriptorSetLayout.h>
+#include <contrib/crampl/crampl/ContainerContainer.h>
 #include "Context.h"
 #include "Renderer.h"
 #include "Scene.h"
@@ -40,7 +42,7 @@ Context::Context() {
         _instance = vk::createInstanceUnique({
                                                      {}, &appInfo, static_cast<uint32_t>(layers.size()), layers.data(),
                                                      static_cast<uint32_t>(extensions.size()), extensions.data()
-                                             });
+                                             }, nullptr, dls);
     }
 #ifndef NDEBUG
     dldi = std::make_unique<vk::DispatchLoaderDynamic>(*_instance, vkGetInstanceProcAddr);
@@ -85,7 +87,6 @@ Context::Context() {
                 {{}, static_cast<uint32_t>(queueCreateInfos.size()), queueCreateInfos.data(),
                  static_cast<uint32_t>(layers.size()), layers.data(), 1, &extensionName, &features});
         PBF_DEBUG_SET_OBJECT_NAME(this, _physicalDevice, "Physical Device");
-        PBF_DEBUG_SET_OBJECT_NAME(this, *_instance, "Main Vulkan Instance");
         PBF_DEBUG_SET_OBJECT_NAME(this, *_surface, "Main Window");
         PBF_DEBUG_SET_OBJECT_NAME(this, *_debugUtilsMessenger, "Debug Utils Messenger");
         PBF_DEBUG_SET_OBJECT_NAME(this, *_device, "Main Device");
@@ -125,34 +126,46 @@ Context::Context() {
         static_cast<std::uint32_t>(globalDescriptorPoolSizes().size()), globalDescriptorPoolSizes().data()});
 
     {
-        std::array<descriptors::DescriptorSetLayout, numGlobalDescriptorSets> setLayoutDescriptors {
-                {
-                        {
-                            .createFlags = {},
-                            .bindings = {{
-                                    .binding = 0,
-                                    .descriptorType = vk::DescriptorType::eUniformBuffer,
-                                    .descriptorCount = 1,
-                                    .stageFlags = vk::ShaderStageFlagBits::eAll
-                            }}
+        _globalDescriptorSetLayout = cache().fetch(descriptors::DescriptorSetLayout{
+                .createFlags = {},
+                .bindings = {{
+                                     .binding = 0,
+                                     .descriptorType = vk::DescriptorType::eUniformBuffer,
+                                     .descriptorCount = 1,
+                                     .stageFlags = vk::ShaderStageFlagBits::eAll
+                             }}
 #ifndef NDEBUG
-                            ,.debugName = "Global Descriptor Set Layout"
+                ,.debugName = "Global Descriptor Set Layout"
 #endif
-                        }
-                }
-        };
-        std::array<vk::UniqueDescriptorSetLayout, numGlobalDescriptorSets> globalDescriptorUniqueSetLayouts;
-        for(auto [it1, it2] = std::make_tuple(globalDescriptorUniqueSetLayouts.begin(), setLayoutDescriptors.begin()); it1 != globalDescriptorUniqueSetLayouts.end(); ++it1, ++it2) {
-            *it1 = it2->realize(this);
+        });
+/*
+        for(auto [setLayout, descriptor] : crampl::ContainerContainer(_globalDescriptorSetLayouts,
+                                                                      setLayoutDescriptors)) {
+            setLayout = descriptor.realize(this);
         }
+
         std::array<vk::DescriptorSetLayout, numGlobalDescriptorSets> globalDescriptorSetLayouts;
-        std::transform(globalDescriptorUniqueSetLayouts.begin(), globalDescriptorUniqueSetLayouts.end(),
-                globalDescriptorSetLayouts.begin(), [](const auto& f) {return *f;});
-        _device->allocateDescriptorSets({*_globalDescriptorPool, numGlobalDescriptorSets,
-                                         globalDescriptorSetLayouts.data()});
+        std::transform(_globalDescriptorSetLayouts.begin(), _globalDescriptorSetLayouts.end(),
+                globalDescriptorSetLayouts.begin(), [](const auto& f) {return *f;});*/
+        _globalDescriptorSet = _device->allocateDescriptorSets({*_globalDescriptorPool, numGlobalDescriptorSets,
+                                                                 &*_globalDescriptorSetLayout}).front();
+
     }
 
     _memoryManager = std::make_unique<MemoryManager>(this);
+
+    {
+        _globalUniformBuffer = std::make_unique<Buffer>(this, sizeof(glm::mat4), vk::BufferUsageFlagBits::eUniformBuffer, MemoryType::DYNAMIC);
+        vk::DescriptorBufferInfo descriptorBufferInfo {
+                _globalUniformBuffer->buffer(), 0, sizeof(glm::mat4)
+        };
+        *_globalUniformBuffer->as<glm::mat4>() = glm::mat4(1);
+        _device->updateDescriptorSets({vk::WriteDescriptorSet{
+                _globalDescriptorSet, 0, 0, 1, vk::DescriptorType::eUniformBuffer, nullptr, &descriptorBufferInfo, nullptr
+        }}, {});
+    }
+
+
     _commandPool = _device->createCommandPoolUnique({{}, _families.graphics});
     _commandPoolTransient = _device->createCommandPoolUnique({vk::CommandPoolCreateFlagBits::eTransient,
                                                               _families.graphics});
@@ -210,6 +223,7 @@ void Context::run() {
     spdlog::get("console")->debug("Entering main loop.");
     while (!_window->shouldClose()) {
         _glfw.pollEvents();
+        _globalDescriptorSetLayout.keepAlive();
         _renderer->render();
         _cache.frame();
     }

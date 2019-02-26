@@ -1,3 +1,5 @@
+find_package(Threads REQUIRED)
+
 
 set(SOURCES main.cpp glfw.h Context.cpp Context.h common.h Swapchain.cpp Swapchain.h Renderer.cpp Renderer.h
         Cache.h Cache.cpp descriptors/RenderPass.h descriptors/Order.h descriptors/VkOrder.h descriptors/RenderPass.cpp
@@ -8,5 +10,5 @@ set(SOURCES main.cpp glfw.h Context.cpp Context.h common.h Swapchain.cpp Swapcha
 
 add_executable(${PROJECT_NAME} ${SOURCES})
 target_include_directories(${PROJECT_NAME} PUBLIC ${CMAKE_CURRENT_LIST_DIR}/..)
-target_link_libraries(${PROJECT_NAME} PUBLIC glfw fmt vulkan spdlog glm crampl)
+target_link_libraries(${PROJECT_NAME} PUBLIC glfw fmt vulkan spdlog glm crampl Threads::Threads)
 add_dependencies(${PROJECT_NAME} shaders-target)

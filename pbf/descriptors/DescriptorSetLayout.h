@@ -19,6 +19,7 @@ namespace pbf::descriptors {
 
 struct DescriptorSetLayout {
 
+    // todo: at some point >=< push constants
     vk::UniqueDescriptorSetLayout realize(Context *context) const;
 
     struct Binding {
@@ -33,7 +34,7 @@ struct DescriptorSetLayout {
     };
 
     template<typename T = DescriptorSetLayout>
-    using Compare = PBFMemberComparator<&T::pushConstants, &T::bindings>;
+    using Compare = PBFMemberComparator<&T::createFlags, &T::bindings>;
 
     vk::DescriptorSetLayoutCreateFlags createFlags;
     vector32<Binding> bindings;

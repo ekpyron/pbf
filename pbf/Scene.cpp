@@ -12,6 +12,7 @@
 #include "Renderer.h"
 
 #include "descriptors/GraphicsPipeline.h"
+#include "descriptors/DescriptorSetLayout.h"
 
 namespace pbf {
 
@@ -61,6 +62,8 @@ void Scene::enqueueCommands(vk::CommandBuffer &buf) {
     for (auto const& [graphicsPipeline, innerMap] : indirectDrawCalls)
     {
         buf.bindPipeline(vk::PipelineBindPoint::eGraphics, *graphicsPipeline);
+        buf.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, *(graphicsPipeline.descriptor().pipelineLayout), 0, { _context->globalDescriptorSet()}, {});
+
         for (auto const& [index, innerMap] : innerMap)
         {
             const auto & [indexBuffer, indexType] = index;
@@ -154,6 +157,9 @@ Triangle::Triangle(Scene *scene)  :scene(scene) {
             },
             .dynamicStates = {vk::DynamicState::eViewport, vk::DynamicState::eScissor},
             .pipelineLayout = scene->context()->cache().fetch(descriptors::PipelineLayout{
+                .setLayouts = {{
+                        scene->context()->globalDescriptorSetLayout()
+                }},
                     PBF_DESC_DEBUG_NAME("Dummy Pipeline Layout")
             }),
             .renderPass = scene->context()->renderer().renderPass(),
@@ -164,5 +170,42 @@ Triangle::Triangle(Scene *scene)  :scene(scene) {
             {BufferRef{&buffer}});
 
     initializedEvent = scene->context()->device().createEventUnique(vk::EventCreateInfo{});
+}
+
+void Triangle::frame(vk::CommandBuffer &enqueueBuffer) {
+    if (!isInitialized) {
+        auto const& device = scene->context()->device();
+
+        enqueueBuffer.copyBuffer(initializeBuffer.buffer(), buffer.buffer(), {
+                vk::BufferCopy {
+                        0, 0, buffer.size()
+                }
+        });
+        enqueueBuffer.copyBuffer(initializeBuffer.buffer(), indexBuffer.buffer(), {
+                vk::BufferCopy {
+                        sizeof(VertexData) * 3, 0, indexBuffer.size()
+                }
+        });
+        enqueueBuffer.setEvent(*initializedEvent, vk::PipelineStageFlagBits::eTransfer);
+
+        // copy
+
+    }
+    if (active && instanceCount() > 0) {
+        if (dirty) {
+            enqueueBuffer.waitEvents(
+                    {*initializedEvent}, vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eVertexInput, {}, {vk::BufferMemoryBarrier{
+                            vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eVertexAttributeRead, 0, 0, buffer.buffer(), 0, buffer.size()
+                    }, vk::BufferMemoryBarrier{
+                            vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eIndexRead, 0, 0, indexBuffer.buffer(), 0, indexBuffer.size()
+                    }}, {}
+            );
+            dirty = false;
+        }
+        // if (potentiallyVisisble() && occlusionQuery()) {
+        // draw
+        // }
+        indirectCommandsBuffer->push_back({3, instanceCount(), 0, 0});
+    }
 }
 }

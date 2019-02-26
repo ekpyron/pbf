@@ -186,6 +186,10 @@ public:
         return _obj;
     }
 
+    const T &descriptor() const {
+        return _obj->descriptor();
+    }
+
     bool operator<(const CacheReference &rhs) const {
         return _obj < rhs._obj;
     }

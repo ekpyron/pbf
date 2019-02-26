@@ -5,6 +5,10 @@ out gl_PerVertex {
     vec4 gl_Position;
 };
 
+layout(binding = 0) uniform GlobalUniformBuffer {
+    mat4 mat;
+} ubo;
+
 layout(location = 0) out vec3 fColor;
 layout(location = 0) in vec3 vPosition;
 
@@ -15,5 +19,5 @@ void main() {
         vec3(0, 0, 1)
     };
     gl_Position = vec4(vPosition, 1);
-    fColor = colors[gl_VertexIndex];
+    fColor = ubo.mat[gl_VertexIndex].xyz;
 }
