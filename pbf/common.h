@@ -60,6 +60,60 @@ inline std::ostream& operator<<(std::ostream &os, const MemoryType& memoryType) 
     return os;
 }
 
+namespace crampl_candidate {
+
+template<typename T>
+class ClosureContainer;
+
+template<typename Ret, typename... Args>
+class ClosureContainer<Ret(Args...)> {
+public:
+    using ArgumentTypes = std::tuple<Args...>;
+    using ReturnType = Ret;
+    virtual ~ClosureContainer() = default;
+    virtual Ret operator()(Args...) = 0;
+};
+
+template<typename CallableType, typename T>
+class TypedClosureContainer;
+
+template<typename R, typename T, typename... Args>
+class TypedClosureContainer<R(Args...), T>: public ClosureContainer<R(Args...)> {
+public:
+    using type = T;
+    TypedClosureContainer(T&& t): callable(std::move(t)) {}
+    virtual ~TypedClosureContainer() = default;
+    R operator()(Args&&... args) override {
+        if constexpr(std::is_same_v<R, void>) {
+            callable(std::forward<Args>(args)...);
+        } else {
+            return callable(std::forward<Args>(args)...);
+        }
+    }
+private:
+    T callable;
+};
+
+}
+
+class ClosureContainer {
+public:
+    virtual ~ClosureContainer() = default;
+    virtual void operator()(vk::CommandBuffer&) = 0;
+};
+template<typename T>
+class TypedClosureContainer: public ClosureContainer {
+public:
+    using type = T;
+    TypedClosureContainer(T&& t): callable(std::move(t)) {}
+    virtual ~TypedClosureContainer() = default;
+    void operator()(vk::CommandBuffer& cb) override {
+        callable(cb);
+    }
+private:
+    T callable;
+};
+
 }
 
 #ifndef NDEBUG

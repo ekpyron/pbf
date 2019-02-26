@@ -155,11 +155,11 @@ Context::Context() {
     _memoryManager = std::make_unique<MemoryManager>(this);
 
     {
-        _globalUniformBuffer = std::make_unique<Buffer>(this, sizeof(glm::mat4), vk::BufferUsageFlagBits::eUniformBuffer, MemoryType::DYNAMIC);
+        _globalUniformBuffer = std::make_unique<Buffer>(this, sizeof(GlobalUniformData), vk::BufferUsageFlagBits::eUniformBuffer, MemoryType::DYNAMIC);
         vk::DescriptorBufferInfo descriptorBufferInfo {
-                _globalUniformBuffer->buffer(), 0, sizeof(glm::mat4)
+                _globalUniformBuffer->buffer(), 0, sizeof(GlobalUniformData)
         };
-        *_globalUniformBuffer->as<glm::mat4>() = glm::mat4(1);
+        globalUniformData = _globalUniformBuffer->as<GlobalUniformData>();
         _device->updateDescriptorSets({vk::WriteDescriptorSet{
                 _globalDescriptorSet, 0, 0, 1, vk::DescriptorType::eUniformBuffer, nullptr, &descriptorBufferInfo, nullptr
         }}, {});
@@ -221,8 +221,10 @@ void Context::setGenericObjectName(vk::ObjectType type, uint64_t obj, const std:
 
 void Context::run() {
     spdlog::get("console")->debug("Entering main loop.");
+    globalUniformData->mvpmatrix = glm::mat4(1);
     while (!_window->shouldClose()) {
         _glfw.pollEvents();
+        globalUniformData->mvpmatrix *= .99;
         _globalDescriptorSetLayout.keepAlive();
         _renderer->render();
         _cache.frame();

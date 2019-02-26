@@ -16,7 +16,7 @@ namespace pbf {
 class Renderer {
 public:
 
-    using StagingFunctor = std::function<void(vk::CommandBuffer&)>;
+    using StagingFunctor = ClosureContainer;
 
     explicit Renderer(Context *context);
 
@@ -26,8 +26,9 @@ public:
         return _renderPass;
     }
 
-    void stage(StagingFunctor &&f) {
-        _stagingFunctorQueue.emplace_back(std::move(f));
+    template<typename... Args>
+    void stage(Args&&... f) {
+        _frameSync[_currentFrameSync].stagingFunctorQueue.emplace_back(std::unique_ptr<StagingFunctor>(new TypedClosureContainer(std::forward<Args>(f)...)));
     }
 
 private:
@@ -41,13 +42,18 @@ private:
         vk::UniqueSemaphore renderFinishedSemaphore;
         vk::UniqueFence fence;
         vk::UniqueCommandBuffer commandBuffer {};
+        std::vector<std::unique_ptr<StagingFunctor>> stagingFunctorQueue;
+
+        void reset() {
+            commandBuffer.reset();
+            stagingFunctorQueue.clear();
+        }
     };
     std::vector<FrameSync> _frameSync;
     std::size_t _currentFrameSync = 0;
     std::vector<vk::UniqueCommandBuffer> _commandBuffers;
 
     vk::UniqueCommandBuffer _stagingCommandBuffer;
-    std::vector<StagingFunctor> _stagingFunctorQueue;
 
     CacheReference<descriptors::RenderPass> _renderPass;
     //CacheReference<descriptors::GraphicsPipeline> _graphicsPipeline;

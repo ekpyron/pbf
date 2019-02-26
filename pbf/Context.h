@@ -31,6 +31,7 @@ public:
     const vk::CommandPool &commandPool(bool transient) const { return *(transient ? _commandPoolTransient : _commandPool); }
     Cache &cache() { return _cache; }
     const Renderer &renderer() const { return *_renderer; }
+    Renderer &renderer() { return *_renderer; }
     Scene &scene() { return *_scene; }
     MemoryManager &memoryManager() { return *_memoryManager; }
 
@@ -148,7 +149,11 @@ private:
     vk::UniqueCommandPool _commandPoolTransient;
 
     std::unique_ptr<MemoryManager> _memoryManager;
+    struct GlobalUniformData {
+        glm::mat4 mvpmatrix;
+    };
     std::unique_ptr<Buffer> _globalUniformBuffer;
+    GlobalUniformData *globalUniformData;
     Cache _cache { this, 100 };
 
     std::unique_ptr<Renderer> _renderer;

@@ -115,7 +115,7 @@ void Renderer::render() {
     auto &currentFrameSync = _frameSync[_currentFrameSync];
 
     device.waitForFences({*currentFrameSync.fence}, static_cast<vk::Bool32>(true), TIMEOUT);
-    currentFrameSync.commandBuffer.reset();
+    currentFrameSync.reset();
 
     static auto lastTime = std::chrono::steady_clock::now();
     static size_t frameCount = 0;
@@ -161,7 +161,11 @@ void Renderer::render() {
 
         buffer->begin({vk::CommandBufferUsageFlagBits::eOneTimeSubmit, nullptr});
 
-        _context->scene().frame(*buffer);
+        _context->scene().frame();
+
+        for (auto& fn: currentFrameSync.stagingFunctorQueue) {
+            (*fn)(*buffer);
+        }
 
         vk::ClearValue clearValue;
         clearValue.setColor({std::array<float, 4>{0.1f, 0.1f, 0.1f, 1.0f}});

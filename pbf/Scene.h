@@ -78,7 +78,7 @@ public:
         IndirectCommandsBuffer(Context *context);
         void clear();
         void push_back(const vk::DrawIndirectCommand &cmd);
-        const std::list<Buffer> &buffers() const { return _buffers; }
+        const auto &buffers() const { return _buffers; }
         std::uint32_t elementsInLastBuffer() const { return _elementsInLastBuffer; }
         static constexpr std::uint32_t bufferSize = 128;
     private:
@@ -90,7 +90,7 @@ public:
 
     Scene(Context* context);
 
-    void frame(vk::CommandBuffer& enqueueBuffer);
+    void frame();
 
     void enqueueCommands(vk::CommandBuffer &buf);
 
@@ -129,7 +129,7 @@ public:
 
     Triangle(Scene* scene);
 
-    void frame(vk::CommandBuffer& enqueueBuffer);
+    void frame();
 
 private:
     struct VertexData {
@@ -137,11 +137,8 @@ private:
     };
 
     Scene *scene;
-    bool isInitialized = false;
     bool active = true;
     bool dirty = true;
-    Buffer initializeBuffer;
-    vk::UniqueEvent initializedEvent;
     Buffer buffer;
     Buffer indexBuffer;
     Scene::IndirectCommandsBuffer* indirectCommandsBuffer {nullptr};
