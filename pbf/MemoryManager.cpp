@@ -18,7 +18,7 @@ MemoryManager::MemoryManager(Context *context) : _context(context) {
 
     auto properties = physicalDevice.getMemoryProperties();
 
-    _memoryTypes = {properties.memoryTypes, properties.memoryTypes + properties.memoryTypeCount};
+    _memoryTypes = {properties.memoryTypes.data(), properties.memoryTypes.data() + properties.memoryTypeCount};
 
     _memoryHeaps.reserve(properties.memoryTypeCount);
     for(std::uint32_t i = 0; i < properties.memoryTypeCount; ++i) { _memoryHeaps.emplace_back(context, i); }
@@ -79,8 +79,9 @@ HeapManager::HeapManager(Context* context, std::uint32_t memoryTypeIndex)
 
 DeviceMemory HeapManager::allocate(std::size_t size, std::size_t alignment, bool hostVisible) {
     const auto &device = _context->device();
-    auto memory = device.allocateMemory({
-        size, _memoryTypeIndex
+    auto memory = device.allocateMemory(vk::MemoryAllocateInfo{
+		.allocationSize = size,
+		.memoryTypeIndex = _memoryTypeIndex
     });
     return {size, memory, 0, this, hostVisible};
 }
@@ -102,6 +103,10 @@ DeviceMemory::DeviceMemory(std::size_t size, vk::DeviceMemory memory, std::size_
 void DeviceMemory::flush() {
     const auto &device = _mgr->context()->device();
 
-    device.flushMappedMemoryRanges({vk::MappedMemoryRange{_memory, _offset, _size}});
+    device.flushMappedMemoryRanges({vk::MappedMemoryRange{
+		.memory = _memory,
+		.offset = _offset,
+		.size = _size
+	}});
 }
 }

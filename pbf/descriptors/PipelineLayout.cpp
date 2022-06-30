@@ -18,7 +18,10 @@ vk::UniquePipelineLayout PipelineLayout::realize(Context *context) const {
     std::transform(setLayouts.begin(), setLayouts.end(), std::back_inserter(vkSetLayouts), [](const auto& _layout) {
         return *_layout;
     });
-    return device.createPipelineLayoutUnique({
-            {}, setLayouts.size(), vkSetLayouts.data(), pushConstants.size(), pushConstants.data()
+    return device.createPipelineLayoutUnique(vk::PipelineLayoutCreateInfo{
+		.setLayoutCount = static_cast<uint32_t>(vkSetLayouts.size()),
+		.pSetLayouts = vkSetLayouts.data(),
+		.pushConstantRangeCount = pushConstants.size(),
+		.pPushConstantRanges = pushConstants.data()
     });
 }

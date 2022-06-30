@@ -17,10 +17,11 @@ namespace pbf::descriptors {
 template<auto... M>
 using PBFMemberComparator = crampl::MemberComparatorTemplate<Order, M...>;
 
-template<typename BitType, typename MaskType>
-struct Order<vk::Flags<BitType, MaskType>> {
-    bool operator()(const vk::Flags<BitType, MaskType>& lhs, const vk::Flags<BitType, MaskType> &rhs) const {
-        return static_cast<MaskType>(lhs) < static_cast<MaskType>(rhs);
+template<typename BitType>
+struct Order<vk::Flags<BitType>> {
+    bool operator()(const vk::Flags<BitType>& lhs, const vk::Flags<BitType> &rhs) const {
+		return lhs < rhs;
+        //return static_cast<typename BitType::MaskType>(lhs) < static_cast<typename BitType::MaskType>(rhs);
     }
 };
 

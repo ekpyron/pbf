@@ -70,9 +70,12 @@ private:
             {
                 const auto &properties = physicalDevice.enumerateDeviceExtensionProperties();
                 auto propertyIt = std::find_if(properties.begin(), properties.end(), [](const auto &prop) {
-                    return prop.extensionName == std::string(VK_KHR_SWAPCHAIN_EXTENSION_NAME);
+					return std::string(prop.extensionName.data()) == VK_KHR_SWAPCHAIN_EXTENSION_NAME;
                 });
-                if (propertyIt == properties.end()) continue;
+                if (propertyIt == properties.end()) {
+					spdlog::get("console")->debug("Rejecting device due to missing {}", VK_KHR_SWAPCHAIN_EXTENSION_NAME);
+					continue;
+				}
             }
             int graphicsFamily = -1;
             int presentFamily = -1;
@@ -89,11 +92,20 @@ private:
                     if(graphicsFamily >= 0 && presentFamily >= 0) break;
                 }
 
-                if(!(graphicsFamily >= 0 && presentFamily >= 0)) continue;
+                if(!(graphicsFamily >= 0 && presentFamily >= 0)) {
+					spdlog::get("console")->debug("Rejecting device due to missing graphics and present family");
+					continue;
+				}
             }
             {
-                if(physicalDevice.getSurfaceFormatsKHR(*_surface).empty()) continue;
-                if(physicalDevice.getSurfacePresentModesKHR(*_surface).empty()) continue;
+                if(physicalDevice.getSurfaceFormatsKHR(*_surface).empty()) {
+					spdlog::get("console")->debug("Rejecting device due to missing surface formats");
+					continue;
+				}
+                if(physicalDevice.getSurfacePresentModesKHR(*_surface).empty()) {
+					spdlog::get("console")->debug("Rejecting device due to missing present modes");
+					continue;
+				}
             }
             return std::make_tuple(physicalDevice,
                     static_cast<std::uint32_t>(graphicsFamily), static_cast<std::uint32_t>(presentFamily));

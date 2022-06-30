@@ -154,12 +154,11 @@ private:
     };
 
 
-    void keepDepsAlive(std::enable_if_t<HasDescriptor<T>::value>* = nullptr) const {
-        keepDependenciesAlive<T>()(_obj->descriptor());
+    void keepDepsAlive() const {
+		if constexpr (HasDescriptor<T>::value) {
+			keepDependenciesAlive<T>()(_obj->descriptor());
+		}
     }
-    void keepDepsAlive(std::enable_if_t<!HasDescriptor<T>::value>* = nullptr) const {
-    }
-
 };
 
 template<typename T>

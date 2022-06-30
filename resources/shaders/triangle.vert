@@ -18,6 +18,6 @@ void main() {
         vec3(0, 1, 0),
         vec3(0, 0, 1)
     };
-    gl_Position = vec4(vPosition, 1);
-    fColor = ubo.mat[gl_VertexIndex].xyz;
+    gl_Position = ubo.mat * vec4(vPosition, 1);
+    fColor = colors[gl_VertexIndex]; // ubo.mat[gl_VertexIndex].xyz;
 }

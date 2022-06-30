@@ -61,19 +61,32 @@ Swapchain::Swapchain(Context *context, const vk::RenderPass& renderPass, vk::Swa
     _images = device.getSwapchainImagesKHR(*_swapchain);
     _imageViews.reserve(_images.size());
     for(const auto &image : _images) {
-        _imageViews.emplace_back(device.createImageViewUnique({
-            {}, image, vk::ImageViewType::e2D, context->surfaceFormat().format, {},
-            { vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1}
-        }));
+        _imageViews.emplace_back(device.createImageViewUnique(vk::ImageViewCreateInfo{
+			.image = image,
+			.viewType = vk::ImageViewType::e2D,
+			.format = context->surfaceFormat().format,
+			.subresourceRange = vk::ImageSubresourceRange{
+				.aspectMask = vk::ImageAspectFlagBits::eColor,
+				.baseMipLevel = 0,
+				.levelCount = 1,
+				.baseArrayLayer = 0,
+				.layerCount = 1
+			}
+		}));
     }
 
     _frameBuffers.reserve(_images.size());
     for(const auto &iv : _imageViews) {
         _frameBuffers.emplace_back(device.createFramebufferUnique(
-                vk::FramebufferCreateInfo(
-                        {}, renderPass, 1, &*iv, _extent.width, _extent.height, 1
-                )
-                ));
+                vk::FramebufferCreateInfo{
+					.renderPass = renderPass,
+					.attachmentCount = 1,
+					.pAttachments = &*iv,
+					.width = _extent.width,
+					.height = _extent.height,
+					.layers = 1,
+				}
+        ));
     }
 #ifndef NDEBUG
     ++swapchainIncarnation;

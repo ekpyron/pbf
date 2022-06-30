@@ -19,23 +19,28 @@ vk::UniquePipeline GraphicsPipeline::realize(Context* context) const {
     vk::PipelineVertexInputStateCreateInfo vertexInputStateCreateInfo;
     vk::PipelineColorBlendStateCreateInfo colorBlendStateCreateInfo;
     vk::PipelineInputAssemblyStateCreateInfo assemblyStateCreateInfo {
-            {}, primitiveTopology, primitiveRestartEnable
+		.topology = primitiveTopology,
+		.primitiveRestartEnable = primitiveRestartEnable
     };
     vk::PipelineTessellationStateCreateInfo tesselationStateCreateInfo {
-            {}, tessellationPatchControlPoints
+		.patchControlPoints = tessellationPatchControlPoints
     };
 
-    vk::PipelineViewportStateCreateInfo viewportStateCreateInfo {{}, 1u, &viewport, 1u, &scissor };
+    vk::PipelineViewportStateCreateInfo viewportStateCreateInfo {
+		.viewportCount = 1u,
+		.pViewports = &viewport,
+		.scissorCount = 1u,
+		.pScissors = &scissor
+	};
 
     {
         stageCreateInfos.reserve(shaderStages.size());
         for (const auto &stage : shaderStages) {
             stageCreateInfos.emplace_back(vk::PipelineShaderStageCreateInfo{
-                    {}, // flags,
-                    stage.stage, // stage
-                    *stage.module, // shader module
-                    stage.entryPoint.c_str(), // entry point
-                    nullptr  // specialization info
+				.stage = stage.stage,
+				.module = *stage.module,
+				.pName = stage.entryPoint.c_str(),
+				.pSpecializationInfo = nullptr
             });
         }
     }
@@ -55,7 +60,8 @@ vk::UniquePipeline GraphicsPipeline::realize(Context* context) const {
     std::optional<vk::PipelineDynamicStateCreateInfo> dynamicStateCreateInfo;
     if (!dynamicStates.empty()) {
         dynamicStateCreateInfo = vk::PipelineDynamicStateCreateInfo {
-                {}, static_cast<uint32_t>(dynamicStates.size()), dynamicStates.data()
+			.dynamicStateCount = static_cast<uint32_t>(dynamicStates.size()),
+			.pDynamicStates = dynamicStates.data()
         };
     }
 
@@ -66,13 +72,25 @@ vk::UniquePipeline GraphicsPipeline::realize(Context* context) const {
     colorBlendStateCreateInfo.setBlendConstants(blendConstants);
 
 
-    vk::GraphicsPipelineCreateInfo info({},
-                                        static_cast<uint32_t>(stageCreateInfos.size()), stageCreateInfos.data(),
-                                        &vertexInputStateCreateInfo, &assemblyStateCreateInfo, &tesselationStateCreateInfo,
-                                        &viewportStateCreateInfo, &rasterizationStateCreateInfo, &multisampleStateCreateInfo,
-                                        &depthStencilStateCreateInfo, &colorBlendStateCreateInfo,
-                                        dynamicStateCreateInfo ? &*dynamicStateCreateInfo : nullptr, *pipelineLayout,
-                                        *renderPass, subpass);
+    vk::GraphicsPipelineCreateInfo info{
+		.stageCount = static_cast<uint32_t>(stageCreateInfos.size()),
+		.pStages = stageCreateInfos.data(),
+		.pVertexInputState = &vertexInputStateCreateInfo,
+		.pInputAssemblyState = &assemblyStateCreateInfo,
+		.pTessellationState = &tesselationStateCreateInfo,
+		.pViewportState = &viewportStateCreateInfo,
+		.pRasterizationState = &rasterizationStateCreateInfo,
+		.pMultisampleState = &multisampleStateCreateInfo,
+		.pDepthStencilState = &depthStencilStateCreateInfo,
+		.pColorBlendState = &colorBlendStateCreateInfo,
+		.pDynamicState = dynamicStateCreateInfo ? &*dynamicStateCreateInfo : nullptr,
+		.layout = *pipelineLayout,
+		.renderPass = *renderPass,
+		.subpass = subpass
+	};
 
-    return device.createGraphicsPipelineUnique(nullptr, info);
+	auto [result, pipeline] = device.createGraphicsPipelineUnique(nullptr, info);
+	if (result != vk::Result::eSuccess)
+		throw std::runtime_error("could not create graphics pipeline.");
+	return std::move(pipeline);
 }

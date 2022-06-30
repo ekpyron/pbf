@@ -22,8 +22,10 @@ vk::UniqueDescriptorSetLayout DescriptorSetLayout::realize(Context *context) con
             nullptr // todo: immutable samplers
         };
     });
-    return context->device().createDescriptorSetLayoutUnique({
-        createFlags, bindings.size(), vkBindings.data()
+    return context->device().createDescriptorSetLayoutUnique(vk::DescriptorSetLayoutCreateInfo{
+		.flags = createFlags,
+		.bindingCount = bindings.size(),
+		.pBindings = vkBindings.data()
     });
 }
 }

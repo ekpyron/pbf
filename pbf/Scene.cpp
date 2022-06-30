@@ -101,7 +101,7 @@ void Scene::enqueueCommands(vk::CommandBuffer &buf) {
 }
 
 
-Triangle::Triangle(Scene *scene)  :scene(scene) {
+Triangle::Triangle(Scene *scene) : scene(scene) {
 
     buffer = {scene->context(), sizeof(VertexData) * 3,
               vk::BufferUsageFlagBits::eTransferDst | vk::BufferUsageFlagBits::eVertexBuffer, MemoryType::STATIC};
@@ -213,12 +213,23 @@ void Triangle::frame() {
                     }
             });
 
-            enqueueBuffer.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eVertexInput, {}, {}, {vk::BufferMemoryBarrier{
-                    vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eVertexAttributeRead, 0, 0, buffer.buffer(), 0, buffer.size()
-            }, vk::BufferMemoryBarrier{
-                    vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eIndexRead, 0, 0, indexBuffer.buffer(), 0, indexBuffer.size()
-            }}, {});
-
+			enqueueBuffer.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eVertexInput, {}, {}, {vk::BufferMemoryBarrier{
+				.srcAccessMask = vk::AccessFlagBits::eTransferWrite,
+				.dstAccessMask = vk::AccessFlagBits::eVertexAttributeRead,
+				.srcQueueFamilyIndex = 0,
+				.dstQueueFamilyIndex = 0,
+				.buffer = buffer.buffer(),
+				.offset = 0,
+				.size = buffer.size()
+			}, vk::BufferMemoryBarrier{
+				.srcAccessMask = vk::AccessFlagBits::eTransferWrite,
+				.dstAccessMask = vk::AccessFlagBits::eIndexRead,
+				.srcQueueFamilyIndex = 0,
+				.dstQueueFamilyIndex = 0,
+				.buffer = indexBuffer.buffer(),
+				.offset = 0,
+				.size = indexBuffer.size()
+			}}, {});
         });
 
         dirty = false;

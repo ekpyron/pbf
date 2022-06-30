@@ -41,8 +41,8 @@ template<> struct VulkanObjectType<vk::SwapchainKHR> : std::integral_constant<vk
 template<> struct VulkanObjectType<vk::DisplayKHR> : std::integral_constant<vk::ObjectType, vk::ObjectType::eDisplayKHR> {};
 template<> struct VulkanObjectType<vk::DisplayModeKHR> : std::integral_constant<vk::ObjectType, vk::ObjectType::eDisplayModeKHR> {};
 template<> struct VulkanObjectType<vk::DebugReportCallbackEXT> : std::integral_constant<vk::ObjectType, vk::ObjectType::eDebugReportCallbackEXT> {};
-template<> struct VulkanObjectType<vk::ObjectTableNVX> : std::integral_constant<vk::ObjectType, vk::ObjectType::eObjectTableNVX> {};
-template<> struct VulkanObjectType<vk::IndirectCommandsLayoutNVX> : std::integral_constant<vk::ObjectType, vk::ObjectType::eIndirectCommandsLayoutNVX> {};
+/*template<> struct VulkanObjectType<vk::ObjectTableNVX> : std::integral_constant<vk::ObjectType, vk::ObjectType::eObjectTableNVX> {};
+template<> struct VulkanObjectType<vk::IndirectCommandsLayoutNVX> : std::integral_constant<vk::ObjectType, vk::ObjectType::eIndirectCommandsLayoutNVX> {};*/
 template<> struct VulkanObjectType<vk::DebugUtilsMessengerEXT> : std::integral_constant<vk::ObjectType, vk::ObjectType::eDebugUtilsMessengerEXT> {};
 template<> struct VulkanObjectType<vk::ValidationCacheEXT> : std::integral_constant<vk::ObjectType, vk::ObjectType::eValidationCacheEXT> {};
 template<> struct VulkanObjectType<vk::AccelerationStructureNV> : std::integral_constant<vk::ObjectType, vk::ObjectType::eAccelerationStructureNV> {};

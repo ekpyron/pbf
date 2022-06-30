@@ -29,7 +29,10 @@ vk::UniqueShaderModule ShaderModule::realize(Context *context) const {
 
         f.read(reinterpret_cast<char *>(v.data()), length);
 
-        return device.createShaderModuleUnique(vk::ShaderModuleCreateInfo({}, v.size(), v.data()));
+        return device.createShaderModuleUnique(vk::ShaderModuleCreateInfo({
+			.codeSize = v.size(),
+			.pCode = v.data()
+		}));
     } catch (...) {
         std::throw_with_nested(std::runtime_error("Cannot read shader " + filename + "."));
     }

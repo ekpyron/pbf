@@ -21,7 +21,9 @@ Renderer::Renderer(Context *context) : _context(context) {
         _frameSync.emplace_back(FrameSync{
                 context->device().createSemaphoreUnique({}),
                 context->device().createSemaphoreUnique({}),
-                context->device().createFenceUnique({vk::FenceCreateFlagBits::eSignaled})
+                context->device().createFenceUnique(vk::FenceCreateInfo {
+					.flags = vk::FenceCreateFlagBits::eSignaled
+				})
         });
         PBF_DEBUG_SET_OBJECT_NAME(context, *_frameSync.back().imageAvailableSemaphore,
                                   fmt::format("Image Available Semaphore #{}", i));
@@ -114,7 +116,10 @@ void Renderer::render() {
 
     auto &currentFrameSync = _frameSync[_currentFrameSync];
 
-    device.waitForFences({*currentFrameSync.fence}, static_cast<vk::Bool32>(true), TIMEOUT);
+	{
+		auto result = device.waitForFences({*currentFrameSync.fence}, static_cast<vk::Bool32>(true), TIMEOUT);
+		// TODO: handle result
+	}
     currentFrameSync.reset();
 
     static auto lastTime = std::chrono::steady_clock::now();
@@ -149,8 +154,10 @@ void Renderer::render() {
         }
     }
 
-    auto buffer = std::move(device.allocateCommandBuffersUnique({
-        _context->commandPool(true), vk::CommandBufferLevel::ePrimary, 1U
+    auto buffer = std::move(device.allocateCommandBuffersUnique(vk::CommandBufferAllocateInfo{
+		.commandPool = _context->commandPool(true),
+		.level = vk::CommandBufferLevel::ePrimary,
+		.commandBufferCount = 1U
     }).front());
     {
 
@@ -159,7 +166,10 @@ void Renderer::render() {
         PBF_DEBUG_SET_OBJECT_NAME(_context, *buffer, fmt::format("Scene Command Buffer #{}", __counter++));
 #endif
 
-        buffer->begin({vk::CommandBufferUsageFlagBits::eOneTimeSubmit, nullptr});
+        buffer->begin(vk::CommandBufferBeginInfo{
+			.flags = vk::CommandBufferUsageFlagBits::eOneTimeSubmit,
+			.pInheritanceInfo = nullptr
+		});
 
         _context->scene().frame();
 
@@ -176,8 +186,11 @@ void Renderer::render() {
         });
         buffer->setScissor(0, {vk::Rect2D{vk::Offset2D(), _swapchain->extent()}});
         buffer->beginRenderPass(vk::RenderPassBeginInfo{
-                *_renderPass, *_swapchain->frameBuffers()[imageIndex],
-                vk::Rect2D{{}, _swapchain->extent()}, 1, &clearValue
+			.renderPass = *_renderPass,
+			.framebuffer = *_swapchain->frameBuffers()[imageIndex],
+			.renderArea = vk::Rect2D{{}, _swapchain->extent()},
+			.clearValueCount = 1,
+			.pClearValues = &clearValue
         }, vk::SubpassContents::eInline);
         /*buffer->bindPipeline(vk::PipelineBindPoint::eGraphics, *_graphicsPipeline);
         buffer->draw(3, 1, 0, 0);*/
@@ -195,16 +208,28 @@ void Renderer::render() {
             vk::PipelineStageFlagBits::eColorAttachmentOutput
     };
     _context->graphicsQueue().submit({vk::SubmitInfo{
-            1, &*currentFrameSync.imageAvailableSemaphore, waitStages,
-            1, &*buffer, 1, &*currentFrameSync.renderFinishedSemaphore
+		.waitSemaphoreCount = 1,
+		.pWaitSemaphores = &*currentFrameSync.imageAvailableSemaphore,
+		.pWaitDstStageMask = waitStages,
+		.commandBufferCount = 1,
+		.pCommandBuffers = &*buffer,
+		.signalSemaphoreCount = 1,
+		.pSignalSemaphores = &*currentFrameSync.renderFinishedSemaphore
     }}, *currentFrameSync.fence);
 
     currentFrameSync.commandBuffer = std::move(buffer);
 
-    _context->presentQueue().presentKHR({
-        1, &*currentFrameSync.renderFinishedSemaphore, 1,
-        &_swapchain->swapchain(), &imageIndex, nullptr
-    });
+	{
+		auto result = _context->presentQueue().presentKHR(vk::PresentInfoKHR{
+			.waitSemaphoreCount = 1,
+			.pWaitSemaphores = &*currentFrameSync.renderFinishedSemaphore,
+			.swapchainCount = 1,
+			.pSwapchains = &_swapchain->swapchain(),
+			.pImageIndices = &imageIndex,
+			.pResults = nullptr
+		});
+		// TODO: handle result
+	}
 
     _currentFrameSync = (_currentFrameSync + 1) % _frameSync.size();
 }

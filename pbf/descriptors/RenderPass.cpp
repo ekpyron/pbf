@@ -17,19 +17,27 @@ vk::UniqueRenderPass RenderPass::realize(Context *context) const {
 
     for (auto const& subpass: subpasses)
     {
-        subpassDescriptions.emplace_back(subpass.flags, subpass.pipelineBindPoint, static_cast<uint32_t>(subpass.inputAttachments.size()),
-                                          subpass.inputAttachments.data(), static_cast<uint32_t>(subpass.colorAttachments.size()),
-                                          subpass.colorAttachments.data(),
-                                          subpass.resolveAttachments.empty() ? nullptr : subpass.resolveAttachments.data(),
-                                          subpass.depthStencilAttachment ? &*subpass.depthStencilAttachment : nullptr,
-                                          static_cast<uint32_t>(subpass.preserveAttachments.size()), subpass.preserveAttachments.data());
-
+		subpassDescriptions.emplace_back(vk::SubpassDescription{
+			.flags = subpass.flags,
+			.pipelineBindPoint = subpass.pipelineBindPoint,
+			.inputAttachmentCount = static_cast<uint32_t>(subpass.inputAttachments.size()),
+			.pInputAttachments = subpass.inputAttachments.data(),
+			.colorAttachmentCount = static_cast<uint32_t>(subpass.colorAttachments.size()),
+			.pColorAttachments = subpass.colorAttachments.data(),
+			.pResolveAttachments = subpass.resolveAttachments.empty() ? nullptr : subpass.resolveAttachments.data(),
+			.pDepthStencilAttachment = subpass.depthStencilAttachment ? &*subpass.depthStencilAttachment : nullptr,
+			.preserveAttachmentCount = static_cast<uint32_t>(subpass.preserveAttachments.size()),
+			.pPreserveAttachments = subpass.preserveAttachments.data()
+		});
     }
 
-    vk::RenderPassCreateInfo createInfo({}, static_cast<uint32_t>(attachments.size()), attachments.data(),
-                                        static_cast<uint32_t>(subpassDescriptions.size()),
-                                        subpassDescriptions.data(),
-                                        static_cast<uint32_t>(subpassDependencies.size()),
-                                        subpassDependencies.data());
+    vk::RenderPassCreateInfo createInfo{
+		.attachmentCount = static_cast<uint32_t>(attachments.size()),
+		.pAttachments = attachments.data(),
+		.subpassCount = static_cast<uint32_t>(subpassDescriptions.size()),
+		.pSubpasses = subpassDescriptions.data(),
+		.dependencyCount = static_cast<uint32_t>(subpassDependencies.size()),
+		.pDependencies = subpassDependencies.data()
+	};
     return context->device().createRenderPassUnique(createInfo);
 }
