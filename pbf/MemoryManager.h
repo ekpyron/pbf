@@ -95,6 +95,7 @@ public:
     MemoryManager& operator=(const MemoryManager &) = delete;
 
     DeviceMemory allocateBufferMemory(MemoryType memoryType, vk::Buffer buffer);
+    DeviceMemory allocateImageMemory(MemoryType memoryType, vk::Image buffer);
 
 private:
 

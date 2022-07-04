@@ -39,6 +39,11 @@ public:
     Renderer &renderer() { return *_renderer; }
     Scene &scene() { return *_scene; }
     MemoryManager &memoryManager() { return *_memoryManager; }
+	vk::Format getDepthFormat() const;
+
+	uint32_t graphicsQueueFamily() const {
+		return _families.graphics;
+	}
 
     CacheReference<descriptors::DescriptorSetLayout> globalDescriptorSetLayout() const {
         return _globalDescriptorSetLayout;

@@ -49,7 +49,16 @@ Quad::Quad(pbf::Scene *scene) : scene(scene) {
                     vk::VertexInputAttributeDescription{0, 0, vk::Format::eR32G32B32Sfloat, 0}},
             .primitiveTopology = vk::PrimitiveTopology::eTriangleList,
             .rasterizationStateCreateInfo = vk::PipelineRasterizationStateCreateInfo().setLineWidth(1.0f),
-            .colorBlendAttachmentStates = {
+			.depthStencilStateCreateInfo = vk::PipelineDepthStencilStateCreateInfo{
+				.depthTestEnable = true,
+				.depthWriteEnable = true,
+				.depthCompareOp = vk::CompareOp::eLess,
+				.depthBoundsTestEnable = false,
+				.stencilTestEnable = false,
+				.minDepthBounds = 0.0f,
+				.maxDepthBounds = 1.0f
+			},
+			.colorBlendAttachmentStates = {
                     vk::PipelineColorBlendAttachmentState().setColorWriteMask(
                             vk::ColorComponentFlagBits::eR | vk::ColorComponentFlagBits::eG |
                             vk::ColorComponentFlagBits::eB | vk::ColorComponentFlagBits::eA

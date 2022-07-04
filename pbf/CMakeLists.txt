@@ -8,7 +8,7 @@ set(SOURCES main.cpp glfw.h Context.cpp Context.h common.h Swapchain.cpp Swapcha
         descriptors/DescriptorSetLayout.h descriptors/DescriptorSetLayout.cpp
         MemoryManager.cpp MemoryManager.h Buffer.cpp Buffer.h Scene.cpp Scene.h
         Camera.cpp Camera.h IndirectCommandsBuffer.h IndirectCommandsBuffer.cpp Quad.cpp Quad.h
-        Simulation.cpp Simulation.h)
+        Simulation.cpp Simulation.h Image.cpp Image.h)
 
 add_executable(${PROJECT_NAME} ${SOURCES})
 target_include_directories(${PROJECT_NAME} PUBLIC ${CMAKE_CURRENT_LIST_DIR}/..)

@@ -45,7 +45,18 @@ Renderer::Renderer(Context *context) : _context(context) {
                                 vk::AttachmentStoreOp::eDontCare,
                                 vk::ImageLayout::eUndefined,
                                 vk::ImageLayout::ePresentSrcKHR
-                        }
+                        },
+					vk::AttachmentDescription{
+						{},
+						context->getDepthFormat(),
+						vk::SampleCountFlagBits::e1,
+						vk::AttachmentLoadOp::eClear,
+						vk::AttachmentStoreOp::eDontCare,
+						vk::AttachmentLoadOp::eDontCare,
+						vk::AttachmentStoreOp::eDontCare,
+						vk::ImageLayout::eUndefined,
+						vk::ImageLayout::eDepthStencilAttachmentOptimal
+					}
                 },
                 .subpasses = {
                         {
@@ -54,7 +65,7 @@ Renderer::Renderer(Context *context) : _context(context) {
                                 .inputAttachments = {},
                                 .colorAttachments = {{0, vk::ImageLayout::eColorAttachmentOptimal}},
                                 .resolveAttachments = {},
-                                .depthStencilAttachment = {},
+                                .depthStencilAttachment = {{1, vk::ImageLayout::eDepthStencilAttachmentOptimal}},
                                 .preserveAttachments = {}
                         }
                 },
@@ -62,9 +73,9 @@ Renderer::Renderer(Context *context) : _context(context) {
                         vk::SubpassDependency{
                                 VK_SUBPASS_EXTERNAL,
                                 0,
-                                vk::PipelineStageFlagBits::eColorAttachmentOutput,
-                                vk::PipelineStageFlagBits::eColorAttachmentOutput,
-                                {}, {}, {}
+                                vk::PipelineStageFlagBits::eColorAttachmentOutput|vk::PipelineStageFlagBits::eEarlyFragmentTests,
+                                vk::PipelineStageFlagBits::eColorAttachmentOutput|vk::PipelineStageFlagBits::eEarlyFragmentTests,
+                                {}, vk::AccessFlagBits::eColorAttachmentWrite|vk::AccessFlagBits::eDepthStencilAttachmentWrite, {}
                         }
                 },
                 PBF_DESC_DEBUG_NAME("Main Renderer RenderPass")
@@ -177,9 +188,10 @@ void Renderer::render() {
             (*fn)(*buffer);
         }
 
-        vk::ClearValue clearValue;
-        clearValue.setColor({std::array<float, 4>{0.1f, 0.1f, 0.1f, 1.0f}});
-        buffer->setViewport(0, {
+        std::array<vk::ClearValue, 2> clearValues;
+        clearValues[0].setColor({std::array<float, 4>{0.1f, 0.1f, 0.1f, 1.0f}});
+		clearValues[1].setDepthStencil(vk::ClearDepthStencilValue{.depth = 1.0f, .stencil = 0});
+		buffer->setViewport(0, {
             vk::Viewport{
                 0, 0, float(_swapchain->extent().width), float(_swapchain->extent().height), 0.0f, 1.0f
             }
@@ -189,8 +201,8 @@ void Renderer::render() {
 			.renderPass = *_renderPass,
 			.framebuffer = *_swapchain->frameBuffers()[imageIndex],
 			.renderArea = vk::Rect2D{{}, _swapchain->extent()},
-			.clearValueCount = 1,
-			.pClearValues = &clearValue
+			.clearValueCount = clearValues.size(),
+			.pClearValues = clearValues.data()
         }, vk::SubpassContents::eInline);
         /*buffer->bindPipeline(vk::PipelineBindPoint::eGraphics, *_graphicsPipeline);
         buffer->draw(3, 1, 0, 0);*/

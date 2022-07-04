@@ -73,15 +73,37 @@ Swapchain::Swapchain(Context *context, const vk::RenderPass& renderPass, vk::Swa
 				.layerCount = 1
 			}
 		}));
+		_depthBuffers.emplace_back(context, context->getDepthFormat(), vk::ImageUsageFlagBits::eDepthStencilAttachment, vk::Extent3D{
+			.width = _extent.width,
+			.height = _extent.height,
+			.depth = 1
+		});
+		_depthBufferViews.emplace_back(device.createImageViewUnique(vk::ImageViewCreateInfo{
+			.image = _depthBuffers.back().image(),
+			.viewType = vk::ImageViewType::e2D,
+			.format = context->getDepthFormat(),
+			.subresourceRange = vk::ImageSubresourceRange{
+				.aspectMask = vk::ImageAspectFlagBits::eDepth,
+				.baseMipLevel = 0,
+				.levelCount = 1,
+				.baseArrayLayer = 0,
+				.layerCount = 1
+			}
+		}));
     }
 
     _frameBuffers.reserve(_images.size());
-    for(const auto &iv : _imageViews) {
+	for (size_t i = 0; i < _images.size(); ++i)
+	{
+		std::array<vk::ImageView, 2> ivs = {
+			*_imageViews[i],
+			*_depthBufferViews[i]
+		};
         _frameBuffers.emplace_back(device.createFramebufferUnique(
                 vk::FramebufferCreateInfo{
 					.renderPass = renderPass,
-					.attachmentCount = 1,
-					.pAttachments = &*iv,
+					.attachmentCount = ivs.size(),
+					.pAttachments = ivs.data(),
 					.width = _extent.width,
 					.height = _extent.height,
 					.layers = 1,

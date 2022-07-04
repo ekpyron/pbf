@@ -10,6 +10,7 @@
 
 #include <vulkan/vulkan.hpp>
 #include <pbf/Context.h>
+#include "Image.h"
 
 namespace pbf {
 
@@ -28,11 +29,15 @@ public:
         return _images.size();
     }
 private:
+	vk::Format findDepthFormat() const;
+
     vk::Extent2D _extent;
     vk::UniqueSwapchainKHR _swapchain;
     std::vector<vk::Image> _images;
     std::vector<vk::UniqueImageView> _imageViews;
     std::vector<vk::UniqueFramebuffer> _frameBuffers;
+	std::vector<Image> _depthBuffers;
+	std::vector<vk::UniqueImageView> _depthBufferViews;
 #ifndef NDEBUG
     static std::uint64_t swapchainIncarnation;
 #endif

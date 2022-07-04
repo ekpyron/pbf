@@ -73,6 +73,20 @@ DeviceMemory MemoryManager::allocateBufferMemory(MemoryType memoryType, vk::Buff
     return std::move(deviceMemory);
 }
 
+DeviceMemory MemoryManager::allocateImageMemory(MemoryType memoryType, vk::Image image) {
+	const auto &device = _context->device();
+
+	auto memoryRequirements = device.getImageMemoryRequirements(image);
+	auto memoryIndex = chooseAdequateMemoryIndex(memoryType, memoryRequirements.memoryTypeBits);
+
+	auto deviceMemory = allocate(memoryIndex, memoryRequirements.size, memoryRequirements.alignment,
+								 static_cast<bool>(_memoryTypes[memoryIndex].propertyFlags & vk::MemoryPropertyFlagBits::eHostVisible));
+
+	device.bindImageMemory(image, deviceMemory.vkMemory(), deviceMemory.offset());
+
+	return std::move(deviceMemory);
+}
+
 
 HeapManager::HeapManager(Context* context, std::uint32_t memoryTypeIndex)
         : _memoryTypeIndex(memoryTypeIndex), _context(context) {}

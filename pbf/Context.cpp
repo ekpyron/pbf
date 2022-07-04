@@ -416,4 +416,11 @@ void Context::OnMouseDown (int button)
 	}*/
 }
 
+
+vk::Format Context::getDepthFormat() const
+{
+	// TODO
+	return vk::Format::eD32Sfloat;
+}
+
 }
