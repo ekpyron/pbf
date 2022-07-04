@@ -17,8 +17,9 @@
 namespace pbf {
 
 Scene::Scene(Context *context) : _context(context) {
-    triangle = std::make_unique<Triangle>(this);
+    triangle = std::make_unique<Quad>(this);
     triangleInstance = std::make_unique<Instance>(triangle.get());
+	triangleInstance2 = std::make_unique<Instance>(triangle.get());
 }
 
 void Scene::IndirectCommandsBuffer::clear() {
@@ -98,11 +99,11 @@ void Scene::enqueueCommands(vk::CommandBuffer &buf) {
 }
 
 
-Triangle::Triangle(Scene *scene) : scene(scene) {
+Quad::Quad(Scene *scene) : scene(scene) {
 
-    buffer = {scene->context(), sizeof(VertexData) * 3,
+    buffer = {scene->context(), sizeof(VertexData) * 4,
               vk::BufferUsageFlagBits::eTransferDst | vk::BufferUsageFlagBits::eVertexBuffer, MemoryType::STATIC};
-    indexBuffer = {scene->context(), sizeof(std::uint16_t) * 3, vk::BufferUsageFlagBits::eTransferDst
+    indexBuffer = {scene->context(), sizeof(std::uint16_t) * 6, vk::BufferUsageFlagBits::eTransferDst
                                                                 | vk::BufferUsageFlagBits::eIndexBuffer,
                    MemoryType::STATIC};
 
@@ -171,30 +172,36 @@ Triangle::Triangle(Scene *scene) : scene(scene) {
 
 }
 
-void Triangle::frame() {
+void Quad::frame() {
     if (active && instanceCount() > 0) {
-        indirectCommandsBuffer->push_back({3, instanceCount(), 0, 0});
+        indirectCommandsBuffer->push_back({6, instanceCount(), 0, 0});
 
     }
 
 
     if (dirty) {
-        Buffer initializeBuffer {scene->context(), sizeof(VertexData)*3 + sizeof(std::uint16_t) * 4, vk::BufferUsageFlagBits::eTransferSrc, MemoryType::TRANSIENT};
+        Buffer initializeBuffer {scene->context(), sizeof(VertexData) * 4 + sizeof(std::uint16_t) * 6, vk::BufferUsageFlagBits::eTransferSrc, MemoryType::TRANSIENT};
 
         VertexData *data = reinterpret_cast<VertexData *>(initializeBuffer.data());
-        data[0].vertices[0]= 0.0f;
-        data[0].vertices[1]= 1.0f;
+        data[0].vertices[0]= -1.0f;
+        data[0].vertices[1]= -1.0f;
         data[0].vertices[2]= 0.0f;
-        data[1].vertices[0]= -1.0f;
-        data[1].vertices[1]= -1.0f;
-        data[1].vertices[2]= 0.0f;
+		data[1].vertices[0]= 1.0f;
+		data[1].vertices[1]= -1.0f;
+		data[1].vertices[2] = 0.0f;
         data[2].vertices[0]= 1.0f;
-        data[2].vertices[1]= -1.0f;
-        data[2].vertices[2] = 0.0f;
-        std::uint16_t *indices = reinterpret_cast<std::uint16_t*>(reinterpret_cast<std::intptr_t>(initializeBuffer.data()) + sizeof(VertexData) * 3);
+        data[2].vertices[1]= 1.0f;
+        data[2].vertices[2]= 0.0f;
+        data[3].vertices[0]= -1.0f;
+        data[3].vertices[1]= 1.0f;
+        data[3].vertices[2] = 0.0f;
+        std::uint16_t *indices = reinterpret_cast<std::uint16_t*>(reinterpret_cast<std::intptr_t>(initializeBuffer.data()) + sizeof(VertexData) * 4);
         indices[0] = 0;
         indices[1] = 1;
         indices[2] = 2;
+		indices[3] = 0;
+		indices[4] = 2;
+		indices[5] = 3;
         initializeBuffer.flush();
         scene->context()->renderer().stage([
                                                    this, initializeBuffer = std::move(initializeBuffer)
@@ -206,7 +213,7 @@ void Triangle::frame() {
             });
             enqueueBuffer.copyBuffer(initializeBuffer.buffer(), indexBuffer.buffer(), {
                     vk::BufferCopy {
-                            sizeof(VertexData) * 3, 0, indexBuffer.size()
+                            sizeof(VertexData) * 4, 0, indexBuffer.size()
                     }
             });
 

@@ -67,7 +67,7 @@ private:
     Instanceable *parent = nullptr;
 };
 
-class Triangle;
+class Quad;
 
 class Scene {
 public:
@@ -119,15 +119,16 @@ private:
                         IndirectCommandsBuffer> indirectDrawCalls;
     std::set<IndirectCommandsBuffer*> indirectCommandBuffers;
 
-    std::unique_ptr<Triangle> triangle;
+    std::unique_ptr<Quad> triangle;
     std::unique_ptr<Instance> triangleInstance;
+	std::unique_ptr<Instance> triangleInstance2;
 };
 
 
-class Triangle: public Instanceable {
+class Quad: public Instanceable {
 public:
 
-    Triangle(Scene* scene);
+    Quad(Scene* scene);
 
     void frame();
 

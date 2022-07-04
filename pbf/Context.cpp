@@ -222,6 +222,21 @@ Context::Context() {
     PBF_DEBUG_SET_OBJECT_NAME(this, *_commandPool, "Main Command Pool");
     _renderer = std::make_unique<Renderer>(this);
     _scene = std::make_unique<Scene>(this);
+
+	glfwSetWindowUserPointer (_window->window(), this);
+	//typedef void (* GLFWcursorposfun)(GLFWwindow* window, double xpos, double ypos);
+	glfwSetCursorPosCallback (_window->window(), [](GLFWwindow* window, double xpos, double ypos) {
+		reinterpret_cast<Context*>(glfwGetWindowUserPointer(window))->OnMouseMove(xpos, ypos);
+	});
+	// typedef void (* GLFWmousebuttonfun)(GLFWwindow* window, int button, int action, int mods);
+	glfwSetMouseButtonCallback (_window->window(), [](GLFWwindow* window, int button, int action, int mods){
+		auto context = reinterpret_cast<Context*>(glfwGetWindowUserPointer(window));
+		if (action == GLFW_PRESS)
+			context->OnMouseDown (button);
+		else if (action == GLFW_RELEASE)
+			context->OnMouseUp (button);
+	});
+
 }
 
 Context::~Context() = default;
@@ -275,6 +290,7 @@ void Context::run() {
     spdlog::get("console")->debug("Entering main loop.");
 	float rot = 0.0f;
 	double lastTime = glfwGetTime();
+	_camera.SetPosition(glm::vec3 (0, 0, -5));
     while (!_window->shouldClose()) {
 		double now = glfwGetTime();
 		double timePassed = now - lastTime;
@@ -286,7 +302,7 @@ void Context::run() {
 									    0.0f,  0.0f, 0.5f, 0.0f,
 									    0.0f,  0.0f, 0.5f, 1.0f);
 		glm::mat4 projmat = glm::perspective(glm::radians(60.0f), float(width) / float(height), 0.1f, 100.0f);
-		glm::mat4 mvmat = glm::rotate(glm::translate(glm::mat4(1), glm::vec3(0,0,-3)), rot, glm::vec3(0,0,1));
+		glm::mat4 mvmat = _camera.GetViewMatrix(); // glm::rotate(glm::translate(glm::mat4(1), glm::vec3(0,0,-3)), rot, glm::vec3(0,0,1));
 		rot += 1.0f * timePassed;
 		globalUniformData->mvpmatrix = clip * projmat * mvmat;
         _globalDescriptorSetLayout.keepAlive();
@@ -296,6 +312,88 @@ void Context::run() {
     spdlog::get("console")->debug("Exiting main loop. Waiting for idle device.");
     _device->waitIdle();
     spdlog::get("console")->debug("Returning from main loop.");
+}
+
+void Context::OnMouseMove(double x, double y)
+{
+	auto window = _window->window();
+	auto [width, height] = _window->framebufferSize();
+	auto oldCursor = cursor;
+	auto deltaX = (x - cursor.x) / width;
+	auto deltaY = (y - cursor.y) / height;
+	cursor = {x,y};
+	// handle mouse events and pass them to the camera class
+	if (glfwGetMouseButton (window, GLFW_MOUSE_BUTTON_LEFT))
+	{
+		// ignore mouse movement, when in highlighting mode
+		if (glfwGetKey (window, GLFW_KEY_H)) return;
+
+		if (glfwGetKey (window, GLFW_KEY_LEFT_CONTROL))
+		{
+			_camera.Zoom (deltaX + deltaY);
+		}
+		else if (glfwGetKey (window, GLFW_KEY_LEFT_SHIFT))
+		{
+			_camera.MoveX (deltaX);
+			_camera.MoveY (deltaY);
+		}
+		else
+		{
+			_camera.Rotate (deltaY, -deltaX);
+		}
+	}
+}
+
+void Context::OnMouseUp (int button)
+{
+}
+
+void Context::OnMouseDown (int button)
+{
+	auto window = _window->window();
+	/*
+	if (glfwGetKey (window, GLFW_KEY_H))
+	{
+		double xpos, ypos;
+		glfwGetCursorPos (window, &xpos, &ypos);
+		GLint id = selection.GetParticle (sph.GetPositionBuffer (), GetNumberOfParticles (), xpos, ypos);
+		if (id >= 0)
+		{
+			// create a temporary buffer
+			GLuint tmpbuffer;
+			glGenBuffers (1, &tmpbuffer);
+			glBindBuffer (GL_COPY_WRITE_BUFFER, tmpbuffer);
+			glBufferData (GL_COPY_WRITE_BUFFER, sizeof (GLuint), NULL, GL_DYNAMIC_READ);
+
+			// copy the particle highlighting information to the temporary buffer
+			// a temporary buffer is used, so that drivers (in particular the NVIDIA driver)
+			// are not tempted to move the whole buffer from GPU to host/DMA memory
+			glBindBuffer (GL_COPY_READ_BUFFER, sph.GetHighlightBuffer ());
+			glCopyBufferSubData (GL_COPY_READ_BUFFER, GL_COPY_WRITE_BUFFER,
+								 id * sizeof (GLuint), 0, sizeof (GLuint));
+
+			// map the temporary buffer to CPU address space
+			GLuint *info = reinterpret_cast<GLuint*> (glMapBuffer (GL_COPY_WRITE_BUFFER, GL_READ_WRITE));
+			if (info == NULL)
+				throw std::runtime_error ("A GPU buffer could not be mapped to CPU address space.");
+
+			// modify the particle information i order to highlight/unhighlight the particle
+			if (*info > 0)
+				*info = 0;
+			else
+				*info = 1;
+
+			// unmap the temporary buffer
+			glUnmapBuffer (GL_COPY_WRITE_BUFFER);
+
+			// copy back to the highlighting buffer
+			glCopyBufferSubData (GL_COPY_WRITE_BUFFER, GL_COPY_READ_BUFFER,
+								 0, id * sizeof (GLuint), sizeof (GLuint));
+
+			// delete the temporary buffer
+			glDeleteBuffers (1, &tmpbuffer);
+		}
+	}*/
 }
 
 }

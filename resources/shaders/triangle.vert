@@ -16,8 +16,9 @@ void main() {
     vec3 colors[] = {
         vec3(1, 0, 0),
         vec3(0, 1, 0),
-        vec3(0, 0, 1)
+        vec3(0, 0, 1),
+        vec3(1, 1, 1)
     };
-    gl_Position = ubo.mat * vec4(vPosition, 1);
+    gl_Position = ubo.mat * vec4(vPosition + vec3(gl_InstanceIndex, 0, 0), 1);
     fColor = colors[gl_VertexIndex]; // ubo.mat[gl_VertexIndex].xyz;
 }

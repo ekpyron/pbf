@@ -6,6 +6,7 @@
 #include <pbf/Cache.h>
 #include <pbf/VulkanObjectType.h>
 #include "MemoryManager.h"
+#include "Camera.h"
 
 namespace pbf {
 
@@ -18,6 +19,10 @@ public:
     Context& operator=(const Context&) = delete;
 
     void run();
+
+	void OnMouseMove(double xpos, double ypos);
+	void OnMouseDown(int button);
+	void OnMouseUp(int button);
 
     const vk::Device &device() const { return *_device; }
     const vk::PhysicalDevice &physicalDevice() const { return _physicalDevice; }
@@ -171,6 +176,10 @@ private:
     std::unique_ptr<Renderer> _renderer;
 
     std::unique_ptr<Scene> _scene;
+
+	glm::vec2 cursor;
+
+	Camera _camera;
 };
 
 }

@@ -88,6 +88,10 @@ public:
         return std::make_tuple(static_cast<std::uint32_t>(width), static_cast<std::uint32_t>(height));
     }
 
+	GLFWwindow* window() {
+		return _window;
+	}
+
 private:
     GLFWwindow *_window;
 
