@@ -1,6 +1,7 @@
 #include "Simulation.h"
 #include "Context.h"
 #include "Renderer.h"
+#include <pbf/descriptors/ComputePipeline.h>
 
 namespace pbf {
 
@@ -9,16 +10,46 @@ _context(context)
 {
 	_particleData = Buffer{
 		context,
-		sizeof(ParticleData) * _numParticles,
+		sizeof(ParticleData) * _numParticles * context->renderer().framePrerenderCount(),
 		vk::BufferUsageFlagBits::eTransferDst | vk::BufferUsageFlagBits::eStorageBuffer,
 		pbf::MemoryType::STATIC
 	};
+
+	const auto& computePipeline = context->cache().fetch(
+		descriptors::ComputePipeline{
+			.flags = {},
+			.shaderStage = descriptors::ShaderStage {
+				.stage = vk::ShaderStageFlagBits::eCompute,
+				.module = context->cache().fetch(
+					pbf::descriptors::ShaderModule{
+						.filename = "shaders/simulation.comp.spv",
+						PBF_DESC_DEBUG_NAME("shaders/simulation.comp.spv Compute Shader")
+					}),
+				.entryPoint = "main"
+			},
+			.pipelineLayout = context->cache().fetch(
+				pbf::descriptors::PipelineLayout{
+					.setLayouts = {{
+						context->globalDescriptorSetLayout()
+					}},
+					PBF_DESC_DEBUG_NAME("Dummy Pipeline Layout")
+				}),
+			PBF_DESC_DEBUG_NAME("Compute pipeline")
+		}
+	);
 }
 
 void Simulation::run()
 {
 	if (!initialized)
 		initialize();
+
+	/*_context->graphicsQueue().submit({
+		vk::SubmitInfo{
+			.waitSemaphoreCount = 1,
+			.pWaitSemaphores = &graphicsSemaphore,
+		}
+	});*/
 }
 
 void Simulation::initialize()
@@ -42,7 +73,7 @@ void Simulation::initialize()
 								] (vk::CommandBuffer& enqueueBuffer) {
 		enqueueBuffer.copyBuffer(initializeBuffer.buffer(), _particleData.buffer(), {
 			vk::BufferCopy {
-				0, 0, _particleData.size()
+				0, 0, initializeBuffer.size()
 			}
 		});
 
@@ -53,7 +84,7 @@ void Simulation::initialize()
 			.dstQueueFamilyIndex = 0,
 			.buffer = _particleData.buffer(),
 			.offset = 0,
-			.size = _particleData.size()
+			.size = initializeBuffer.size()
 		}}, {});
 	});
 

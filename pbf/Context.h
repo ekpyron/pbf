@@ -93,7 +93,7 @@ private:
                 const auto& queueFamilyProperties = physicalDevice.getQueueFamilyProperties();
                 for(std::size_t i = 0; i < queueFamilyProperties.size(); ++i) {
                     const auto& qf = queueFamilyProperties[i];
-                    if(qf.queueFlags & vk::QueueFlagBits::eGraphics) {
+                    if((qf.queueFlags & (vk::QueueFlagBits::eGraphics|vk::QueueFlagBits::eCompute)) == (vk::QueueFlagBits::eGraphics|vk::QueueFlagBits::eCompute)) {
                         graphicsFamily = static_cast<int>(i);
                     }
                     if(physicalDevice.getSurfaceSupportKHR(static_cast<uint32_t>(i), *_surface)) {

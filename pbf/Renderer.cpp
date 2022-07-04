@@ -15,11 +15,11 @@ static constexpr std::uint64_t TIMEOUT = std::numeric_limits<std::uint64_t>::max
 namespace pbf {
 
 Renderer::Renderer(Context *context) : _context(context) {
-    constexpr std::size_t FRAME_PRERENDER_COUNT = 3; // todo: choose this wisely
-    _frameSync.reserve(FRAME_PRERENDER_COUNT);
-    for (size_t i = 0; i < FRAME_PRERENDER_COUNT; i++) {
+    _frameSync.reserve(framePrerenderCount());
+    for (size_t i = 0; i < framePrerenderCount(); i++) {
         _frameSync.emplace_back(FrameSync{
                 context->device().createSemaphoreUnique({}),
+				context->device().createSemaphoreUnique({}),
                 context->device().createSemaphoreUnique({}),
                 context->device().createFenceUnique(vk::FenceCreateInfo {
 					.flags = vk::FenceCreateFlagBits::eSignaled
@@ -29,6 +29,8 @@ Renderer::Renderer(Context *context) : _context(context) {
                                   fmt::format("Image Available Semaphore #{}", i));
         PBF_DEBUG_SET_OBJECT_NAME(context, *_frameSync.back().renderFinishedSemaphore,
                                   fmt::format("Render Finished Semaphore #{}", i));
+		PBF_DEBUG_SET_OBJECT_NAME(context, *_frameSync.back().computeFinishedSemaphore,
+								  fmt::format("Compute Finished Semaphore #{}", i));
         PBF_DEBUG_SET_OBJECT_NAME(context, *_frameSync.back().fence, fmt::format("Frame Fence #{}", i));
     }
 
@@ -80,44 +82,6 @@ Renderer::Renderer(Context *context) : _context(context) {
                 },
                 PBF_DESC_DEBUG_NAME("Main Renderer RenderPass")
         });
-    }
-    {
-        /*_graphicsPipeline = context->cache().fetch(descriptors::GraphicsPipeline{
-                .shaderStages = {
-                        {
-                                .stage = vk::ShaderStageFlagBits::eVertex,
-                                .module = context->cache().fetch(descriptors::ShaderModule{
-                                        .filename = "shaders/test.vert.spv",
-                                        PBF_DESC_DEBUG_NAME("shaders/test.vert.spv Vertex Shader")
-                                }),
-                                .entryPoint = "main"
-                        },
-                        {
-                                .stage = vk::ShaderStageFlagBits::eFragment,
-                                .module = context->cache().fetch(descriptors::ShaderModule{
-                                        .filename = "shaders/test.frag.spv",
-                                        PBF_DESC_DEBUG_NAME("Fragment Shader shaders/test.frag.spv")
-                                }),
-                                .entryPoint = "main"
-                        }
-                },
-                .vertexBindingDescriptions = {},
-                .vertexInputAttributeDescriptions = {},
-                .primitiveTopology = vk::PrimitiveTopology::eTriangleList,
-                .rasterizationStateCreateInfo = vk::PipelineRasterizationStateCreateInfo().setLineWidth(1.0f),
-                .colorBlendAttachmentStates = {
-                        vk::PipelineColorBlendAttachmentState().setColorWriteMask(
-                                vk::ColorComponentFlagBits::eR | vk::ColorComponentFlagBits::eG |
-                                vk::ColorComponentFlagBits::eB | vk::ColorComponentFlagBits::eA
-                        )
-                },
-                .dynamicStates = {vk::DynamicState::eViewport, vk::DynamicState::eScissor},
-                .pipelineLayout = context->cache().fetch(descriptors::PipelineLayout{
-                        PBF_DESC_DEBUG_NAME("Dummy Pipeline Layout")
-                }),
-                .renderPass = _renderPass,
-                PBF_DESC_DEBUG_NAME("Main Renderer Graphics Pipeline")
-        });*/
     }
     reset();
 }

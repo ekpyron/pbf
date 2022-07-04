@@ -31,6 +31,10 @@ public:
         _frameSync[_currentFrameSync].stagingFunctorQueue.emplace_back(std::unique_ptr<StagingFunctor>(new TypedClosureContainer(std::forward<Args>(f)...)));
     }
 
+	auto framePrerenderCount() const {
+		return 3u;
+	}
+
 private:
 
     void reset();
@@ -40,6 +44,7 @@ private:
     struct FrameSync {
         vk::UniqueSemaphore imageAvailableSemaphore;
         vk::UniqueSemaphore renderFinishedSemaphore;
+		vk::UniqueSemaphore computeFinishedSemaphore;
         vk::UniqueFence fence;
         vk::UniqueCommandBuffer commandBuffer {};
         std::vector<std::unique_ptr<StagingFunctor>> stagingFunctorQueue;

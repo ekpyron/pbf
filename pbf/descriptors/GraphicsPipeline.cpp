@@ -9,13 +9,15 @@
 #include "GraphicsPipeline.h"
 
 #include <pbf/Context.h>
+#include <ranges>
+
+#include "/tmp/RangeConversion.h"
 
 using namespace pbf::descriptors;
 
 vk::UniquePipeline GraphicsPipeline::realize(Context* context) const {
     auto const& device = context->device();
 
-    std::vector<vk::PipelineShaderStageCreateInfo> stageCreateInfos;
     vk::PipelineVertexInputStateCreateInfo vertexInputStateCreateInfo;
     vk::PipelineColorBlendStateCreateInfo colorBlendStateCreateInfo;
     vk::PipelineInputAssemblyStateCreateInfo assemblyStateCreateInfo {
@@ -33,17 +35,7 @@ vk::UniquePipeline GraphicsPipeline::realize(Context* context) const {
 		.pScissors = &scissor
 	};
 
-    {
-        stageCreateInfos.reserve(shaderStages.size());
-        for (const auto &stage : shaderStages) {
-            stageCreateInfos.emplace_back(vk::PipelineShaderStageCreateInfo{
-				.stage = stage.stage,
-				.module = *stage.module,
-				.pName = stage.entryPoint.c_str(),
-				.pSpecializationInfo = nullptr
-            });
-        }
-    }
+	auto stageCreateInfos = shaderStages | std::ranges::views::transform(&ShaderStage::createInfo) | crampl::to<std::vector<vk::PipelineShaderStageCreateInfo>>;
     {
         vertexInputStateCreateInfo
                 .setPVertexBindingDescriptions(vertexBindingDescriptions.data())

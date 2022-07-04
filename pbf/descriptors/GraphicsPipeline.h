@@ -10,6 +10,7 @@
 
 #include <pbf/common.h>
 #include <pbf/Cache.h>
+#include <pbf/descriptors/ShaderStage.h>
 #include <pbf/descriptors/ShaderModule.h>
 #include <pbf/descriptors/PipelineLayout.h>
 #include <pbf/descriptors/RenderPass.h>
@@ -18,14 +19,6 @@ namespace pbf::descriptors {
 
 struct GraphicsPipeline {
     vk::UniquePipeline realize(Context* context) const;
-
-    struct ShaderStage {
-        vk::ShaderStageFlagBits stage;
-        CacheReference<ShaderModule> module;
-        std::string entryPoint;
-        template<typename T = ShaderStage>
-        using Compare = PBFMemberComparator<&T::stage, &T::module, &T::entryPoint>;
-    };
 
     template<typename T = GraphicsPipeline>
     using Compare = PBFMemberComparator<&T::shaderStages, &T::vertexBindingDescriptions, &T::vertexInputAttributeDescriptions,

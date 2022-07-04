@@ -16,10 +16,10 @@ class Simulation
 {
 public:
 	Simulation(Context* context);
-	void run();
 	uint32_t getNumParticles() const {
 		return _numParticles;
 	}
+	void run();
 	Buffer& particleData() { return _particleData; }
 	const Buffer& particleData() const { return _particleData; }
 
