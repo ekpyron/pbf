@@ -68,6 +68,8 @@ public:
      * \param pos new camera position
      */
     void SetPosition (const glm::vec3 &pos);
+
+	glm::mat4 GetViewRot() const;
 private:
     /** Current position of the camera.
      */

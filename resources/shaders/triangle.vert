@@ -7,6 +7,7 @@ out gl_PerVertex {
 
 layout(binding = 0) uniform GlobalUniformBuffer {
     mat4 mat;
+    mat3 viewRot;
 } ubo;
 
 struct ParticleData {
@@ -28,6 +29,6 @@ void main() {
         vec2(1, 1),
         vec2(-1, 1)
     };
-    gl_Position = ubo.mat * vec4(0.2 * vPosition + data[gl_InstanceIndex].position, 1);
+    gl_Position = ubo.mat * vec4(0.2 * ubo.viewRot * vPosition + data[gl_InstanceIndex].position, 1);
     fCoords = coords[gl_VertexIndex]; // ubo.mat[gl_VertexIndex].xyz;
 }

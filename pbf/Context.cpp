@@ -325,6 +325,7 @@ void Context::run() {
 		glm::mat4 mvmat = _camera.GetViewMatrix(); // glm::rotate(glm::translate(glm::mat4(1), glm::vec3(0,0,-3)), rot, glm::vec3(0,0,1));
 		rot += 1.0f * timePassed;
 		globalUniformData->mvpmatrix = clip * projmat * mvmat;
+		globalUniformData->viewrot = _camera.GetViewRot();
         _globalDescriptorSetLayout.keepAlive();
         _renderer->render();
         _cache.frame();

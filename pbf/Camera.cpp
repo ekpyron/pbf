@@ -34,6 +34,14 @@ glm::mat4 Camera::GetViewMatrix () const
     return vmat;
 }
 
+glm::mat4 Camera::GetViewRot() const {
+	glm::vec3 right = rot * glm::vec3(1,0,0);
+	glm::vec3 up = rot * glm::vec3(0,1,0);
+	glm::vec3 depth = glm::cross(right, up);
+	return glm::mat4(glm::mat3(right, up, depth));
+}
+
+
 void Camera::SetPosition (const glm::vec3 &_pos)
 {
     pos = _pos;
