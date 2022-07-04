@@ -12,6 +12,8 @@
 
 #include "Context.h"
 #include "Buffer.h"
+#include "Quad.h"
+#include "IndirectCommandsBuffer.h"
 #include <crampl/MultiKeyMap.h>
 #include <list>
 
@@ -25,68 +27,8 @@ protected:
 
 };
 
-
-class Instanceable {
-public:
-    void addInstance() {
-        ++_instanceCount;
-    }
-    void removeInstance() {
-        --_instanceCount;
-    }
-
-    std::uint32_t instanceCount() const {return _instanceCount;}
-
-private:
-    std::uint32_t _instanceCount = 0;
-};
-
-class Instance {
-public:
-    Instance(Instanceable* parent = nullptr) : parent(parent) {
-        if (parent)
-            parent->addInstance();
-    }
-    ~Instance() {
-        if (parent)
-            parent->removeInstance();
-    }
-    Instance(const Instance&) = delete;
-    Instance  &operator=(const Instance&) = delete;
-    Instance(Instance &&rhs) noexcept {
-        *this = std::move(rhs);
-    }
-    Instance &operator=(Instance &&rhs) noexcept {
-        if (parent)
-            parent->removeInstance();
-        parent = rhs.parent;
-        rhs.parent = nullptr;
-        return *this;
-    }
-private:
-    Instanceable *parent = nullptr;
-};
-
-class Quad;
-
 class Scene {
 public:
-
-    class IndirectCommandsBuffer
-    {
-    public:
-        IndirectCommandsBuffer(Context *context);
-        void clear();
-        void push_back(const vk::DrawIndirectCommand &cmd);
-        const auto &buffers() const { return _buffers; }
-        std::uint32_t elementsInLastBuffer() const { return _elementsInLastBuffer; }
-        static constexpr std::uint32_t bufferSize = 128;
-    private:
-        Context *context;
-        std::list<Buffer> _buffers;
-        std::list<Buffer>::iterator _currentBuffer;
-        std::uint32_t _elementsInLastBuffer {bufferSize};
-    };
 
     Scene(Context* context);
 
@@ -120,29 +62,6 @@ private:
     std::set<IndirectCommandsBuffer*> indirectCommandBuffers;
 
     std::unique_ptr<Quad> triangle;
-    std::unique_ptr<Instance> triangleInstance;
-	std::unique_ptr<Instance> triangleInstance2;
-};
-
-
-class Quad: public Instanceable {
-public:
-
-    Quad(Scene* scene);
-
-    void frame();
-
-private:
-    struct VertexData {
-        float vertices[4];
-    };
-
-    Scene *scene;
-    bool active = true;
-    bool dirty = true;
-    Buffer buffer;
-    Buffer indexBuffer;
-    Scene::IndirectCommandsBuffer* indirectCommandsBuffer {nullptr};
 };
 
 
