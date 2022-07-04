@@ -11,6 +11,7 @@
 
 #include "Scene.h"
 #include "Renderer.h"
+#include "Simulation.h"
 
 #include "descriptors/GraphicsPipeline.h"
 #include "descriptors/DescriptorSetLayout.h"
@@ -18,15 +19,16 @@
 
 namespace pbf {
 
-Scene::Scene(Context *context) : _context(context) {
-    triangle = std::make_unique<Quad>(this);
+Scene::Scene(Context *context) : _context(context), _simulation(context) {
+    quad = std::make_unique<Quad>(this);
 }
 
 
 void Scene::frame() {
+	_simulation.run();
     for(auto* ptr: indirectCommandBuffers) ptr->clear();
 
-    triangle->frame();
+    quad->frame(_simulation.getNumParticles());
 }
 
 void Scene::enqueueCommands(vk::CommandBuffer &buf) {

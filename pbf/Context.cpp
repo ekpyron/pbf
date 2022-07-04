@@ -171,7 +171,13 @@ Context::Context() {
                                      .descriptorType = vk::DescriptorType::eUniformBuffer,
                                      .descriptorCount = 1,
                                      .stageFlags = vk::ShaderStageFlagBits::eAll
-                             }}
+                             },
+							 {
+								 .binding = 1,
+								 .descriptorType = vk::DescriptorType::eStorageBuffer,
+								 .descriptorCount = 1,
+								 .stageFlags = vk::ShaderStageFlagBits::eCompute | vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eFragment
+							 }}
 #ifndef NDEBUG
                 ,.debugName = "Global Descriptor Set Layout"
 #endif
@@ -195,25 +201,6 @@ Context::Context() {
 
     _memoryManager = std::make_unique<MemoryManager>(this);
 
-    {
-        _globalUniformBuffer = std::make_unique<Buffer>(this, sizeof(GlobalUniformData), vk::BufferUsageFlagBits::eUniformBuffer, MemoryType::DYNAMIC);
-        vk::DescriptorBufferInfo descriptorBufferInfo {
-                _globalUniformBuffer->buffer(), 0, sizeof(GlobalUniformData)
-        };
-        globalUniformData = _globalUniformBuffer->as<GlobalUniformData>();
-        _device->updateDescriptorSets({vk::WriteDescriptorSet{
-			.dstSet = _globalDescriptorSet,
-			.dstBinding = 0,
-			.dstArrayElement = 0,
-			.descriptorCount = 1,
-			.descriptorType = vk::DescriptorType::eUniformBuffer,
-			.pImageInfo = nullptr,
-			.pBufferInfo = &descriptorBufferInfo,
-			.pTexelBufferView = nullptr
-        }}, {});
-    }
-
-
     _commandPool = _device->createCommandPoolUnique(vk::CommandPoolCreateInfo{.queueFamilyIndex = _families.graphics});
     _commandPoolTransient = _device->createCommandPoolUnique(vk::CommandPoolCreateInfo{
 		.flags = vk::CommandPoolCreateFlagBits::eTransient,
@@ -222,6 +209,39 @@ Context::Context() {
     PBF_DEBUG_SET_OBJECT_NAME(this, *_commandPool, "Main Command Pool");
     _renderer = std::make_unique<Renderer>(this);
     _scene = std::make_unique<Scene>(this);
+
+
+
+	{
+		_globalUniformBuffer = std::make_unique<Buffer>(this, sizeof(GlobalUniformData), vk::BufferUsageFlagBits::eUniformBuffer, MemoryType::DYNAMIC);
+		vk::DescriptorBufferInfo uniformBufferDescriptorInfo {
+			_globalUniformBuffer->buffer(), 0, sizeof(GlobalUniformData)
+		};
+		vk::DescriptorBufferInfo particleDataBufferDescriptorInfo {
+			_scene->simulation().particleData().buffer(), 0, sizeof(Simulation::ParticleData) * _scene->simulation().getNumParticles()
+		};
+		globalUniformData = _globalUniformBuffer->as<GlobalUniformData>();
+		_device->updateDescriptorSets({vk::WriteDescriptorSet{
+			.dstSet = _globalDescriptorSet,
+			.dstBinding = 0,
+			.dstArrayElement = 0,
+			.descriptorCount = 1,
+			.descriptorType = vk::DescriptorType::eUniformBuffer,
+			.pImageInfo = nullptr,
+			.pBufferInfo = &uniformBufferDescriptorInfo,
+			.pTexelBufferView = nullptr
+		},vk::WriteDescriptorSet{
+			.dstSet = _globalDescriptorSet,
+			.dstBinding = 1,
+			.dstArrayElement = 0,
+			.descriptorCount = 1,
+			.descriptorType = vk::DescriptorType::eStorageBuffer,
+			.pImageInfo = nullptr,
+			.pBufferInfo = &particleDataBufferDescriptorInfo,
+			.pTexelBufferView = nullptr
+		}}, {});
+	}
+
 
 	glfwSetWindowUserPointer (_window->window(), this);
 	//typedef void (* GLFWcursorposfun)(GLFWwindow* window, double xpos, double ypos);

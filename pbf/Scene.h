@@ -16,16 +16,9 @@
 #include "IndirectCommandsBuffer.h"
 #include <crampl/MultiKeyMap.h>
 #include <list>
+#include "Simulation.h"
 
 namespace pbf {
-
-class Renderable {
-public:
-
-protected:
-    CacheReference<descriptors::GraphicsPipeline> _graphicsPipeline;
-
-};
 
 class Scene {
 public:
@@ -50,9 +43,13 @@ public:
         return result;
     }
 
+	Simulation& simulation() { return _simulation; }
+	const Simulation& simulation() const { return _simulation; }
+
 private:
 
     Context* _context;
+	Simulation _simulation;
 
     crampl::MultiKeyMap<std::map,
                         CacheReference<descriptors::GraphicsPipeline>,
@@ -61,7 +58,7 @@ private:
                         IndirectCommandsBuffer> indirectDrawCalls;
     std::set<IndirectCommandsBuffer*> indirectCommandBuffers;
 
-    std::unique_ptr<Quad> triangle;
+    std::unique_ptr<Quad> quad;
 };
 
 

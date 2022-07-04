@@ -91,8 +91,7 @@ Quad::Quad(pbf::Scene *scene) : scene(scene) {
 
 }
 
-void Quad::frame() {
-	uint32_t instanceCount = 2;
+void Quad::frame(uint32_t instanceCount) {
     if (active) {
         indirectCommandsBuffer->push_back({6, instanceCount, 0, 0});
 

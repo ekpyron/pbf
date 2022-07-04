@@ -22,7 +22,7 @@ public:
 
     Quad(Scene* scene);
 
-    void frame();
+    void frame(uint32_t instanceCount);
 
 private:
     struct VertexData {
