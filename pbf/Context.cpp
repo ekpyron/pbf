@@ -218,7 +218,7 @@ Context::Context() {
 			_globalUniformBuffer->buffer(), 0, sizeof(GlobalUniformData)
 		};
 		vk::DescriptorBufferInfo particleDataBufferDescriptorInfo {
-			_scene->simulation().particleData().buffer(), 0, sizeof(Simulation::ParticleData) * _scene->simulation().getNumParticles() * renderer().framePrerenderCount()
+			_scene->simulation().particleData().buffer(), 0, _scene->simulation().particleData().size()
 		};
 		globalUniformData = _globalUniformBuffer->as<GlobalUniformData>();
 		_device->updateDescriptorSets({vk::WriteDescriptorSet{
