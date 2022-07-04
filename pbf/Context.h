@@ -173,7 +173,10 @@ private:
     std::unique_ptr<MemoryManager> _memoryManager;
     struct GlobalUniformData {
         glm::mat4 mvpmatrix;
-		glm::mat4 viewrot;
+		glm::mat3x4 viewrot;
+		uint sourceIndex;
+		uint destIndex;
+		uint numParticles;
     };
     std::unique_ptr<Buffer> _globalUniformBuffer;
     GlobalUniformData *globalUniformData;

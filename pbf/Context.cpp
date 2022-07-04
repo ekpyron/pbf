@@ -218,7 +218,7 @@ Context::Context() {
 			_globalUniformBuffer->buffer(), 0, sizeof(GlobalUniformData)
 		};
 		vk::DescriptorBufferInfo particleDataBufferDescriptorInfo {
-			_scene->simulation().particleData().buffer(), 0, sizeof(Simulation::ParticleData) * _scene->simulation().getNumParticles()
+			_scene->simulation().particleData().buffer(), 0, sizeof(Simulation::ParticleData) * _scene->simulation().getNumParticles() * renderer().framePrerenderCount()
 		};
 		globalUniformData = _globalUniformBuffer->as<GlobalUniformData>();
 		_device->updateDescriptorSets({vk::WriteDescriptorSet{
@@ -230,7 +230,7 @@ Context::Context() {
 			.pImageInfo = nullptr,
 			.pBufferInfo = &uniformBufferDescriptorInfo,
 			.pTexelBufferView = nullptr
-		},vk::WriteDescriptorSet{
+		}, vk::WriteDescriptorSet{
 			.dstSet = _globalDescriptorSet,
 			.dstBinding = 1,
 			.dstArrayElement = 0,
@@ -326,6 +326,9 @@ void Context::run() {
 		rot += 1.0f * timePassed;
 		globalUniformData->mvpmatrix = clip * projmat * mvmat;
 		globalUniformData->viewrot = _camera.GetViewRot();
+		globalUniformData->numParticles = scene().simulation().getNumParticles();
+		globalUniformData->sourceIndex = renderer().previousFrameSync();
+		globalUniformData->destIndex = renderer().currentFrameSync();
         _globalDescriptorSetLayout.keepAlive();
         _renderer->render();
         _cache.frame();

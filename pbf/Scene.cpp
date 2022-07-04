@@ -25,7 +25,6 @@ Scene::Scene(Context *context) : _context(context), _simulation(context) {
 
 
 void Scene::frame() {
-	_simulation.run();
     for(auto* ptr: indirectCommandBuffers) ptr->clear();
 
     quad->frame(_simulation.getNumParticles());

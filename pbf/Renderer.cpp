@@ -97,7 +97,7 @@ void Renderer::render() {
 	}
     currentFrameSync.reset();
 
-    static auto lastTime = std::chrono::steady_clock::now();
+	static auto lastTime = std::chrono::steady_clock::now();
     static size_t frameCount = 0;
 
     frameCount++;
@@ -128,7 +128,6 @@ void Renderer::render() {
             vk::throwResultException(result, "cannot acquire image");
         }
     }
-
     auto buffer = std::move(device.allocateCommandBuffersUnique(vk::CommandBufferAllocateInfo{
 		.commandPool = _context->commandPool(true),
 		.level = vk::CommandBufferLevel::ePrimary,
@@ -146,13 +145,16 @@ void Renderer::render() {
 			.pInheritanceInfo = nullptr
 		});
 
+
         _context->scene().frame();
+
+		_context->scene().simulation().run(*buffer);
 
         for (auto& fn: currentFrameSync.stagingFunctorQueue) {
             (*fn)(*buffer);
         }
 
-        std::array<vk::ClearValue, 2> clearValues;
+		std::array<vk::ClearValue, 2> clearValues;
         clearValues[0].setColor({std::array<float, 4>{0.1f, 0.1f, 0.1f, 1.0f}});
 		clearValues[1].setDepthStencil(vk::ClearDepthStencilValue{.depth = 1.0f, .stencil = 0});
 		buffer->setViewport(0, {
@@ -171,7 +173,7 @@ void Renderer::render() {
         /*buffer->bindPipeline(vk::PipelineBindPoint::eGraphics, *_graphicsPipeline);
         buffer->draw(3, 1, 0, 0);*/
 
-        _context->scene().enqueueCommands(*buffer);
+		_context->scene().enqueueCommands(*buffer);
 
         buffer->endRenderPass();
         buffer->end();
@@ -180,18 +182,41 @@ void Renderer::render() {
 
     device.resetFences({*currentFrameSync.fence});
 
-    vk::PipelineStageFlags waitStages[] = {
-            vk::PipelineStageFlagBits::eColorAttachmentOutput
-    };
-    _context->graphicsQueue().submit({vk::SubmitInfo{
-		.waitSemaphoreCount = 1,
-		.pWaitSemaphores = &*currentFrameSync.imageAvailableSemaphore,
-		.pWaitDstStageMask = waitStages,
-		.commandBufferCount = 1,
-		.pCommandBuffers = &*buffer,
-		.signalSemaphoreCount = 1,
-		.pSignalSemaphores = &*currentFrameSync.renderFinishedSemaphore
-    }}, *currentFrameSync.fence);
+	/*
+	 currentFrameSync.computeCommandBuffer = std::move(_context->scene().simulation().run());
+	{
+		vk::PipelineStageFlags waitStages[] = {
+			vk::PipelineStageFlagBits::eVertexInput
+		};
+		_context->graphicsQueue().submit({
+											 vk::SubmitInfo{
+												 .waitSemaphoreCount = 1,
+												 .pWaitSemaphores = &*currentFrameSync.renderFinishedSemaphore,
+												 .pWaitDstStageMask = waitStages,
+												 .commandBufferCount = 1,
+												 .pCommandBuffers = &*currentFrameSync.computeCommandBuffer,
+												 .signalSemaphoreCount = 1,
+												 .pSignalSemaphores = &*currentFrameSync.computeFinishedSemaphore
+											 }
+										 });
+	}
+	 */
+
+	auto const& nextFrameSync = _frameSync.at((_currentFrameSync + 1) % _frameSync.size());
+	{
+		vk::PipelineStageFlags waitStages[] = {
+			vk::PipelineStageFlagBits::eColorAttachmentOutput
+		};
+		_context->graphicsQueue().submit({vk::SubmitInfo{
+			.waitSemaphoreCount = 1u,
+			.pWaitSemaphores = &*currentFrameSync.imageAvailableSemaphore,
+			.pWaitDstStageMask = waitStages,
+			.commandBufferCount = 1,
+			.pCommandBuffers = &*buffer,
+			.signalSemaphoreCount = 1,
+			.pSignalSemaphores = &*currentFrameSync.renderFinishedSemaphore
+		}}, *currentFrameSync.fence);
+	}
 
     currentFrameSync.commandBuffer = std::move(buffer);
 
@@ -207,7 +232,13 @@ void Renderer::render() {
 		// TODO: handle result
 	}
 
-    _currentFrameSync = (_currentFrameSync + 1) % _frameSync.size();
+	++_currentFrameSync;
+	if (_currentFrameSync >= _frameSync.size())
+	{
+		_currentFrameSync = 0;
+		firstRun = false;
+	}
+	//_currentFrameSync = (_currentFrameSync + 1) % _frameSync.size();
 }
 
 void Renderer::reset() {

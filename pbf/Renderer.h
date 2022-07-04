@@ -35,6 +35,13 @@ public:
 		return 3u;
 	}
 
+	auto currentFrameSync() const {
+		return _currentFrameSync;
+	}
+	auto previousFrameSync() const {
+		return (_currentFrameSync + framePrerenderCount() - 1) %  framePrerenderCount();
+	}
+
 private:
 
     void reset();
@@ -47,6 +54,7 @@ private:
 		vk::UniqueSemaphore computeFinishedSemaphore;
         vk::UniqueFence fence;
         vk::UniqueCommandBuffer commandBuffer {};
+		vk::UniqueCommandBuffer computeCommandBuffer {};
         std::vector<std::unique_ptr<StagingFunctor>> stagingFunctorQueue;
 
         void reset() {
@@ -57,6 +65,7 @@ private:
     std::vector<FrameSync> _frameSync;
     std::size_t _currentFrameSync = 0;
     std::vector<vk::UniqueCommandBuffer> _commandBuffers;
+	bool firstRun = true;
 
     vk::UniqueCommandBuffer _stagingCommandBuffer;
 

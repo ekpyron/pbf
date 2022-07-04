@@ -19,7 +19,7 @@ public:
 	uint32_t getNumParticles() const {
 		return _numParticles;
 	}
-	void run();
+	void run(vk::CommandBuffer buf);
 	Buffer& particleData() { return _particleData; }
 	const Buffer& particleData() const { return _particleData; }
 
@@ -32,7 +32,7 @@ private:
 	uint32_t _numParticles = 64 * 64 * 64;
 
 	bool initialized = false;
-	void initialize();
+	void initialize(vk::CommandBuffer buf);
 };
 
 }

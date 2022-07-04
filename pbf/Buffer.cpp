@@ -21,7 +21,7 @@ pbf::Buffer::Buffer(pbf::Context *context, std::size_t size, vk::BufferUsageFlag
 		.queueFamilyIndexCount = static_cast<uint32_t>(queueFamilyIndices.size()),
 		.pQueueFamilyIndices = queueFamilyIndices.data()
 	});
-    _deviceMemory = mmgr.allocateBufferMemory(memoryType,_buffer);
+    _deviceMemory = mmgr.allocateBufferMemory(memoryType, _buffer);
 }
 
 pbf::Buffer &pbf::Buffer::operator=(pbf::Buffer &&rhs) noexcept {
