@@ -9,6 +9,7 @@
 
 #include <iostream>
 #include "Context.h"
+#include "spdlog/sinks/stdout_color_sinks.h"
 
 void print_exception(const std::exception &e, int level = 0)
 {

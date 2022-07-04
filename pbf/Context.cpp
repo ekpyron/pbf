@@ -27,7 +27,17 @@ Context::Context() {
         throw std::runtime_error("Vulkan not supported");
     }
     _glfw.windowHint(GLFW_CLIENT_API, GLFW_NO_API);
-    _window = std::make_unique<glfw::Window>(700, 700, "PBF", nullptr, nullptr);
+	_glfw.windowHint(GLFW_RESIZABLE, GLFW_FALSE);
+	/*
+	auto* monitor = glfwGetPrimaryMonitor();
+	auto* mode = glfwGetVideoMode(monitor);
+	_glfw.windowHint(GLFW_RED_BITS, mode->redBits);
+	_glfw.windowHint(GLFW_GREEN_BITS, mode->greenBits);
+	_glfw.windowHint(GLFW_BLUE_BITS, mode->blueBits);
+	_glfw.windowHint(GLFW_REFRESH_RATE, mode->refreshRate);
+    _window = std::make_unique<glfw::Window>(mode->width, mode->height, "PBF", monitor, nullptr);
+	*/
+	_window = std::make_unique<glfw::Window>(768*2, 768, "PBF", nullptr, nullptr);
 
     {
         std::vector<const char *> layers;
@@ -264,13 +274,21 @@ void Context::setGenericObjectName(vk::ObjectType type, uint64_t obj, const std:
 void Context::run() {
     spdlog::get("console")->debug("Entering main loop.");
 	float rot = 0.0f;
+	double lastTime = glfwGetTime();
     while (!_window->shouldClose()) {
+		double now = glfwGetTime();
+		double timePassed = now - lastTime;
+		lastTime = now;
         _glfw.pollEvents();
 		auto [width, height] = window().framebufferSize();
+		glm::mat4x4 clip = glm::mat4x4( 1.0f,  0.0f, 0.0f, 0.0f,
+									    0.0f, -1.0f, 0.0f, 0.0f,
+									    0.0f,  0.0f, 0.5f, 0.0f,
+									    0.0f,  0.0f, 0.5f, 1.0f);
 		glm::mat4 projmat = glm::perspective(glm::radians(60.0f), float(width) / float(height), 0.1f, 100.0f);
 		glm::mat4 mvmat = glm::rotate(glm::translate(glm::mat4(1), glm::vec3(0,0,-3)), rot, glm::vec3(0,0,1));
-		rot += 0.01f;
-		globalUniformData->mvpmatrix = projmat * mvmat;
+		rot += 1.0f * timePassed;
+		globalUniformData->mvpmatrix = clip * projmat * mvmat;
         _globalDescriptorSetLayout.keepAlive();
         _renderer->render();
         _cache.frame();

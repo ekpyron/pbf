@@ -17,11 +17,8 @@
 namespace pbf {
 
 Scene::Scene(Context *context) : _context(context) {
-
     triangle = std::make_unique<Triangle>(this);
     triangleInstance = std::make_unique<Instance>(triangle.get());
-
-
 }
 
 void Scene::IndirectCommandsBuffer::clear() {
@@ -234,39 +231,6 @@ void Triangle::frame() {
 
         dirty = false;
     }
-
-
-    /*
-    if (!isInitialized) {
-        auto const& device = scene->context()->device();
-
-        enqueueBuffer.copyBuffer(initializeBuffer.buffer(), buffer.buffer(), {
-                vk::BufferCopy {
-                        0, 0, buffer.size()
-                }
-        });
-        enqueueBuffer.copyBuffer(initializeBuffer.buffer(), indexBuffer.buffer(), {
-                vk::BufferCopy {
-                        sizeof(VertexData) * 3, 0, indexBuffer.size()
-                }
-        });
-        // copy
-
-    }
-    if (active && instanceCount() > 0) {
-        if (dirty) {
-            enqueueBuffer.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eVertexInput, {}, {}, {vk::BufferMemoryBarrier{
-                    vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eVertexAttributeRead, 0, 0, buffer.buffer(), 0, buffer.size()
-            }, vk::BufferMemoryBarrier{
-                    vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eIndexRead, 0, 0, indexBuffer.buffer(), 0, indexBuffer.size()
-            }}, {});
-            dirty = false;
-        }
-        // if (potentiallyVisisble() && occlusionQuery()) {
-        // draw
-        // }
-        indirectCommandsBuffer->push_back({3, instanceCount(), 0, 0});
-    }*/
 
 }
 }
