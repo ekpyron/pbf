@@ -15,6 +15,3 @@ add_executable(${PROJECT_NAME} ${SOURCES})
 target_include_directories(${PROJECT_NAME} PUBLIC ${CMAKE_CURRENT_LIST_DIR}/..)
 target_link_libraries(${PROJECT_NAME} PUBLIC glfw fmt vulkan spdlog glm crampl Threads::Threads)
 add_dependencies(${PROJECT_NAME} shaders-target)
-if (NOT MSVC)
-    target_compile_options(${PROJECT_NAME} PRIVATE -Wno-volatile)  # glm volatile warning begone
-endif()
