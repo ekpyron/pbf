@@ -2,11 +2,13 @@
 #extension GL_ARB_separate_shader_objects : enable
 #extension GL_KHR_shader_subgroup_basic : enable
 
-layout (local_size_x = 256, local_size_y = 1, local_size_z = 1) in;
-
+#define HALFBLOCKSIZE 128
+#define BLOCKSIZE (2*HALFBLOCKSIZE)
+layout (local_size_x = HALFBLOCKSIZE, local_size_y = 1, local_size_z = 1) in;
 
 struct ParticleData {
     vec3 position;
+    float aux;
 };
 
 
@@ -21,12 +23,17 @@ layout(std430, binding = 0) buffer particleData
     ParticleData data[];
 };
 
-layout(std430, binding = 1) buffer ParticleSortKeys
+layout(std430, binding = 1) writeonly buffer ParticleSortKeys
 {
     uint particleSortKeys[];
 };
 
-uvec3 GRID_HASHWEIGHTS = uvec3(1, 64, 64*64);
+/*layout(std430, binding = 2) writeonly buffer BlockSum
+{
+    uint blocksum[];
+};*/
+
+uvec3 GRID_HASHWEIGHTS = uvec3(1,0,0); // uvec3(1, 64, 64*64);
 vec3 GRID_MAX = vec3(31, 31, 31);
 vec3 GRID_MIN = vec3(-32, -32, -32);
 
@@ -38,18 +45,79 @@ uint GetHash (in vec3 pos)
 
 uint selectedBit = 0;
 
+shared uint tmp[BLOCKSIZE];
+
 void main() {
-    uint sourceIndex = ubo.sourceIndex * ubo.numParticles + gl_GlobalInvocationID.x;
-    uint destIndex = ubo.destIndex * ubo.numParticles + gl_GlobalInvocationID.x;
+    uint sourceOffset = ubo.sourceIndex * ubo.numParticles;
+    uint destOffset = ubo.destIndex * ubo.numParticles;
+    //uint sourceIndex = sourceOffset + gl_GlobalInvocationID.x;
+    //uint destIndex = destOffset + gl_GlobalInvocationID.x;
 
-    ParticleData currentParticle = data[sourceIndex];
-    uint hash = GetHash(currentParticle.position);
+    // gl_WorkGroupID.x
+    // gl_LocalInvocationIndex
 
-    //particleSortKeys[destIndex] = (hash >> selectedBit) & 1u;
+    ParticleData currentParticle1 = data[sourceOffset + gl_WorkGroupID.x * BLOCKSIZE + gl_LocalInvocationIndex * 2];
+    ParticleData currentParticle2 = data[sourceOffset + gl_WorkGroupID.x * BLOCKSIZE + gl_LocalInvocationIndex * 2 + 1];
+    uint hash1 = GetHash(currentParticle1.position);
+    uint hash2 = GetHash(currentParticle2.position);
+
+    tmp[gl_LocalInvocationIndex * 2] = (hash1 >> selectedBit) & 1u;
+    tmp[gl_LocalInvocationIndex * 2 + 1] = (hash2 >> selectedBit) & 1u;
+
+
+
+    int offset = 1;
+    for (int d = HALFBLOCKSIZE; d > 0; d >>= 1)
+    {
+        barrier();
+        memoryBarrier();
+
+        if (gl_LocalInvocationIndex < d) {
+            uint i = offset * (2 * gl_LocalInvocationIndex + 1) - 1;
+            uint j = offset * (2 * gl_LocalInvocationIndex + 2) - 1;
+            tmp[j] += tmp[i];
+        }
+        offset <<= 1;
+    }
+
+    barrier();
+    memoryBarrier();
+
+    // if (subGroupElect())
+    {
+        if (gl_LocalInvocationIndex == 0)
+        {
+            //blocksum[gl_WorkGroupID.x] = tmp[BLOCKSIZE - 1];
+            tmp[BLOCKSIZE - 1] = 0;
+        }
+    }
+
+    for (uint d = 1; d < BLOCKSIZE; d <<= 1)
+    {
+        offset >>= 1;
+        barrier();
+        memoryBarrier();
+
+        if (gl_LocalInvocationIndex < d)
+        {
+            uint i = offset * (2 * gl_LocalInvocationIndex + 1) - 1;
+            uint j = offset * (2 * gl_LocalInvocationIndex + 2) - 1;
+            uint t = tmp[i];
+            tmp[i] = tmp[j];
+            tmp[j] += t;
+        }
+    }
+
+    barrier ();
+    memoryBarrierShared ();
+
+    particleSortKeys[sourceOffset + gl_WorkGroupID.x * BLOCKSIZE + gl_LocalInvocationIndex * 2] = tmp[gl_LocalInvocationIndex * 2];
+    particleSortKeys[sourceOffset + gl_WorkGroupID.x * BLOCKSIZE + gl_LocalInvocationIndex * 2 + 1] = tmp[gl_LocalInvocationIndex * 2 + 1];
 
     // build prefix sums of gridData
 
-
-
-    data[destIndex].position = currentParticle.position;
+    data[destOffset + gl_WorkGroupID.x * BLOCKSIZE + gl_LocalInvocationIndex * 2] = currentParticle1;
+    data[destOffset + gl_WorkGroupID.x * BLOCKSIZE + gl_LocalInvocationIndex * 2].aux = tmp[gl_LocalInvocationIndex * 2];
+    data[destOffset + gl_WorkGroupID.x * BLOCKSIZE + gl_LocalInvocationIndex * 2 + 1] = currentParticle2;
+    data[destOffset + gl_WorkGroupID.x * BLOCKSIZE + gl_LocalInvocationIndex * 2 + 1].aux = tmp[gl_LocalInvocationIndex * 2 + 1];
 }

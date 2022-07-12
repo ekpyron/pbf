@@ -16,6 +16,7 @@ layout(push_constant) uniform PushConstants {
 
 struct ParticleData {
     vec3 position;
+    float aux;
 };
 
 layout(std430, binding = 1) buffer particleData
@@ -24,10 +25,12 @@ layout(std430, binding = 1) buffer particleData
 };
 
 layout(location = 0) out vec2 fCoords;
+layout(location = 1) out float fAux;
 layout(location = 0) in vec2 vPosition;
 
 void main() {
     uint index = pushConstants.sourceIndex;
     gl_Position = ubo.mat * vec4(0.2 * ubo.viewRot * vec3(vPosition, 0.0) + data[index + gl_InstanceIndex].position, 1);
     fCoords = vPosition;
+    fAux = data[index + gl_InstanceIndex].aux;
 }
