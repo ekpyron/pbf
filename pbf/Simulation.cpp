@@ -14,7 +14,72 @@ _context(context)
 		vk::BufferUsageFlagBits::eTransferDst | vk::BufferUsageFlagBits::eStorageBuffer,
 		pbf::MemoryType::STATIC
 	};
+	_particleSortKeys = Buffer{
+		context,
+		32 * _numParticles * context->renderer().framePrerenderCount(),
+		vk::BufferUsageFlagBits::eStorageBuffer,
+		pbf::MemoryType::STATIC
+	};
+	{
+		static std::array<vk::DescriptorPoolSize, 1> sizes {{
+			{ vk::DescriptorType::eStorageBuffer, 2 }
+		}};
+		_descriptorPool = context->device().createDescriptorPoolUnique(vk::DescriptorPoolCreateInfo{
+			.maxSets = numDescriptorSets,
+			.poolSizeCount = static_cast<std::uint32_t>(sizes.size()),
+			.pPoolSizes = sizes.data()
+		});
+	}
 
+	_paramsLayout = context->cache().fetch(descriptors::DescriptorSetLayout{
+		.createFlags = {},
+		.bindings = {{
+						 .binding = 0,
+						 .descriptorType = vk::DescriptorType::eStorageBuffer,
+						 .descriptorCount = 1,
+						 .stageFlags = vk::ShaderStageFlagBits::eCompute
+					 },
+					 {
+						 .binding = 1,
+						 .descriptorType = vk::DescriptorType::eStorageBuffer,
+						 .descriptorCount = 1,
+						 .stageFlags = vk::ShaderStageFlagBits::eCompute
+					 }}
+#ifndef NDEBUG
+		,.debugName = "Simulation Descriptor Set Layout"
+#endif
+	});
+	_params = context->device().allocateDescriptorSets(vk::DescriptorSetAllocateInfo{
+		.descriptorPool = *_descriptorPool,
+		.descriptorSetCount = 1,
+		.pSetLayouts = &*_paramsLayout
+	}).front();
+	vk::DescriptorBufferInfo particleDataBufferDescriptorInfo {
+		particleData().buffer(), 0, particleData().size()
+	};
+	vk::DescriptorBufferInfo particleSortKeysBufferDescriptorInfo {
+		_particleSortKeys.buffer(), 0, _particleSortKeys.size()
+	};
+
+	context->device().updateDescriptorSets({vk::WriteDescriptorSet{
+		.dstSet = _params,
+		.dstBinding = 0,
+		.dstArrayElement = 0,
+		.descriptorCount = 1,
+		.descriptorType = vk::DescriptorType::eStorageBuffer,
+		.pImageInfo = nullptr,
+		.pBufferInfo = &particleDataBufferDescriptorInfo,
+		.pTexelBufferView = nullptr
+	}, vk::WriteDescriptorSet{
+		.dstSet = _params,
+		.dstBinding = 1,
+		.dstArrayElement = 0,
+		.descriptorCount = 1,
+		.descriptorType = vk::DescriptorType::eStorageBuffer,
+		.pImageInfo = nullptr,
+		.pBufferInfo = &particleSortKeysBufferDescriptorInfo,
+		.pTexelBufferView = nullptr
+	}}, {});
 }
 
 void Simulation::run(vk::CommandBuffer buf)
@@ -22,6 +87,7 @@ void Simulation::run(vk::CommandBuffer buf)
 	if (!initialized)
 		initialize(buf);
 
+	_paramsLayout.keepAlive();
 	const auto& computePipeline = _context->cache().fetch(
 		descriptors::ComputePipeline{
 			.flags = {},
@@ -37,11 +103,16 @@ void Simulation::run(vk::CommandBuffer buf)
 			.pipelineLayout = _context->cache().fetch(
 				pbf::descriptors::PipelineLayout{
 					.setLayouts = {{
-						_context->globalDescriptorSetLayout()
+						_paramsLayout
 					}},
-					PBF_DESC_DEBUG_NAME("Dummy Pipeline Layout")
+					.pushConstants = {vk::PushConstantRange{
+						.stageFlags = vk::ShaderStageFlagBits::eCompute,
+						.offset = 0,
+						.size = sizeof(PushConstantData)
+					}},
+					PBF_DESC_DEBUG_NAME("Simulation Pipeline Layout")
 				}),
-			PBF_DESC_DEBUG_NAME("Compute pipeline")
+			PBF_DESC_DEBUG_NAME("Compute pipeline layout")
 		}
 	);
 	/*auto buffer = std::move(_context->device().allocateCommandBuffersUnique(vk::CommandBufferAllocateInfo{
@@ -62,9 +133,23 @@ void Simulation::run(vk::CommandBuffer buf)
 		.pInheritanceInfo = nullptr
 	});
 */
+
+	PushConstantData pushConstantData{
+		.sourceIndex = _context->renderer().previousFrameSync(),
+		.destIndex = _context->renderer().currentFrameSync(),
+		.numParticles = getNumParticles()
+	};
+
 	buf.bindPipeline(vk::PipelineBindPoint::eCompute, *computePipeline);
-	buf.bindDescriptorSets(vk::PipelineBindPoint::eCompute, *(computePipeline.descriptor().pipelineLayout), 0, { _context->globalDescriptorSet()}, {});
-	buf.dispatch(64*64*64, 1, 1);
+	buf.bindDescriptorSets(vk::PipelineBindPoint::eCompute, *(computePipeline.descriptor().pipelineLayout), 0, { _params}, {});
+	buf.pushConstants(
+		*computePipeline.descriptor().pipelineLayout,
+		vk::ShaderStageFlagBits::eCompute,
+		0,
+		sizeof(PushConstantData),
+		&pushConstantData
+	);
+	buf.dispatch((getNumParticles() + 255)/256, 1, 1);
 
 	buf.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eVertexInput, {}, {}, {vk::BufferMemoryBarrier{
 		.srcAccessMask = vk::AccessFlagBits::eShaderWrite|vk::AccessFlagBits::eMemoryWrite,
@@ -72,8 +157,8 @@ void Simulation::run(vk::CommandBuffer buf)
 		.srcQueueFamilyIndex = 0,
 		.dstQueueFamilyIndex = 0,
 		.buffer = _particleData.buffer(),
-		.offset = 0, // sizeof(ParticleData) * _numParticles * (_context->renderer().framePrerenderCount() - 1),
-		.size = _particleData.size(), // initializeBuffer.size()
+		.offset = sizeof(ParticleData) * _numParticles * (_context->renderer().framePrerenderCount() - 1),
+		.size = sizeof(ParticleData) * _numParticles
 	}}, {});
 
 //	buffer->end();
@@ -107,19 +192,17 @@ void Simulation::initialize(vk::CommandBuffer buf)
 
 	buf.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eComputeShader, {}, {}, {vk::BufferMemoryBarrier{
 		.srcAccessMask = vk::AccessFlagBits::eTransferWrite,
-		.dstAccessMask = vk::AccessFlagBits::eShaderRead|vk::AccessFlagBits::eMemoryRead,
+		.dstAccessMask = vk::AccessFlagBits::eShaderRead,
 		.srcQueueFamilyIndex = 0,
 		.dstQueueFamilyIndex = 0,
 		.buffer = _particleData.buffer(),
 		.offset = sizeof(ParticleData) * _numParticles * (_context->renderer().framePrerenderCount() - 1),
-		.size = initializeBuffer.size(), // initializeBuffer.size()
+		.size = initializeBuffer.size(),
 	}}, {});
 
 
-	_context->renderer().stage([
-									this, initializeBuffer = std::move(initializeBuffer)
-								] (vk::CommandBuffer& enqueueBuffer) {
-	});
+	// keep alive until next use of frame sync
+	_context->renderer().stage([initializeBuffer = std::move(initializeBuffer)] (auto) {});
 
 	initialized = true;
 }

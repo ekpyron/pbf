@@ -34,10 +34,11 @@ public:
     }
 
     IndirectCommandsBuffer* getIndirectCommandBuffer(const CacheReference<descriptors::GraphicsPipeline> &graphicsPipeline,
+													 const Quad::PushConstantData& pushConstantData,
                                                      const std::tuple<BufferRef, vk::IndexType> &indexBuffer,
                                                      const std::vector<BufferRef> &vertexBuffers)
     {
-        auto result = &crampl::emplace(indirectDrawCalls, std::piecewise_construct, std::forward_as_tuple(graphicsPipeline),
+        auto result = &crampl::emplace(indirectDrawCalls, std::piecewise_construct, std::forward_as_tuple(graphicsPipeline), std::forward_as_tuple(pushConstantData),
                                        std::forward_as_tuple(indexBuffer), std::forward_as_tuple(vertexBuffers), std::forward_as_tuple(_context));
         indirectCommandBuffers.emplace(result);
         return result;
@@ -53,6 +54,7 @@ private:
 
     crampl::MultiKeyMap<std::map,
                         CacheReference<descriptors::GraphicsPipeline>,
+						Quad::PushConstantData,
                         std::tuple<BufferRef, vk::IndexType> /* index buffer */,
                         std::vector<BufferRef> /* vertex buffers */,
                         IndirectCommandsBuffer> indirectDrawCalls;

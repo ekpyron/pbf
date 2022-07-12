@@ -3,7 +3,6 @@
 //
 
 #include "descriptors/DescriptorSetLayout.h"
-#include "descriptors/GraphicsPipeline.h"
 #include "Renderer.h"
 #include "Scene.h"
 #include <cstdint>
@@ -21,7 +20,7 @@ Quad::Quad(pbf::Scene *scene) : scene(scene) {
                                                                 | vk::BufferUsageFlagBits::eIndexBuffer,
                    pbf::MemoryType::STATIC};
 
-    const auto &graphicsPipeline = scene->context()->cache().fetch(
+    graphicsPipeline = scene->context()->cache().fetch(
 		pbf::descriptors::GraphicsPipeline{
             .shaderStages = {
                     {
@@ -70,16 +69,16 @@ Quad::Quad(pbf::Scene *scene) : scene(scene) {
                     .setLayouts = {{
                                            scene->context()->globalDescriptorSetLayout()
                                    }},
+				   .pushConstants = {vk::PushConstantRange{
+					   .stageFlags = vk::ShaderStageFlagBits::eVertex,
+					   .offset = 0,
+					   .size = sizeof(PushConstantData)
+				   }},
                     PBF_DESC_DEBUG_NAME("Dummy Pipeline Layout")
             }),
             .renderPass = scene->context()->renderer().renderPass(),
             PBF_DESC_DEBUG_NAME("Main Renderer Graphics Pipeline")
     });
-
-    indirectCommandsBuffer = scene->getIndirectCommandBuffer(graphicsPipeline, std::make_tuple(
-																 pbf::BufferRef{&indexBuffer},
-																 vk::IndexType::eUint16),
-                                                             {pbf::BufferRef{&buffer}});
 
     // enqueue functor
 
@@ -101,13 +100,20 @@ Quad::Quad(pbf::Scene *scene) : scene(scene) {
 }
 
 void Quad::frame(uint32_t instanceCount) {
-    if (active) {
+	if (active) {
+		indirectCommandsBuffer = scene->getIndirectCommandBuffer(
+			graphicsPipeline,
+			PushConstantData{
+				.startIndex = scene->context()->renderer().currentFrameSync() * scene->simulation().getNumParticles()
+			},
+			std::make_tuple(pbf::BufferRef{&indexBuffer}, vk::IndexType::eUint16),
+			{pbf::BufferRef{&buffer}}
+		);
         indirectCommandsBuffer->push_back({6, instanceCount, 0, 0});
-
     }
 
 
-    if (dirty) {
+	if (dirty) {
         pbf::Buffer initializeBuffer {scene->context(), sizeof(VertexData) * 4 + sizeof(std::uint16_t) * 6, vk::BufferUsageFlagBits::eTransferSrc, pbf::MemoryType::TRANSIENT};
 
         VertexData *data = reinterpret_cast<VertexData *>(initializeBuffer.data());

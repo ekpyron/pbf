@@ -38,37 +38,52 @@ void Scene::enqueueCommands(vk::CommandBuffer &buf) {
         buf.bindPipeline(vk::PipelineBindPoint::eGraphics, *graphicsPipeline);
         buf.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, *(graphicsPipeline.descriptor().pipelineLayout), 0, { _context->globalDescriptorSet()}, {});
 
-        for (auto& [index, innerMap] : innerMap)
-        {
-            auto& [indexBuffer, indexType] = index;
-            buf.bindIndexBuffer(indexBuffer.buffer->buffer(), 0, indexType);
-            for (auto& [vertexBuffers, indirectCommandBuffer] : innerMap)
-            {
-                std::vector<vk::Buffer> vkBuffers;
-                vkBuffers.reserve(vertexBuffers.size());
-                std::transform(std::begin(vertexBuffers), std::end(vertexBuffers),
-                        std::back_inserter(vkBuffers), [](const auto& vb) {return vb.buffer->buffer();});
-                std::vector<vk::DeviceSize> offsets (vertexBuffers.size(), vk::DeviceSize{0});
-                assert(offsets.size() == vertexBuffers.size());
-                buf.bindVertexBuffers(0, vkBuffers, offsets);
+		for (auto& [pushConstantData, innerMap] : innerMap)
+		{
+			buf.pushConstants(
+				*(graphicsPipeline.descriptor().pipelineLayout),
+				vk::ShaderStageFlagBits::eVertex,
+				0,
+				sizeof(pushConstantData),
+				&pushConstantData
+			);
+			for (auto &[index, innerMap]: innerMap)
+			{
+				auto &[indexBuffer, indexType] = index;
+				buf.bindIndexBuffer(indexBuffer.buffer->buffer(), 0, indexType);
+				for (auto &[vertexBuffers, indirectCommandBuffer]: innerMap)
+				{
+					std::vector<vk::Buffer> vkBuffers;
+					vkBuffers.reserve(vertexBuffers.size());
+					std::transform(
+						std::begin(vertexBuffers), std::end(vertexBuffers),
+						std::back_inserter(vkBuffers), [](const auto &vb)
+						{ return vb.buffer->buffer(); }
+					);
+					std::vector<vk::DeviceSize> offsets(vertexBuffers.size(), vk::DeviceSize{0});
+					assert(offsets.size() == vertexBuffers.size());
+					buf.bindVertexBuffers(0, vkBuffers, offsets);
 
-                {
-                    auto it = indirectCommandBuffer.buffers().begin();
-                    while (it != indirectCommandBuffer.buffers().end())
-                    {
-                        auto next = it;
-                        ++next;
+					{
+						auto it = indirectCommandBuffer.buffers().begin();
+						while (it != indirectCommandBuffer.buffers().end())
+						{
+							auto next = it;
+							++next;
 
-                        auto lastBuffer = next == indirectCommandBuffer.buffers().end();
-                        buf.drawIndexedIndirect(it->buffer(), 0,
-                                                lastBuffer ? indirectCommandBuffer.elementsInLastBuffer() : IndirectCommandsBuffer::bufferSize
-                                , sizeof(vk::DrawIndirectCommand));
-                        it = next;
-                    }
+							auto lastBuffer = next == indirectCommandBuffer.buffers().end();
+							buf.drawIndexedIndirect(
+								it->buffer(), 0,
+								lastBuffer ?
+									indirectCommandBuffer.elementsInLastBuffer():
+									IndirectCommandsBuffer::bufferSize, sizeof(vk::DrawIndirectCommand));
+							it = next;
+						}
 
-                }
-            }
-        }
+					}
+				}
+			}
+		}
 
     }
 

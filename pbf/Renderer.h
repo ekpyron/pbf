@@ -35,10 +35,10 @@ public:
 		return 3u;
 	}
 
-	auto currentFrameSync() const {
+	std::uint32_t currentFrameSync() const {
 		return _currentFrameSync;
 	}
-	auto previousFrameSync() const {
+	std::uint32_t previousFrameSync() const {
 		return (_currentFrameSync + framePrerenderCount() - 1) %  framePrerenderCount();
 	}
 

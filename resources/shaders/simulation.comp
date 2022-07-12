@@ -1,7 +1,8 @@
 #version 450
 #extension GL_ARB_separate_shader_objects : enable
+#extension GL_KHR_shader_subgroup_basic : enable
 
-layout (local_size_x = 1, local_size_y = 1, local_size_z = 1) in;
+layout (local_size_x = 256, local_size_y = 1, local_size_z = 1) in;
 
 
 struct ParticleData {
@@ -9,24 +10,46 @@ struct ParticleData {
 };
 
 
-layout(binding = 0) uniform GlobalUniformBuffer {
-    mat4 mat;
-    mat3 viewRot;
+layout(push_constant) uniform UniformBuffer {
     uint sourceIndex;
     uint destIndex;
     uint numParticles;
 } ubo;
 
-
-layout(std430, binding = 1) buffer particleData
+layout(std430, binding = 0) buffer particleData
 {
-        ParticleData data[];
+    ParticleData data[];
 };
 
-
-
-void main()
+layout(std430, binding = 1) buffer ParticleSortKeys
 {
-    uint index = gl_GlobalInvocationID.x;
-    data[ubo.destIndex * ubo.numParticles + index].position = data[ubo.sourceIndex * ubo.numParticles + index].position;
+    uint particleSortKeys[];
+};
+
+uvec3 GRID_HASHWEIGHTS = uvec3(1, 64, 64*64);
+vec3 GRID_MAX = vec3(31, 31, 31);
+vec3 GRID_MIN = vec3(-32, -32, -32);
+
+uint GetHash (in vec3 pos)
+{
+    ivec3 grid = ivec3 (clamp (pos.xyz, GRID_MIN, GRID_MAX));
+    return uint (dot (grid - GRID_MIN, GRID_HASHWEIGHTS));
+}
+
+uint selectedBit = 0;
+
+void main() {
+    uint sourceIndex = ubo.sourceIndex * ubo.numParticles + gl_GlobalInvocationID.x;
+    uint destIndex = ubo.destIndex * ubo.numParticles + gl_GlobalInvocationID.x;
+
+    ParticleData currentParticle = data[sourceIndex];
+    uint hash = GetHash(currentParticle.position);
+
+    //particleSortKeys[destIndex] = (hash >> selectedBit) & 1u;
+
+    // build prefix sums of gridData
+
+
+
+    data[destIndex].position = currentParticle.position;
 }

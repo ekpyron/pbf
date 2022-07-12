@@ -10,6 +10,7 @@
 #include <list>
 #include "Context.h"
 #include "Buffer.h"
+#include "descriptors/GraphicsPipeline.h"
 
 
 namespace pbf {
@@ -24,6 +25,13 @@ public:
 
     void frame(uint32_t instanceCount);
 
+	struct PushConstantData {
+		uint startIndex = 0;
+		bool operator<(const PushConstantData& _rhs) const {
+			return startIndex < _rhs.startIndex;
+		}
+	};
+
 private:
     struct VertexData {
         float vertices[4];
@@ -35,6 +43,7 @@ private:
     Buffer buffer;
     Buffer indexBuffer;
     IndirectCommandsBuffer* indirectCommandsBuffer {nullptr};
+	CacheReference<descriptors::GraphicsPipeline> graphicsPipeline;
 };
 
 }

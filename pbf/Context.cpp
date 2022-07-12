@@ -44,7 +44,7 @@ Context::Context() {
         auto extensions = _glfw.getRequiredInstanceExtensions();
 #ifndef NDEBUG
         extensions.push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
-        //layers.push_back("VK_LAYER_LUNARG_standard_validation"); //leads to crash
+        layers.push_back("VK_LAYER_KHRONOS_validation");
 #endif
         vk::ApplicationInfo appInfo{
                 .pApplicationName = "PBF",
@@ -110,7 +110,7 @@ Context::Context() {
         features.setMultiDrawIndirect(static_cast<vk::Bool32>(true));
         std::vector<const char *> layers;
 #ifndef NDEBUG
-        layers.push_back("VK_LAYER_LUNARG_standard_validation");
+        layers.push_back("VK_LAYER_KHRONOS_validation");
 #endif
         auto extensionName = VK_KHR_SWAPCHAIN_EXTENSION_NAME;
         _device = _physicalDevice.createDeviceUnique(vk::DeviceCreateInfo{
@@ -326,9 +326,6 @@ void Context::run() {
 		rot += 1.0f * timePassed;
 		globalUniformData->mvpmatrix = clip * projmat * mvmat;
 		globalUniformData->viewrot = _camera.GetViewRot();
-		globalUniformData->numParticles = scene().simulation().getNumParticles();
-		globalUniformData->sourceIndex = renderer().previousFrameSync();
-		globalUniformData->destIndex = renderer().currentFrameSync();
         _globalDescriptorSetLayout.keepAlive();
         _renderer->render();
         _cache.frame();

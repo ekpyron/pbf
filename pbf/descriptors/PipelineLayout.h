@@ -23,7 +23,7 @@ struct PipelineLayout {
     vk::UniquePipelineLayout realize(Context *context) const;
 
     template<typename T = PipelineLayout>
-    using Compare = PBFMemberComparator<&T::pushConstants>;
+    using Compare = PBFMemberComparator<&T::setLayouts, &T::pushConstants>;
 
     vector32<CacheReference<DescriptorSetLayout>> setLayouts;
     vector32<vk::PushConstantRange> pushConstants;

@@ -7,6 +7,7 @@
 
 #include "common.h"
 #include "Buffer.h"
+#include "Cache.h"
 
 namespace pbf {
 
@@ -29,6 +30,16 @@ public:
 private:
 	Context* _context;
 	Buffer _particleData;
+	Buffer _particleSortKeys;
+	struct PushConstantData {
+		uint sourceIndex;
+		uint destIndex;
+		uint numParticles;
+	};
+	vk::UniqueDescriptorPool _descriptorPool;
+	static constexpr std::uint32_t numDescriptorSets = 1;
+	CacheReference<descriptors::DescriptorSetLayout> _paramsLayout;
+	vk::DescriptorSet _params;
 	uint32_t _numParticles = 64 * 64 * 64;
 
 	bool initialized = false;

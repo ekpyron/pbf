@@ -10,6 +10,10 @@ layout(binding = 0) uniform GlobalUniformBuffer {
     mat3 viewRot;
 } ubo;
 
+layout(push_constant) uniform PushConstants {
+    uint sourceIndex;
+} pushConstants;
+
 struct ParticleData {
     vec3 position;
 };
@@ -20,15 +24,10 @@ layout(std430, binding = 1) buffer particleData
 };
 
 layout(location = 0) out vec2 fCoords;
-layout(location = 0) in vec3 vPosition;
+layout(location = 0) in vec2 vPosition;
 
 void main() {
-    vec2 coords[] = {
-        vec2(-1, -1),
-        vec2(1, -1),
-        vec2(1, 1),
-        vec2(-1, 1)
-    };
-    gl_Position = ubo.mat * vec4(0.2 * ubo.viewRot * vPosition + data[gl_InstanceIndex].position, 1);
-    fCoords = coords[gl_VertexIndex]; // ubo.mat[gl_VertexIndex].xyz;
+    uint index = pushConstants.sourceIndex;
+    gl_Position = ubo.mat * vec4(0.2 * ubo.viewRot * vec3(vPosition, 0.0) + data[index + gl_InstanceIndex].position, 1);
+    fCoords = vPosition;
 }

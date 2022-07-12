@@ -232,13 +232,7 @@ void Renderer::render() {
 		// TODO: handle result
 	}
 
-	++_currentFrameSync;
-	if (_currentFrameSync >= _frameSync.size())
-	{
-		_currentFrameSync = 0;
-		firstRun = false;
-	}
-	//_currentFrameSync = (_currentFrameSync + 1) % _frameSync.size();
+	_currentFrameSync = (_currentFrameSync + 1) % _frameSync.size();
 }
 
 void Renderer::reset() {

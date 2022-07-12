@@ -158,7 +158,7 @@ private:
     vk::PresentModeKHR _presentMode {vk::PresentModeKHR::eFifo};
 
     static const auto &globalDescriptorPoolSizes() {
-        static std::array<vk::DescriptorPoolSize, 1> sizes {{{ vk::DescriptorType::eUniformBuffer, 1 }}};
+        static std::array<vk::DescriptorPoolSize, 2> sizes {{{ vk::DescriptorType::eUniformBuffer, 1 }, { vk::DescriptorType::eStorageBuffer, 1 }}};
         return sizes;
     }
     static constexpr std::uint32_t numGlobalDescriptorSets = 1;
@@ -174,9 +174,6 @@ private:
     struct GlobalUniformData {
         glm::mat4 mvpmatrix;
 		glm::mat3x4 viewrot;
-		uint sourceIndex;
-		uint destIndex;
-		uint numParticles;
     };
     std::unique_ptr<Buffer> _globalUniformBuffer;
     GlobalUniformData *globalUniformData;
