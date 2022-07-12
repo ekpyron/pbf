@@ -21,7 +21,7 @@ _context(context), _numParticles(numParticles), _input(input), _output(output)
 
 	std::uint32_t numBlocks = getNumParticles() / blockSize;
 	std::uint32_t numBlockSums = numBlocks;
-	_scanStages.resize(static_cast<int>(ceil (log (((numBlockSums + blockSize - 1) / blockSize) * blockSize) / log (blockSize))));
+	_scanStages.resize(1 + static_cast<int>(ceil (log (((numBlockSums + blockSize - 1) / blockSize) * blockSize) / log (blockSize))));
 
 	assert(!_scanStages.empty());
 
@@ -83,7 +83,7 @@ _context(context), _numParticles(numParticles), _input(input), _output(output)
 	for (auto& scanStage: _scanStages) {
 		scanStage.buffer = Buffer{
 			context,
-			numBlockSums * 4u,
+			numBlockSums > 0 ? numBlockSums * 4u : 4u,
 			vk::BufferUsageFlagBits::eStorageBuffer,
 			MemoryType::STATIC
 		};
@@ -250,17 +250,43 @@ void Simulation::run(vk::CommandBuffer buf)
 
 	buf.bindPipeline(vk::PipelineBindPoint::eCompute, *_prescanPipeline);
 	buf.bindDescriptorSets(vk::PipelineBindPoint::eCompute, *(_prescanPipeline.descriptor().pipelineLayout), 0, { _prescanParams }, {});
-	buf.dispatch((getNumParticles() + 255)/256, 1, 1);
+	std::uint32_t numGroups = (getNumParticles() + 255)/256;
+	buf.dispatch(numGroups, 1, 1);
 
-	buf.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eVertexInput, {}, {}, {vk::BufferMemoryBarrier{
+	buf.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eVertexInput | vk::PipelineStageFlagBits::eComputeShader, {}, {}, {vk::BufferMemoryBarrier{
 		.srcAccessMask = vk::AccessFlagBits::eShaderWrite|vk::AccessFlagBits::eMemoryWrite,
-		.dstAccessMask = vk::AccessFlagBits::eVertexAttributeRead,
+		.dstAccessMask = vk::AccessFlagBits::eVertexAttributeRead|vk::AccessFlagBits::eShaderRead,
 		.srcQueueFamilyIndex = 0,
 		.dstQueueFamilyIndex = 0,
 		.buffer = _output.buffer,
 		.offset = 0,
 		.size = _output.range
 	}}, {});
+
+	// particleKeys in prescan: 262144
+	// prescanWrites 1024 blocksums
+	// scanStage[0] writes 4 blocksums
+	// scanStage[1] writes 1 blocksum
+
+	buf.bindPipeline(vk::PipelineBindPoint::eCompute, *_scanPipeline);
+	// for each stage
+	for (size_t i = 0u; i < _scanStages.size() - 1; ++i) {
+		auto& scanStage = _scanStages.at(i);
+		buf.bindDescriptorSets(vk::PipelineBindPoint::eCompute, *(_scanPipeline.descriptor().pipelineLayout), 0, { scanStage.params }, {});
+		numGroups = (numGroups + 255) / 256;
+		buf.dispatch(numGroups, 1, 1);
+
+		buf.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {}, {}, {vk::BufferMemoryBarrier{
+			.srcAccessMask = vk::AccessFlagBits::eShaderWrite|vk::AccessFlagBits::eMemoryWrite,
+			.dstAccessMask = vk::AccessFlagBits::eShaderRead,
+			.srcQueueFamilyIndex = 0,
+			.dstQueueFamilyIndex = 0,
+			.buffer = scanStage.buffer.buffer(),
+			.offset = 0,
+			.size = scanStage.buffer.size()
+		}}, {});
+
+	}
 
 //	buffer->end();
 

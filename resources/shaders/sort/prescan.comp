@@ -29,7 +29,7 @@ layout(std430, binding = 2) writeonly buffer ParticleSortKeys
 
 layout(std430, binding = 3) writeonly buffer BlockSum
 {
-    uint blocksum[];
+    uint blocksums[];
 };
 
 
@@ -83,7 +83,7 @@ void main() {
     {
         if (gl_LocalInvocationIndex == 0)
         {
-            blocksum[gl_WorkGroupID.x] = tmp[BLOCKSIZE - 1];
+            blocksums[gl_WorkGroupID.x] = tmp[BLOCKSIZE - 1];
             tmp[BLOCKSIZE - 1] = 0;
         }
     }
