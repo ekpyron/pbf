@@ -16,31 +16,39 @@ class Context;
 class Simulation
 {
 public:
-	Simulation(Context* context);
+	Simulation(Context* context, size_t numParticles, vk::DescriptorBufferInfo input, vk::DescriptorBufferInfo output);
 	uint32_t getNumParticles() const {
 		return _numParticles;
 	}
 	void run(vk::CommandBuffer buf);
-	Buffer& particleData() { return _particleData; }
-	const Buffer& particleData() const { return _particleData; }
 
-	struct alignas(sizeof(glm::vec4)) ParticleData {
-		glm::vec3 position;
-	};
 private:
 	Context* _context;
-	Buffer _particleData;
+	size_t _numParticles = 0;
 	Buffer _particleSortKeys;
+
+	vk::DescriptorBufferInfo _input;
+	vk::DescriptorBufferInfo _output;
+
+	struct ScanStage {
+		Buffer buffer;
+		CacheReference<descriptors::DescriptorSetLayout> paramsLayout;
+		vk::DescriptorSet params;
+	};
+
+	std::vector<ScanStage> _scanStages;
+
+	static constexpr std::uint32_t blockSize = 256;
+
 	struct PushConstantData {
 		uint sourceIndex;
 		uint destIndex;
 		uint numParticles;
 	};
+
 	vk::UniqueDescriptorPool _descriptorPool;
-	static constexpr std::uint32_t numDescriptorSets = 1;
-	CacheReference<descriptors::DescriptorSetLayout> _paramsLayout;
-	vk::DescriptorSet _params;
-	uint32_t _numParticles = 64 * 64 * 64;
+	CacheReference<descriptors::DescriptorSetLayout> _prescanParamsLayout;
+	vk::DescriptorSet _prescanParams;
 
 	bool initialized = false;
 	void initialize(vk::CommandBuffer buf);

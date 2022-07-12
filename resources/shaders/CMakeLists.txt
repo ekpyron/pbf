@@ -20,6 +20,7 @@ add_shader(test.frag.spv test.frag)
 add_shader(triangle.vert.spv triangle.vert)
 add_shader(triangle.frag.spv triangle.frag)
 
-add_shader(simulation.comp.spv simulation.comp)
+add_shader(sort/prescan.comp.spv sort/prescan.comp)
+add_shader(sort/scan.comp.spv sort/scan.comp)
 
 add_custom_target(shaders-target DEPENDS "${shaders_out}")

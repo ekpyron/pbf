@@ -5,22 +5,22 @@
 
 namespace pbf {
 
-Simulation::Simulation(Context *context):
-_context(context)
+Simulation::Simulation(Context *context, size_t numParticles, vk::DescriptorBufferInfo input, vk::DescriptorBufferInfo output):
+_context(context), _numParticles(numParticles), _input(input), _output(output)
 {
-	_particleData = Buffer{
-		context,
-		sizeof(ParticleData) * _numParticles * context->renderer().framePrerenderCount(),
-		vk::BufferUsageFlagBits::eTransferDst | vk::BufferUsageFlagBits::eStorageBuffer,
-		pbf::MemoryType::STATIC
-	};
 	_particleSortKeys = Buffer{
 		context,
 		32 * _numParticles * context->renderer().framePrerenderCount(),
 		vk::BufferUsageFlagBits::eStorageBuffer,
 		pbf::MemoryType::STATIC
 	};
+
+	std::uint32_t numBlocks = getNumParticles() / blockSize;
+	std::uint32_t numBlockSums = numBlocks;
+	_scanStages.resize(static_cast<int>(ceil (log (((numBlockSums + blockSize - 1) / blockSize) * blockSize) / log (blockSize))));
+
 	{
+		std::uint32_t numDescriptorSets = 1 + _scanStages.size();
 		static std::array<vk::DescriptorPoolSize, 1> sizes {{
 			{ vk::DescriptorType::eStorageBuffer, 2 }
 		}};
@@ -31,7 +31,7 @@ _context(context)
 		});
 	}
 
-	_paramsLayout = context->cache().fetch(descriptors::DescriptorSetLayout{
+	_prescanParamsLayout = context->cache().fetch(descriptors::DescriptorSetLayout{
 		.createFlags = {},
 		.bindings = {{
 						 .binding = 0,
@@ -44,42 +44,108 @@ _context(context)
 						 .descriptorType = vk::DescriptorType::eStorageBuffer,
 						 .descriptorCount = 1,
 						 .stageFlags = vk::ShaderStageFlagBits::eCompute
+					 },
+					 {
+						 .binding = 2,
+						 .descriptorType = vk::DescriptorType::eStorageBuffer,
+						 .descriptorCount = 1,
+						 .stageFlags = vk::ShaderStageFlagBits::eCompute
 					 }}
 #ifndef NDEBUG
 		,.debugName = "Simulation Descriptor Set Layout"
 #endif
 	});
-	_params = context->device().allocateDescriptorSets(vk::DescriptorSetAllocateInfo{
+	_prescanParams = context->device().allocateDescriptorSets(vk::DescriptorSetAllocateInfo{
 		.descriptorPool = *_descriptorPool,
 		.descriptorSetCount = 1,
-		.pSetLayouts = &*_paramsLayout
+		.pSetLayouts = &*_prescanParamsLayout
 	}).front();
-	vk::DescriptorBufferInfo particleDataBufferDescriptorInfo {
-		particleData().buffer(), 0, particleData().size()
-	};
-	vk::DescriptorBufferInfo particleSortKeysBufferDescriptorInfo {
-		_particleSortKeys.buffer(), 0, _particleSortKeys.size()
-	};
+	{
+		std::array<vk::DescriptorBufferInfo, 3> descriptorInfos {{input, output, vk::DescriptorBufferInfo{
+			_particleSortKeys.buffer(),
+			0,
+			VK_WHOLE_SIZE
+		}}};
+		context->device().updateDescriptorSets({vk::WriteDescriptorSet{
+			.dstSet = _prescanParams,
+			.dstBinding = 0,
+			.dstArrayElement = 0,
+			.descriptorCount = descriptorInfos.size(),
+			.descriptorType = vk::DescriptorType::eStorageBuffer,
+			.pImageInfo = nullptr,
+			.pBufferInfo = descriptorInfos.data(),
+			.pTexelBufferView = nullptr
+		}}, {});
+	}
 
-	context->device().updateDescriptorSets({vk::WriteDescriptorSet{
-		.dstSet = _params,
-		.dstBinding = 0,
-		.dstArrayElement = 0,
-		.descriptorCount = 1,
-		.descriptorType = vk::DescriptorType::eStorageBuffer,
-		.pImageInfo = nullptr,
-		.pBufferInfo = &particleDataBufferDescriptorInfo,
-		.pTexelBufferView = nullptr
-	}, vk::WriteDescriptorSet{
-		.dstSet = _params,
-		.dstBinding = 1,
-		.dstArrayElement = 0,
-		.descriptorCount = 1,
-		.descriptorType = vk::DescriptorType::eStorageBuffer,
-		.pImageInfo = nullptr,
-		.pBufferInfo = &particleSortKeysBufferDescriptorInfo,
-		.pTexelBufferView = nullptr
-	}}, {});
+
+	if (getNumParticles() % blockSize)
+		throw std::runtime_error("Particle count must be a multiple of blockSize.");
+
+	for (
+#ifndef NDEBUG
+		size_t i = 0u;
+#endif
+		auto& scanStage: _scanStages
+	) {
+		scanStage.buffer = Buffer{
+			context,
+			numBlockSums * 4u,
+			vk::BufferUsageFlagBits::eStorageBuffer,
+			MemoryType::STATIC
+		};
+
+		scanStage.paramsLayout = context->cache().fetch(descriptors::DescriptorSetLayout{
+			.createFlags = {},
+			.bindings = {{
+							 .binding = 0,
+							 .descriptorType = vk::DescriptorType::eStorageBuffer,
+							 .descriptorCount = 1,
+							 .stageFlags = vk::ShaderStageFlagBits::eCompute
+						 },
+						 {
+							 .binding = 1,
+							 .descriptorType = vk::DescriptorType::eStorageBuffer,
+							 .descriptorCount = 1,
+							 .stageFlags = vk::ShaderStageFlagBits::eCompute
+						 }}
+#ifndef NDEBUG
+			,.debugName = fmt::format("Scan stage Set Layout {}", i++)
+#endif
+		});
+
+		scanStage.params = context->device().allocateDescriptorSets(vk::DescriptorSetAllocateInfo{
+			.descriptorPool = *_descriptorPool,
+			.descriptorSetCount = 1,
+			.pSetLayouts = &*scanStage.paramsLayout
+		}).front();
+
+		numBlockSums /= blockSize;
+	}
+
+	for (size_t i = 1u; i < _scanStages.size(); ++i) {
+		auto& previousScanStage = _scanStages[i - 1];
+		auto& scanStage = _scanStages[i];
+
+		std::array<vk::DescriptorBufferInfo, 2> descriptorInfos {{
+			{previousScanStage.buffer.buffer(), 0, previousScanStage.buffer.size()},
+			{scanStage.buffer.buffer(), 0, scanStage.buffer.size()}
+		}};
+
+		context->device().updateDescriptorSets({vk::WriteDescriptorSet{
+			.dstSet = scanStage.params,
+			.dstBinding = 0,
+			.dstArrayElement = 0,
+			.descriptorCount = descriptorInfos.size(),
+			.descriptorType = vk::DescriptorType::eStorageBuffer,
+			.pImageInfo = nullptr,
+			.pBufferInfo = descriptorInfos.data(),
+			.pTexelBufferView = nullptr
+		}}, {});
+
+
+
+	}
 }
 
 void Simulation::run(vk::CommandBuffer buf)
@@ -87,7 +153,7 @@ void Simulation::run(vk::CommandBuffer buf)
 	if (!initialized)
 		initialize(buf);
 
-	_paramsLayout.keepAlive();
+	_prescanParamsLayout.keepAlive();
 	const auto& computePipeline = _context->cache().fetch(
 		descriptors::ComputePipeline{
 			.flags = {},
@@ -95,15 +161,15 @@ void Simulation::run(vk::CommandBuffer buf)
 				.stage = vk::ShaderStageFlagBits::eCompute,
 				.module = _context->cache().fetch(
 					pbf::descriptors::ShaderModule{
-						.filename = "shaders/simulation.comp.spv",
-						PBF_DESC_DEBUG_NAME("shaders/simulation.comp.spv Compute Shader")
+						.filename = "shaders/sort/prescan.comp.spv",
+						PBF_DESC_DEBUG_NAME("shaders/sort/prescan.comp.spv Compute Shader")
 					}),
 				.entryPoint = "main"
 			},
 			.pipelineLayout = _context->cache().fetch(
 				pbf::descriptors::PipelineLayout{
 					.setLayouts = {{
-						_paramsLayout
+						_prescanParamsLayout
 					}},
 					.pushConstants = {vk::PushConstantRange{
 						.stageFlags = vk::ShaderStageFlagBits::eCompute,
@@ -112,7 +178,7 @@ void Simulation::run(vk::CommandBuffer buf)
 					}},
 					PBF_DESC_DEBUG_NAME("Simulation Pipeline Layout")
 				}),
-			PBF_DESC_DEBUG_NAME("Compute pipeline layout")
+			PBF_DESC_DEBUG_NAME("sort pipeline layout")
 		}
 	);
 	/*auto buffer = std::move(_context->device().allocateCommandBuffersUnique(vk::CommandBufferAllocateInfo{
@@ -141,7 +207,7 @@ void Simulation::run(vk::CommandBuffer buf)
 	};
 
 	buf.bindPipeline(vk::PipelineBindPoint::eCompute, *computePipeline);
-	buf.bindDescriptorSets(vk::PipelineBindPoint::eCompute, *(computePipeline.descriptor().pipelineLayout), 0, { _params}, {});
+	buf.bindDescriptorSets(vk::PipelineBindPoint::eCompute, *(computePipeline.descriptor().pipelineLayout), 0, { _prescanParams }, {});
 	buf.pushConstants(
 		*computePipeline.descriptor().pipelineLayout,
 		vk::ShaderStageFlagBits::eCompute,
@@ -156,9 +222,9 @@ void Simulation::run(vk::CommandBuffer buf)
 		.dstAccessMask = vk::AccessFlagBits::eVertexAttributeRead,
 		.srcQueueFamilyIndex = 0,
 		.dstQueueFamilyIndex = 0,
-		.buffer = _particleData.buffer(),
-		.offset = sizeof(ParticleData) * _numParticles * (_context->renderer().framePrerenderCount() - 1),
-		.size = sizeof(ParticleData) * _numParticles
+		.buffer = _output.buffer,
+		.offset = 0,
+		.size = _output.range
 	}}, {});
 
 //	buffer->end();
@@ -168,41 +234,6 @@ void Simulation::run(vk::CommandBuffer buf)
 
 void Simulation::initialize(vk::CommandBuffer buf)
 {
-	Buffer initializeBuffer {_context, sizeof(ParticleData) * _numParticles, vk::BufferUsageFlagBits::eTransferSrc, pbf::MemoryType::TRANSIENT};
-
-	ParticleData* data = reinterpret_cast<ParticleData*>(initializeBuffer.data());
-
-		for (int32_t x = 0; x < 64; ++x)
-			for (int32_t y = 0; y < 64; ++y)
-				for (int32_t z = 0; z < 64; ++z)
-				{
-					auto id = (64 * 64 * x + 64 * y + z);
-					data[id].position = glm::vec3(x - 32, y - 32, z - 32);
-				}
-
-	initializeBuffer.flush();
-
-	buf.copyBuffer(initializeBuffer.buffer(), _particleData.buffer(), {
-		vk::BufferCopy {
-			.srcOffset = 0,
-			.dstOffset = sizeof(ParticleData) * _numParticles * (_context->renderer().framePrerenderCount() - 1),
-			.size = initializeBuffer.size()
-		}
-	});
-
-	buf.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eComputeShader, {}, {}, {vk::BufferMemoryBarrier{
-		.srcAccessMask = vk::AccessFlagBits::eTransferWrite,
-		.dstAccessMask = vk::AccessFlagBits::eShaderRead,
-		.srcQueueFamilyIndex = 0,
-		.dstQueueFamilyIndex = 0,
-		.buffer = _particleData.buffer(),
-		.offset = sizeof(ParticleData) * _numParticles * (_context->renderer().framePrerenderCount() - 1),
-		.size = initializeBuffer.size(),
-	}}, {});
-
-
-	// keep alive until next use of frame sync
-	_context->renderer().stage([initializeBuffer = std::move(initializeBuffer)] (auto) {});
 
 	initialized = true;
 }

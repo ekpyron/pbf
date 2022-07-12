@@ -146,9 +146,9 @@ void Renderer::render() {
 		});
 
 
-        _context->scene().frame();
+        _context->scene().frame(*buffer);
 
-		_context->scene().simulation().run(*buffer);
+		_context->scene().simulations().at(_currentFrameSync).run(*buffer);
 
         for (auto& fn: currentFrameSync.stagingFunctorQueue) {
             (*fn)(*buffer);

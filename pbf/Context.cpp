@@ -218,7 +218,7 @@ Context::Context() {
 			_globalUniformBuffer->buffer(), 0, sizeof(GlobalUniformData)
 		};
 		vk::DescriptorBufferInfo particleDataBufferDescriptorInfo {
-			_scene->simulation().particleData().buffer(), 0, _scene->simulation().particleData().size()
+			_scene->particleData().buffer(), 0, _scene->particleData().size()
 		};
 		globalUniformData = _globalUniformBuffer->as<GlobalUniformData>();
 		_device->updateDescriptorSets({vk::WriteDescriptorSet{
@@ -310,7 +310,7 @@ void Context::run() {
     spdlog::get("console")->debug("Entering main loop.");
 	float rot = 0.0f;
 	double lastTime = glfwGetTime();
-	_camera.SetPosition(glm::vec3 (0, 0, -5));
+	_camera.SetPosition(glm::vec3 (0, 0, -100));
     while (!_window->shouldClose()) {
 		double now = glfwGetTime();
 		double timePassed = now - lastTime;

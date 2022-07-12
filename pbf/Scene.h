@@ -25,7 +25,7 @@ public:
 
     Scene(Context* context);
 
-    void frame();
+    void frame(vk::CommandBuffer &buf);
 
     void enqueueCommands(vk::CommandBuffer &buf);
 
@@ -44,15 +44,31 @@ public:
         return result;
     }
 
-	Simulation& simulation() { return _simulation; }
-	const Simulation& simulation() const { return _simulation; }
+	auto& simulations() { return _simulations; }
+	const auto& simulations() const { return _simulations; }
+	uint32_t getNumParticles() const {
+		return _numParticles;
+	}
+
+	Buffer& particleData() { return _particleData; }
+	const Buffer& particleData() const { return _particleData; }
+
+	struct ParticleData {
+		glm::vec3 position;
+		float padding = 0.0f;
+	};
 
 private:
 
     Context* _context;
-	Simulation _simulation;
 
-    crampl::MultiKeyMap<std::map,
+	uint32_t _numParticles = 64 * 64 * 64;
+
+	Buffer _particleData;
+
+	std::vector<Simulation> _simulations;
+
+	crampl::MultiKeyMap<std::map,
                         CacheReference<descriptors::GraphicsPipeline>,
 						Quad::PushConstantData,
                         std::tuple<BufferRef, vk::IndexType> /* index buffer */,
@@ -61,6 +77,8 @@ private:
     std::set<IndirectCommandsBuffer*> indirectCommandBuffers;
 
     std::unique_ptr<Quad> quad;
+
+	bool _initialized = false;
 };
 
 

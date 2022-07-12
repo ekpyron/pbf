@@ -104,7 +104,7 @@ void Quad::frame(uint32_t instanceCount) {
 		indirectCommandsBuffer = scene->getIndirectCommandBuffer(
 			graphicsPipeline,
 			PushConstantData{
-				.startIndex = scene->context()->renderer().currentFrameSync() * scene->simulation().getNumParticles()
+				.startIndex = scene->context()->renderer().currentFrameSync() * scene->getNumParticles()
 			},
 			std::make_tuple(pbf::BufferRef{&indexBuffer}, vk::IndexType::eUint16),
 			{pbf::BufferRef{&buffer}}
