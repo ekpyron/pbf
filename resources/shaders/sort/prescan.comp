@@ -12,12 +12,6 @@ struct ParticleData {
 };
 
 
-layout(push_constant) uniform UniformBuffer {
-    uint sourceIndex;
-    uint destIndex;
-    uint numParticles;
-} ubo;
-
 layout(std430, binding = 0) readonly buffer particleInputData
 {
     ParticleData inputData[];
@@ -32,12 +26,12 @@ layout(std430, binding = 2) writeonly buffer ParticleSortKeys
 {
     uint particleSortKeys[];
 };
-/*
-layout(std430, binding = 2) writeonly buffer BlockSum
+
+layout(std430, binding = 3) writeonly buffer BlockSum
 {
     uint blocksum[];
 };
-*/
+
 
 uvec3 GRID_HASHWEIGHTS = uvec3(1,0,0); // uvec3(1, 64, 64*64);
 vec3 GRID_MAX = vec3(31, 31, 31);
@@ -89,7 +83,7 @@ void main() {
     {
         if (gl_LocalInvocationIndex == 0)
         {
-            //blocksum[gl_WorkGroupID.x] = tmp[BLOCKSIZE - 1];
+            blocksum[gl_WorkGroupID.x] = tmp[BLOCKSIZE - 1];
             tmp[BLOCKSIZE - 1] = 0;
         }
     }

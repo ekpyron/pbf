@@ -8,6 +8,7 @@
 #include "common.h"
 #include "Buffer.h"
 #include "Cache.h"
+#include <pbf/descriptors/ComputePipeline.h>
 
 namespace pbf {
 
@@ -30,21 +31,19 @@ private:
 	vk::DescriptorBufferInfo _input;
 	vk::DescriptorBufferInfo _output;
 
+	CacheReference<descriptors::ComputePipeline> _prescanPipeline;
+	CacheReference<descriptors::ComputePipeline> _scanPipeline;
+	CacheReference<descriptors::DescriptorSetLayout> _scanParamsLayout;
+
+	Buffer _prescanBlocksums;
 	struct ScanStage {
 		Buffer buffer;
-		CacheReference<descriptors::DescriptorSetLayout> paramsLayout;
 		vk::DescriptorSet params;
 	};
 
 	std::vector<ScanStage> _scanStages;
 
 	static constexpr std::uint32_t blockSize = 256;
-
-	struct PushConstantData {
-		uint sourceIndex;
-		uint destIndex;
-		uint numParticles;
-	};
 
 	vk::UniqueDescriptorPool _descriptorPool;
 	CacheReference<descriptors::DescriptorSetLayout> _prescanParamsLayout;
