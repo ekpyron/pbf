@@ -27,7 +27,6 @@ Context::Context() {
         throw std::runtime_error("Vulkan not supported");
     }
     _glfw.windowHint(GLFW_CLIENT_API, GLFW_NO_API);
-	_glfw.windowHint(GLFW_RESIZABLE, GLFW_FALSE);
 	/*
 	auto* monitor = glfwGetPrimaryMonitor();
 	auto* mode = glfwGetVideoMode(monitor);
