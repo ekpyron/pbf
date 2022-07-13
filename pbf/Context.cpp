@@ -176,10 +176,8 @@ Context::Context() {
 								 .descriptorType = vk::DescriptorType::eStorageBuffer,
 								 .descriptorCount = 1,
 								 .stageFlags = vk::ShaderStageFlagBits::eCompute | vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eFragment
-							 }}
-#ifndef NDEBUG
-                ,.debugName = "Global Descriptor Set Layout"
-#endif
+							 }},
+			PBF_DESC_DEBUG_NAME("Global Descriptor Set Layout")
         });
 /*
         for(auto [setLayout, descriptor] : crampl::ContainerContainer(_globalDescriptorSetLayouts,

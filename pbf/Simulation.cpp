@@ -51,10 +51,8 @@ _context(context), _numParticles(numParticles), _input(input), _output(output)
 						 .descriptorType = vk::DescriptorType::eStorageBuffer,
 						 .descriptorCount = 1,
 						 .stageFlags = vk::ShaderStageFlagBits::eCompute
-					 }}
-#ifndef NDEBUG
-		,.debugName = "Scan stage Set Layout"
-#endif
+					 }},
+		PBF_DESC_DEBUG_NAME("Scan stage Set Layout")
 	});
 
 	_scanPipeline = _context->cache().fetch(
@@ -141,10 +139,8 @@ _context(context), _numParticles(numParticles), _input(input), _output(output)
 						 .descriptorType = vk::DescriptorType::eStorageBuffer,
 						 .descriptorCount = 1, // TODO: check if this can be = 3
 						 .stageFlags = vk::ShaderStageFlagBits::eCompute
-					 }}
-#ifndef NDEBUG
-		,.debugName = "Simulation Descriptor Set Layout"
-#endif
+					 }},
+		PBF_DESC_DEBUG_NAME("Simulation Descriptor Set Layout")
 	});
 	_prescanParams = context->device().allocateDescriptorSets(vk::DescriptorSetAllocateInfo{
 		.descriptorPool = *_descriptorPool,
