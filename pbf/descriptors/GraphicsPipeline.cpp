@@ -35,7 +35,13 @@ vk::UniquePipeline GraphicsPipeline::realize(Context* context) const {
 		.pScissors = &scissor
 	};
 
-	auto stageCreateInfos = shaderStages | std::ranges::views::transform(&ShaderStage::createInfo) | crampl::to<std::vector<vk::PipelineShaderStageCreateInfo>>;
+	std::vector<vk::PipelineShaderStageCreateInfo> stageCreateInfos;
+	std::vector<vk::SpecializationInfo> specializationInfos;
+	stageCreateInfos.reserve(shaderStages.size());
+	specializationInfos.reserve(shaderStages.size());
+	for (auto const& shaderStage: shaderStages) {
+		stageCreateInfos.emplace_back(shaderStage.createInfo(specializationInfos.emplace_back()));
+	}
     {
         vertexInputStateCreateInfo
                 .setPVertexBindingDescriptions(vertexBindingDescriptions.data())

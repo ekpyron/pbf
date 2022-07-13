@@ -13,9 +13,10 @@
 using namespace pbf::descriptors;
 
 vk::UniquePipeline ComputePipeline::realize(Context* context) const {
+	vk::SpecializationInfo specializationInfo;
 	auto [result, pipeline] = context->device().createComputePipelineUnique(nullptr, vk::ComputePipelineCreateInfo{
 		.flags = flags,
-		.stage = shaderStage.createInfo(),
+		.stage = shaderStage.createInfo(specializationInfo),
 		.layout = *pipelineLayout,
 		.basePipelineHandle = {},
 		.basePipelineIndex = {}
