@@ -170,13 +170,7 @@ Context::Context() {
                                      .descriptorType = vk::DescriptorType::eUniformBuffer,
                                      .descriptorCount = 1,
                                      .stageFlags = vk::ShaderStageFlagBits::eAll
-                             },
-							 {
-								 .binding = 1,
-								 .descriptorType = vk::DescriptorType::eStorageBuffer,
-								 .descriptorCount = 1,
-								 .stageFlags = vk::ShaderStageFlagBits::eCompute | vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eFragment
-							 }},
+                             }},
 			PBF_DESC_DEBUG_NAME("Global Descriptor Set Layout")
         });
 /*
@@ -214,9 +208,6 @@ Context::Context() {
 		vk::DescriptorBufferInfo uniformBufferDescriptorInfo {
 			_globalUniformBuffer->buffer(), 0, sizeof(GlobalUniformData)
 		};
-		vk::DescriptorBufferInfo particleDataBufferDescriptorInfo {
-			_scene->particleData().buffer(), 0, _scene->particleData().size()
-		};
 		globalUniformData = _globalUniformBuffer->as<GlobalUniformData>();
 		_device->updateDescriptorSets({vk::WriteDescriptorSet{
 			.dstSet = _globalDescriptorSet,
@@ -226,15 +217,6 @@ Context::Context() {
 			.descriptorType = vk::DescriptorType::eUniformBuffer,
 			.pImageInfo = nullptr,
 			.pBufferInfo = &uniformBufferDescriptorInfo,
-			.pTexelBufferView = nullptr
-		}, vk::WriteDescriptorSet{
-			.dstSet = _globalDescriptorSet,
-			.dstBinding = 1,
-			.dstArrayElement = 0,
-			.descriptorCount = 1,
-			.descriptorType = vk::DescriptorType::eStorageBuffer,
-			.pImageInfo = nullptr,
-			.pBufferInfo = &particleDataBufferDescriptorInfo,
 			.pTexelBufferView = nullptr
 		}}, {});
 	}

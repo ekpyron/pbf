@@ -27,8 +27,8 @@ Quad::Quad(pbf::Scene *scene) : scene(scene) {
                             .stage = vk::ShaderStageFlagBits::eVertex,
                             .module = scene->context()->cache().fetch(
 								pbf::descriptors::ShaderModule{
-                                    .filename = "shaders/triangle.vert.spv",
-                                    PBF_DESC_DEBUG_NAME("shaders/triangle.vert.spv Vertex Shader")
+                                    .filename = "shaders/particle.vert.spv",
+                                    PBF_DESC_DEBUG_NAME("shaders/particle.vert.spv Vertex Shader")
                             }),
                             .entryPoint = "main"
                     },
@@ -36,16 +36,44 @@ Quad::Quad(pbf::Scene *scene) : scene(scene) {
                             .stage = vk::ShaderStageFlagBits::eFragment,
                             .module = scene->context()->cache().fetch(
 								pbf::descriptors::ShaderModule{
-                                    .filename = "shaders/triangle.frag.spv",
-                                    PBF_DESC_DEBUG_NAME("Fragment Shader shaders/triangle.frag.spv")
+                                    .filename = "shaders/particle.frag.spv",
+                                    PBF_DESC_DEBUG_NAME("shaders/particle.frag.spv Fragment Shader")
                             }),
                             .entryPoint = "main"
                     }
             },
             .vertexBindingDescriptions = {
-                    vk::VertexInputBindingDescription{0, sizeof(VertexData), vk::VertexInputRate::eVertex}},
+                    vk::VertexInputBindingDescription{
+						.binding = 0,
+						.stride = sizeof(VertexData),
+						.inputRate = vk::VertexInputRate::eVertex
+					},
+					vk::VertexInputBindingDescription{
+						.binding = 1,
+						.stride = sizeof(Scene::ParticleData),
+						.inputRate = vk::VertexInputRate::eInstance
+					}
+			},
             .vertexInputAttributeDescriptions = {
-                    vk::VertexInputAttributeDescription{0, 0, vk::Format::eR32G32B32Sfloat, 0}},
+                    vk::VertexInputAttributeDescription{
+						.location = 0,
+						.binding = 0,
+						.format = vk::Format::eR32G32B32Sfloat,
+						.offset = 0
+					},
+					vk::VertexInputAttributeDescription{
+						.location = 1,
+						.binding = 1,
+						.format = vk::Format::eR32G32B32Sfloat,
+						.offset = offsetof(Scene::ParticleData, position)
+					},
+					vk::VertexInputAttributeDescription{
+						.location = 2,
+						.binding = 1,
+						.format = vk::Format::eR32Sfloat,
+						.offset = offsetof(Scene::ParticleData, aux)
+					}
+			},
             .primitiveTopology = vk::PrimitiveTopology::eTriangleList,
             .rasterizationStateCreateInfo = vk::PipelineRasterizationStateCreateInfo().setLineWidth(1.0f),
 			.depthStencilStateCreateInfo = vk::PipelineDepthStencilStateCreateInfo{
@@ -69,11 +97,6 @@ Quad::Quad(pbf::Scene *scene) : scene(scene) {
                     .setLayouts = {{
                                            scene->context()->globalDescriptorSetLayout()
                                    }},
-				   .pushConstants = {vk::PushConstantRange{
-					   .stageFlags = vk::ShaderStageFlagBits::eVertex,
-					   .offset = 0,
-					   .size = sizeof(PushConstantData)
-				   }},
                     PBF_DESC_DEBUG_NAME("Dummy Pipeline Layout")
             }),
             .renderPass = scene->context()->renderer().renderPass(),
@@ -103,11 +126,15 @@ void Quad::frame(uint32_t instanceCount) {
 	if (active) {
 		indirectCommandsBuffer = scene->getIndirectCommandBuffer(
 			graphicsPipeline,
-			PushConstantData{
-				.startIndex = scene->context()->renderer().currentFrameSync() * scene->getNumParticles()
-			},
+			{},
 			std::make_tuple(pbf::BufferRef{&indexBuffer}, vk::IndexType::eUint16),
-			{pbf::BufferRef{&buffer}}
+			{
+				BufferRef{&buffer},
+				BufferRef{
+					.buffer = &scene->particleData(),
+					.offset = sizeof(Scene::ParticleData) * scene->getNumParticles() * scene->context()->renderer().currentFrameSync()
+				}
+			}
 		);
         indirectCommandsBuffer->push_back({6, instanceCount, 0, 0});
     }

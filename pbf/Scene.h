@@ -34,7 +34,7 @@ public:
     }
 
     IndirectCommandsBuffer* getIndirectCommandBuffer(const CacheReference<descriptors::GraphicsPipeline> &graphicsPipeline,
-													 const Quad::PushConstantData& pushConstantData,
+													 const std::vector<uint8_t>& pushConstantData,
                                                      const std::tuple<BufferRef, vk::IndexType> &indexBuffer,
                                                      const std::vector<BufferRef> &vertexBuffers)
     {
@@ -55,7 +55,7 @@ public:
 
 	struct ParticleData {
 		glm::vec3 position;
-		float padding = 0.0f;
+		float aux = 0.0f;
 	};
 
 private:
@@ -70,7 +70,7 @@ private:
 
 	crampl::MultiKeyMap<std::map,
                         CacheReference<descriptors::GraphicsPipeline>,
-						Quad::PushConstantData,
+						std::vector<uint8_t>,
                         std::tuple<BufferRef, vk::IndexType> /* index buffer */,
                         std::vector<BufferRef> /* vertex buffers */,
                         IndirectCommandsBuffer> indirectDrawCalls;

@@ -25,13 +25,6 @@ public:
 
     void frame(uint32_t instanceCount);
 
-	struct PushConstantData {
-		uint startIndex = 0;
-		bool operator<(const PushConstantData& _rhs) const {
-			return startIndex < _rhs.startIndex;
-		}
-	};
-
 private:
     struct VertexData {
         float vertices[4];

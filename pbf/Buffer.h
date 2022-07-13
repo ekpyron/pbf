@@ -50,10 +50,13 @@ private:
 };
 
 struct BufferRef {
-    Buffer* buffer;
-    bool operator<(const BufferRef& rhs) const {
-        return (buffer && rhs.buffer) ? *buffer < *rhs.buffer : buffer < rhs.buffer;
-    }
+	Buffer* buffer = nullptr;
+	size_t offset = 0;
+	bool operator<(const BufferRef& rhs) const {
+		return
+			((buffer && rhs.buffer) ? *buffer < *rhs.buffer : buffer < rhs.buffer) &&
+			offset < rhs.offset;
+	}
 };
 
 }

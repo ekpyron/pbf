@@ -23,7 +23,7 @@ Scene::Scene(Context *context)
 : _context(context), _particleData{
 	context,
 	sizeof(ParticleData) * _numParticles * context->renderer().framePrerenderCount(),
-	vk::BufferUsageFlagBits::eTransferDst | vk::BufferUsageFlagBits::eStorageBuffer,
+	vk::BufferUsageFlagBits::eTransferDst | vk::BufferUsageFlagBits::eStorageBuffer | vk::BufferUsageFlagBits::eVertexBuffer,
 	pbf::MemoryType::STATIC
 } {
 
@@ -107,28 +107,26 @@ void Scene::enqueueCommands(vk::CommandBuffer &buf) {
 
 		for (auto& [pushConstantData, innerMap] : innerMap)
 		{
-			buf.pushConstants(
-				*(graphicsPipeline.descriptor().pipelineLayout),
-				vk::ShaderStageFlagBits::eVertex,
-				0,
-				sizeof(pushConstantData),
-				&pushConstantData
-			);
+			if (!pushConstantData.empty())
+				buf.pushConstants(
+					*(graphicsPipeline.descriptor().pipelineLayout),
+					vk::ShaderStageFlagBits::eVertex,
+					0,
+					static_cast<uint32_t>(pushConstantData.size()),
+					pushConstantData.data()
+				);
 			for (auto &[index, innerMap]: innerMap)
 			{
 				auto &[indexBuffer, indexType] = index;
 				buf.bindIndexBuffer(indexBuffer.buffer->buffer(), 0, indexType);
-				for (auto &[vertexBuffers, indirectCommandBuffer]: innerMap)
+				for (auto &[vertexBufferRefs, indirectCommandBuffer]: innerMap)
 				{
 					std::vector<vk::Buffer> vkBuffers;
-					vkBuffers.reserve(vertexBuffers.size());
-					std::transform(
-						std::begin(vertexBuffers), std::end(vertexBuffers),
-						std::back_inserter(vkBuffers), [](const auto &vb)
-						{ return vb.buffer->buffer(); }
-					);
-					std::vector<vk::DeviceSize> offsets(vertexBuffers.size(), vk::DeviceSize{0});
-					assert(offsets.size() == vertexBuffers.size());
+					std::vector<vk::DeviceSize> offsets;
+					for (BufferRef const& vertexBufferRef: vertexBufferRefs) {
+						vkBuffers.emplace_back(vertexBufferRef.buffer->buffer());
+						offsets.emplace_back(vertexBufferRef.offset);
+					}
 					buf.bindVertexBuffers(0, vkBuffers, offsets);
 
 					{
