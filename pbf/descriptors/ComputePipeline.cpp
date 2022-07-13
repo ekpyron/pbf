@@ -12,7 +12,7 @@
 
 using namespace pbf::descriptors;
 
-vk::UniquePipeline ComputePipeline::realize(Context* context) const {
+vk::UniquePipeline ComputePipeline::realize(ContextInterface* context) const {
 	vk::SpecializationInfo specializationInfo;
 	auto [result, pipeline] = context->device().createComputePipelineUnique(nullptr, vk::ComputePipelineCreateInfo{
 		.flags = flags,

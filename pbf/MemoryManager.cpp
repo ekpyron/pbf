@@ -12,7 +12,7 @@
 
 namespace pbf {
 
-MemoryManager::MemoryManager(Context *context) : _context(context) {
+MemoryManager::MemoryManager(ContextInterface *context) : _context(context) {
 
     const auto &physicalDevice  = _context->physicalDevice();
 
@@ -88,7 +88,7 @@ DeviceMemory MemoryManager::allocateImageMemory(MemoryType memoryType, vk::Image
 }
 
 
-HeapManager::HeapManager(Context* context, std::uint32_t memoryTypeIndex)
+HeapManager::HeapManager(ContextInterface* context, std::uint32_t memoryTypeIndex)
         : _memoryTypeIndex(memoryTypeIndex), _context(context) {}
 
 DeviceMemory HeapManager::allocate(std::size_t size, std::size_t alignment, bool hostVisible) {
