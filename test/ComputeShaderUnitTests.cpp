@@ -29,21 +29,27 @@ TEST_CASE("Compute Shader Stub Test", "[stub]")
 #extension GL_ARB_separate_shader_objects : enable
 #extension GL_KHR_shader_subgroup_basic : enable
 
-layout (local_size_x = 4, local_size_y = 1, local_size_z = 1) in;
+layout (local_size_x_id = 0, local_size_x = 2, local_size_y = 1, local_size_z = 1) in;
 
 layout(std430, binding = 0) buffer Data
 {
     uint data[];
 };
 
+layout(constant_id = 2) const uint shift = 0;
+
 void main()
 {
-    data[gl_GlobalInvocationID.x] = (gl_GlobalInvocationID.x + 7) * 42;
+    data[gl_GlobalInvocationID.x] = (gl_GlobalInvocationID.x + shift) * 42;
 }
 						)"),
 						PBF_DESC_DEBUG_NAME("shaders/stub.comp.spv Compute Shader")
 					}),
-				.entryPoint = "main"
+				.entryPoint = "main",
+				.specialization = {
+					Specialization{.constantID = 0, .value = uint32_t(4)},
+					Specialization{.constantID = 2, .value = uint32_t(7)}
+				}
 			},
 			.pipelineLayout = context.cache().fetch(
 				descriptors::PipelineLayout{
@@ -53,7 +59,6 @@ void main()
 			PBF_DESC_DEBUG_NAME("prescan pipeline")
 		}
 	);
-
 	vk::UniqueDescriptorPool descriptorPool;
 	{
 		std::uint32_t numDescriptorSets = 1;
