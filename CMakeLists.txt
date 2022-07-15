@@ -13,7 +13,7 @@ set(FMT_DOC OFF CACHE BOOL "" FORCE)
 set(GLM_TEST_ENABLE OFF CACHE BOOL "" FORCE)
 
 find_package(glfw3 REQUIRED)
-find_package(Vulkan REQUIRED)
+find_package(Vulkan COMPONENTS glslangValidator REQUIRED)
 
 add_subdirectory(contrib/fmt)
 add_definitions(-DSPDLOG_FMT_EXTERNAL -DVULKAN_HPP_NO_STRUCT_CONSTRUCTORS)
@@ -23,3 +23,6 @@ add_subdirectory(contrib/crampl)
 
 add_subdirectory(resources/shaders)
 add_subdirectory(pbf)
+
+add_subdirectory(contrib/Catch2)
+add_subdirectory(test)

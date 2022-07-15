@@ -9,7 +9,7 @@
 #include "Buffer.h"
 #include "Context.h"
 
-pbf::Buffer::Buffer(pbf::Context *context, std::size_t size, vk::BufferUsageFlags usageFlags, MemoryType memoryType,
+pbf::Buffer::Buffer(pbf::ContextInterface *context, std::size_t size, vk::BufferUsageFlags usageFlags, MemoryType memoryType,
                     const std::vector<uint32_t> &queueFamilyIndices) : _size(size), context(context) {
 
     const auto &device = context->device();

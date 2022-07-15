@@ -26,19 +26,19 @@ Quad::Quad(pbf::Scene *scene) : scene(scene) {
                     {
                             .stage = vk::ShaderStageFlagBits::eVertex,
                             .module = scene->context()->cache().fetch(
-								pbf::descriptors::ShaderModule{
-                                    .filename = "shaders/particle.vert.spv",
+								descriptors::ShaderModule{
+                                    .source = descriptors::ShaderModule::File{"shaders/particle.vert.spv"},
                                     PBF_DESC_DEBUG_NAME("shaders/particle.vert.spv Vertex Shader")
-                            }),
+	                            }),
                             .entryPoint = "main"
                     },
                     {
                             .stage = vk::ShaderStageFlagBits::eFragment,
                             .module = scene->context()->cache().fetch(
-								pbf::descriptors::ShaderModule{
-                                    .filename = "shaders/particle.frag.spv",
+								descriptors::ShaderModule{
+									.source = descriptors::ShaderModule::File{"shaders/particle.frag.spv"},
                                     PBF_DESC_DEBUG_NAME("shaders/particle.frag.spv Fragment Shader")
-                            }),
+	                            }),
                             .entryPoint = "main"
                     }
             },

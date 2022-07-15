@@ -11,7 +11,7 @@
 
 using namespace pbf::descriptors;
 
-vk::UniquePipelineLayout PipelineLayout::realize(Context *context) const {
+vk::UniquePipelineLayout PipelineLayout::realize(ContextInterface *context) const {
     const auto &device = context->device();
     std::vector<vk::DescriptorSetLayout> vkSetLayouts;
     vkSetLayouts.reserve(setLayouts.size());

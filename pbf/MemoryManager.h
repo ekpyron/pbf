@@ -17,7 +17,7 @@ class Buffer;
 
 class HeapManager {
 public:
-    HeapManager(Context* context, std::uint32_t memoryTypeIndex);
+    HeapManager(ContextInterface* context, std::uint32_t memoryTypeIndex);
 
     HeapManager(const HeapManager&) = delete;
     HeapManager &operator=(const HeapManager &) = delete;
@@ -27,11 +27,11 @@ public:
     DeviceMemory allocate(std::size_t size, std::size_t alignment, bool hostVisible);
     void free(const DeviceMemory &);
 
-    Context* context() { return _context; }
+	ContextInterface* context() { return _context; }
 private:
     std::uint32_t _memoryTypeIndex;
     //std::vector<vk::DeviceMemory> _blocks;
-    Context* _context;
+	ContextInterface* _context;
 };
 
 class DeviceMemory {
@@ -86,10 +86,7 @@ private:
 class MemoryManager {
 
 public:
-
-
-
-    explicit MemoryManager(Context *context);
+    explicit MemoryManager(ContextInterface *context);
 
     MemoryManager(const MemoryManager &) = delete;
     MemoryManager& operator=(const MemoryManager &) = delete;
@@ -105,7 +102,7 @@ private:
         return _memoryHeaps.at(memoryTypeIndex).allocate(size, alignment, hostVisible);
     }
 
-    Context * _context;
+	ContextInterface * _context;
 
     std::vector<HeapManager> _memoryHeaps;
     std::vector<vk::MemoryType> _memoryTypes;

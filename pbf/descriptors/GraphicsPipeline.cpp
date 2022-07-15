@@ -15,7 +15,7 @@
 
 using namespace pbf::descriptors;
 
-vk::UniquePipeline GraphicsPipeline::realize(Context* context) const {
+vk::UniquePipeline GraphicsPipeline::realize(ContextInterface* context) const {
     auto const& device = context->device();
 
     vk::PipelineVertexInputStateCreateInfo vertexInputStateCreateInfo;
