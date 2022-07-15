@@ -7,10 +7,11 @@
 #include <pbf/VulkanObjectType.h>
 #include "MemoryManager.h"
 #include "Camera.h"
+#include "ContextInterface.h"
 
 namespace pbf {
 
-class Context {
+class Context : public ContextInterface {
 public:
     Context();
     virtual ~Context();
@@ -24,8 +25,8 @@ public:
 	void OnMouseDown(int button);
 	void OnMouseUp(int button);
 
-    const vk::Device &device() const { return *_device; }
-    const vk::PhysicalDevice &physicalDevice() const { return _physicalDevice; }
+    const vk::Device &device() const override { return *_device; }
+    const vk::PhysicalDevice &physicalDevice() const override { return _physicalDevice; }
     const vk::SurfaceKHR &surface() const { return *_surface; }
     const glfw::Window &window() const { return *_window; }
     const vk::SurfaceFormatKHR &surfaceFormat() const { return _surfaceFormat; }
@@ -38,7 +39,7 @@ public:
     const Renderer &renderer() const { return *_renderer; }
     Renderer &renderer() { return *_renderer; }
     Scene &scene() { return *_scene; }
-    MemoryManager &memoryManager() { return *_memoryManager; }
+    MemoryManager &memoryManager() override { return *_memoryManager; }
 	vk::Format getDepthFormat() const;
 
 	uint32_t graphicsQueueFamily() const {
@@ -55,7 +56,7 @@ public:
     void setObjectName(const T &obj, const std::string &name) {
         setGenericObjectName(VulkanObjectType<T>, reinterpret_cast<uint64_t>(static_cast<void*>(obj)), name);
     }
-    void setGenericObjectName(vk::ObjectType type, uint64_t obj, const std::string &name) const;
+    void setGenericObjectName(vk::ObjectType type, uint64_t obj, const std::string &name) const override;
 #define PBF_DEBUG_SET_OBJECT_NAME(context, object, name) context->setObjectName(object, name)
 #else
 #define PBF_DEBUG_SET_OBJECT_NAME(context, object, name) do { } while(0)

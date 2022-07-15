@@ -33,7 +33,7 @@ struct RenderPass {
                     &T::depthStencilAttachment, &T::preserveAttachments>;
     };
 
-    vk::UniqueRenderPass realize(Context *context) const;
+    vk::UniqueRenderPass realize(ContextInterface *context) const;
 
     template<typename T = RenderPass>
     using Compare = PBFMemberComparator<&T::attachments, &T::subpasses, &T::subpassDependencies>;

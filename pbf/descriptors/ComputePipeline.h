@@ -10,7 +10,7 @@
 namespace pbf::descriptors {
 
 struct ComputePipeline {
-    vk::UniquePipeline realize(Context* context) const;
+    vk::UniquePipeline realize(ContextInterface* context) const;
 
 	vk::PipelineCreateFlags flags;
 	ShaderStage shaderStage;

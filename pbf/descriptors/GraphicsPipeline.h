@@ -18,7 +18,7 @@
 namespace pbf::descriptors {
 
 struct GraphicsPipeline {
-    vk::UniquePipeline realize(Context* context) const;
+    vk::UniquePipeline realize(ContextInterface* context) const;
 
     template<typename T = GraphicsPipeline>
     using Compare = PBFMemberComparator<&T::shaderStages, &T::vertexBindingDescriptions, &T::vertexInputAttributeDescriptions,

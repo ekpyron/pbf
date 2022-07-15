@@ -19,7 +19,7 @@ namespace pbf {
 class IndirectCommandsBuffer
 {
 public:
-	IndirectCommandsBuffer(pbf::Context *context);
+	IndirectCommandsBuffer(Context *context);
 	void clear();
 	void push_back(const vk::DrawIndirectCommand &cmd);
 	const auto &buffers() const { return _buffers; }

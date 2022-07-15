@@ -10,7 +10,7 @@
 #include "../Context.h"
 namespace pbf::descriptors {
 
-vk::UniqueDescriptorSetLayout DescriptorSetLayout::realize(Context *context) const {
+vk::UniqueDescriptorSetLayout DescriptorSetLayout::realize(ContextInterface *context) const {
     std::vector<vk::DescriptorSetLayoutBinding> vkBindings;
     vkBindings.reserve(bindings.size());
     std::transform(bindings.begin(), bindings.end(), std::back_inserter(vkBindings), [](const Binding &binding) {

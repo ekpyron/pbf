@@ -16,7 +16,7 @@ class Buffer {
 
 public:
     Buffer() = default;
-    Buffer(Context* context, std::size_t size, vk::BufferUsageFlags usageFlags, MemoryType memoryType,
+    Buffer(ContextInterface* context, std::size_t size, vk::BufferUsageFlags usageFlags, MemoryType memoryType,
             const std::vector<std::uint32_t> &queueFamilyIndices = {});
     ~Buffer();
 
@@ -43,7 +43,7 @@ public:
     }
 
 private:
-    Context *context {nullptr};
+	ContextInterface *context {nullptr};
     std::size_t _size {0};
     vk::Buffer _buffer {};
     DeviceMemory _deviceMemory {};

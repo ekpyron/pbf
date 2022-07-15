@@ -62,7 +62,7 @@ _context(context), _numParticles(numParticles), _input(input), _output(output)
 				.stage = vk::ShaderStageFlagBits::eCompute,
 				.module = _context->cache().fetch(
 					pbf::descriptors::ShaderModule{
-						.filename = "shaders/sort/scan.comp.spv",
+						.source = pbf::descriptors::ShaderModule::File{"shaders/sort/scan.comp.spv"},
 						PBF_DESC_DEBUG_NAME("shaders/sort/scan.comp.spv Compute Shader")
 					}),
 				.entryPoint = "main"
@@ -176,7 +176,7 @@ _context(context), _numParticles(numParticles), _input(input), _output(output)
 				.stage = vk::ShaderStageFlagBits::eCompute,
 				.module = _context->cache().fetch(
 					pbf::descriptors::ShaderModule{
-						.filename = "shaders/sort/prescan.comp.spv",
+						.source = pbf::descriptors::ShaderModule::File{"shaders/sort/prescan.comp.spv"},
 						PBF_DESC_DEBUG_NAME("shaders/sort/prescan.comp.spv Compute Shader")
 					}),
 				.entryPoint = "main"

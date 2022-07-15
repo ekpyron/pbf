@@ -23,6 +23,7 @@
 #include <vulkan/vulkan.hpp>
 
 namespace pbf {
+class ContextInterface;
 class Context;
 class Renderer;
 class MemoryManager;

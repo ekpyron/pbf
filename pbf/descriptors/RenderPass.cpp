@@ -12,7 +12,7 @@
 
 using namespace pbf::descriptors;
 
-vk::UniqueRenderPass RenderPass::realize(Context *context) const {
+vk::UniqueRenderPass RenderPass::realize(ContextInterface *context) const {
     std::vector<vk::SubpassDescription> subpassDescriptions;
 
     for (auto const& subpass: subpasses)

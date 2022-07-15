@@ -1,17 +1,19 @@
 find_package(Threads REQUIRED)
 
-
-set(SOURCES main.cpp glfw.h Context.cpp Context.h common.h Swapchain.cpp Swapchain.h Renderer.cpp Renderer.h
+add_library(pbf_common STATIC
         Cache.h Cache.cpp descriptors/RenderPass.h descriptors/Order.h descriptors/VkOrder.h descriptors/RenderPass.cpp
         descriptors/GraphicsPipeline.cpp descriptors/GraphicsPipeline.h descriptors/ShaderModule.cpp
         descriptors/ShaderModule.h descriptors/PipelineLayout.cpp descriptors/PipelineLayout.h
+        descriptors/ComputePipeline.h descriptors/ComputePipeline.cpp
         descriptors/DescriptorSetLayout.h descriptors/DescriptorSetLayout.cpp
-        MemoryManager.cpp MemoryManager.h Buffer.cpp Buffer.h Scene.cpp Scene.h
-        Camera.cpp Camera.h IndirectCommandsBuffer.h IndirectCommandsBuffer.cpp Quad.cpp Quad.h
-        Simulation.cpp Simulation.h Image.cpp Image.h
-        descriptors/ComputePipeline.h descriptors/ComputePipeline.cpp)
+        Buffer.cpp Buffer.h MemoryManager.cpp MemoryManager.h)
+target_include_directories(pbf_common PUBLIC ${CMAKE_CURRENT_LIST_DIR}/..)
+target_link_libraries(pbf_common PUBLIC fmt Vulkan::Vulkan spdlog glm crampl Threads::Threads)
+
+set(SOURCES main.cpp glfw.h Context.cpp Context.h ContextInterface.h common.h Swapchain.cpp Swapchain.h Renderer.cpp Renderer.h
+        Scene.cpp Scene.h Camera.cpp Camera.h IndirectCommandsBuffer.h IndirectCommandsBuffer.cpp Quad.cpp Quad.h
+        Simulation.cpp Simulation.h Image.cpp Image.h)
 
 add_executable(${PROJECT_NAME} ${SOURCES})
-target_include_directories(${PROJECT_NAME} PUBLIC ${CMAKE_CURRENT_LIST_DIR}/..)
-target_link_libraries(${PROJECT_NAME} PUBLIC glfw fmt vulkan spdlog glm crampl Threads::Threads)
+target_link_libraries(${PROJECT_NAME} PUBLIC glfw pbf_common)
 add_dependencies(${PROJECT_NAME} shaders-target)

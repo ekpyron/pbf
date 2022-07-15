@@ -20,7 +20,7 @@ namespace pbf::descriptors {
 
 struct PipelineLayout {
 
-    vk::UniquePipelineLayout realize(Context *context) const;
+    vk::UniquePipelineLayout realize(ContextInterface *context) const;
 
     template<typename T = PipelineLayout>
     using Compare = PBFMemberComparator<&T::setLayouts, &T::pushConstants>;
