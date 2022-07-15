@@ -10,6 +10,7 @@
 #include <list>
 #include "Context.h"
 #include "Buffer.h"
+#include "descriptors/GraphicsPipeline.h"
 
 
 namespace pbf {
@@ -35,6 +36,7 @@ private:
     Buffer buffer;
     Buffer indexBuffer;
     IndirectCommandsBuffer* indirectCommandsBuffer {nullptr};
+	CacheReference<descriptors::GraphicsPipeline> graphicsPipeline;
 };
 
 }

@@ -111,23 +111,29 @@ void Renderer::render() {
 //    _graphicsPipeline.keepAlive();
 
     uint32_t imageIndex = 0;
-    auto result = device.acquireNextImageKHR(
-            _swapchain->swapchain(), TIMEOUT, *currentFrameSync.imageAvailableSemaphore,
-            nullptr, &imageIndex
-    );
+	try {
+		auto result = device.acquireNextImageKHR(
+			_swapchain->swapchain(), TIMEOUT, *currentFrameSync.imageAvailableSemaphore,
+			nullptr, &imageIndex
+		);
 
-    switch (result) {
-        case vk::Result::eErrorOutOfDateKHR: {
-            reset();
-            return;
-        }
-        case vk::Result::eSuccess:
-        case vk::Result::eSuboptimalKHR:
-            break;
-        default: {
-            vk::throwResultException(result, "cannot acquire image");
-        }
-    }
+		switch (result) {
+			case vk::Result::eErrorOutOfDateKHR: {
+				reset();
+				return;
+			}
+			case vk::Result::eSuccess:
+			case vk::Result::eSuboptimalKHR:
+				break;
+			default: {
+				vk::throwResultException(result, "cannot acquire image");
+			}
+		}
+	} catch (vk::OutOfDateKHRError const&) {
+		reset();
+		return;
+	}
+
     auto buffer = std::move(device.allocateCommandBuffersUnique(vk::CommandBufferAllocateInfo{
 		.commandPool = _context->commandPool(true),
 		.level = vk::CommandBufferLevel::ePrimary,
@@ -146,9 +152,9 @@ void Renderer::render() {
 		});
 
 
-        _context->scene().frame();
+        _context->scene().frame(*buffer);
 
-		_context->scene().simulation().run(*buffer);
+		_context->scene().simulations().at(_currentFrameSync).run(*buffer);
 
         for (auto& fn: currentFrameSync.stagingFunctorQueue) {
             (*fn)(*buffer);
@@ -220,7 +226,7 @@ void Renderer::render() {
 
     currentFrameSync.commandBuffer = std::move(buffer);
 
-	{
+	try	{
 		auto result = _context->presentQueue().presentKHR(vk::PresentInfoKHR{
 			.waitSemaphoreCount = 1,
 			.pWaitSemaphores = &*currentFrameSync.renderFinishedSemaphore,
@@ -229,16 +235,13 @@ void Renderer::render() {
 			.pImageIndices = &imageIndex,
 			.pResults = nullptr
 		});
-		// TODO: handle result
+		if (result != vk::Result::eSuccess)
+			vk::throwResultException(result, "");
+	} catch (const vk::OutOfDateKHRError&) {
+		reset();
 	}
 
-	++_currentFrameSync;
-	if (_currentFrameSync >= _frameSync.size())
-	{
-		_currentFrameSync = 0;
-		firstRun = false;
-	}
-	//_currentFrameSync = (_currentFrameSync + 1) % _frameSync.size();
+	_currentFrameSync = (_currentFrameSync + 1) % _frameSync.size();
 }
 
 void Renderer::reset() {

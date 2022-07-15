@@ -3,7 +3,6 @@
 //
 
 #include "descriptors/DescriptorSetLayout.h"
-#include "descriptors/GraphicsPipeline.h"
 #include "Renderer.h"
 #include "Scene.h"
 #include <cstdint>
@@ -21,15 +20,15 @@ Quad::Quad(pbf::Scene *scene) : scene(scene) {
                                                                 | vk::BufferUsageFlagBits::eIndexBuffer,
                    pbf::MemoryType::STATIC};
 
-    const auto &graphicsPipeline = scene->context()->cache().fetch(
+    graphicsPipeline = scene->context()->cache().fetch(
 		pbf::descriptors::GraphicsPipeline{
             .shaderStages = {
                     {
                             .stage = vk::ShaderStageFlagBits::eVertex,
                             .module = scene->context()->cache().fetch(
 								pbf::descriptors::ShaderModule{
-                                    .filename = "shaders/triangle.vert.spv",
-                                    PBF_DESC_DEBUG_NAME("shaders/triangle.vert.spv Vertex Shader")
+                                    .filename = "shaders/particle.vert.spv",
+                                    PBF_DESC_DEBUG_NAME("shaders/particle.vert.spv Vertex Shader")
                             }),
                             .entryPoint = "main"
                     },
@@ -37,16 +36,44 @@ Quad::Quad(pbf::Scene *scene) : scene(scene) {
                             .stage = vk::ShaderStageFlagBits::eFragment,
                             .module = scene->context()->cache().fetch(
 								pbf::descriptors::ShaderModule{
-                                    .filename = "shaders/triangle.frag.spv",
-                                    PBF_DESC_DEBUG_NAME("Fragment Shader shaders/triangle.frag.spv")
+                                    .filename = "shaders/particle.frag.spv",
+                                    PBF_DESC_DEBUG_NAME("shaders/particle.frag.spv Fragment Shader")
                             }),
                             .entryPoint = "main"
                     }
             },
             .vertexBindingDescriptions = {
-                    vk::VertexInputBindingDescription{0, sizeof(VertexData), vk::VertexInputRate::eVertex}},
+                    vk::VertexInputBindingDescription{
+						.binding = 0,
+						.stride = sizeof(VertexData),
+						.inputRate = vk::VertexInputRate::eVertex
+					},
+					vk::VertexInputBindingDescription{
+						.binding = 1,
+						.stride = sizeof(Scene::ParticleData),
+						.inputRate = vk::VertexInputRate::eInstance
+					}
+			},
             .vertexInputAttributeDescriptions = {
-                    vk::VertexInputAttributeDescription{0, 0, vk::Format::eR32G32B32Sfloat, 0}},
+                    vk::VertexInputAttributeDescription{
+						.location = 0,
+						.binding = 0,
+						.format = vk::Format::eR32G32B32Sfloat,
+						.offset = 0
+					},
+					vk::VertexInputAttributeDescription{
+						.location = 1,
+						.binding = 1,
+						.format = vk::Format::eR32G32B32Sfloat,
+						.offset = offsetof(Scene::ParticleData, position)
+					},
+					vk::VertexInputAttributeDescription{
+						.location = 2,
+						.binding = 1,
+						.format = vk::Format::eR32Sfloat,
+						.offset = offsetof(Scene::ParticleData, aux)
+					}
+			},
             .primitiveTopology = vk::PrimitiveTopology::eTriangleList,
             .rasterizationStateCreateInfo = vk::PipelineRasterizationStateCreateInfo().setLineWidth(1.0f),
 			.depthStencilStateCreateInfo = vk::PipelineDepthStencilStateCreateInfo{
@@ -76,11 +103,6 @@ Quad::Quad(pbf::Scene *scene) : scene(scene) {
             PBF_DESC_DEBUG_NAME("Main Renderer Graphics Pipeline")
     });
 
-    indirectCommandsBuffer = scene->getIndirectCommandBuffer(graphicsPipeline, std::make_tuple(
-																 pbf::BufferRef{&indexBuffer},
-																 vk::IndexType::eUint16),
-                                                             {pbf::BufferRef{&buffer}});
-
     // enqueue functor
 
     /*TypedClosureContainer container([
@@ -101,13 +123,24 @@ Quad::Quad(pbf::Scene *scene) : scene(scene) {
 }
 
 void Quad::frame(uint32_t instanceCount) {
-    if (active) {
+	if (active) {
+		indirectCommandsBuffer = scene->getIndirectCommandBuffer(
+			graphicsPipeline,
+			{},
+			std::make_tuple(pbf::BufferRef{&indexBuffer}, vk::IndexType::eUint16),
+			{
+				BufferRef{&buffer},
+				BufferRef{
+					.buffer = &scene->particleData(),
+					.offset = sizeof(Scene::ParticleData) * scene->getNumParticles() * scene->context()->renderer().currentFrameSync()
+				}
+			}
+		);
         indirectCommandsBuffer->push_back({6, instanceCount, 0, 0});
-
     }
 
 
-    if (dirty) {
+	if (dirty) {
         pbf::Buffer initializeBuffer {scene->context(), sizeof(VertexData) * 4 + sizeof(std::uint16_t) * 6, vk::BufferUsageFlagBits::eTransferSrc, pbf::MemoryType::TRANSIENT};
 
         VertexData *data = reinterpret_cast<VertexData *>(initializeBuffer.data());

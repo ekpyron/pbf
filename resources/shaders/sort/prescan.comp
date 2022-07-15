@@ -1,0 +1,119 @@
+#version 450
+#extension GL_ARB_separate_shader_objects : enable
+#extension GL_KHR_shader_subgroup_basic : enable
+
+#define HALFBLOCKSIZE 128
+#define BLOCKSIZE (2*HALFBLOCKSIZE)
+layout (local_size_x = HALFBLOCKSIZE, local_size_y = 1, local_size_z = 1) in;
+
+struct ParticleData {
+    vec3 position;
+    float aux;
+};
+
+
+layout(std430, binding = 0) readonly buffer particleInputData
+{
+    ParticleData inputData[];
+};
+
+layout(std430, binding = 1) writeonly buffer particleOutputData
+{
+    ParticleData outputData[];
+};
+
+layout(std430, binding = 2) writeonly buffer ParticleSortKeys
+{
+    uint particleSortKeys[];
+};
+
+layout(std430, binding = 3) writeonly buffer BlockSum
+{
+    uint blocksums[];
+};
+
+
+uvec3 GRID_HASHWEIGHTS = uvec3(1,0,0); // uvec3(1, 64, 64*64);
+vec3 GRID_MAX = vec3(31, 31, 31);
+vec3 GRID_MIN = vec3(-32, -32, -32);
+
+uint GetHash (in vec3 pos)
+{
+    ivec3 grid = ivec3 (clamp (pos.xyz, GRID_MIN, GRID_MAX));
+    return uint (dot (grid - GRID_MIN, GRID_HASHWEIGHTS));
+}
+
+uint selectedBit = 0;
+
+shared uint tmp[BLOCKSIZE];
+
+void main() {
+
+    // gl_WorkGroupID.x
+    // gl_LocalInvocationIndex
+
+    ParticleData currentParticle1 = inputData[gl_WorkGroupID.x * BLOCKSIZE + gl_LocalInvocationIndex];
+    ParticleData currentParticle2 = inputData[gl_WorkGroupID.x * BLOCKSIZE + gl_LocalInvocationIndex + HALFBLOCKSIZE];
+    uint hash1 = GetHash(currentParticle1.position);
+    uint hash2 = GetHash(currentParticle2.position);
+
+    tmp[gl_LocalInvocationIndex * 2] = (hash1 >> selectedBit) & 1u;
+    tmp[gl_LocalInvocationIndex * 2 + 1] = (hash2 >> selectedBit) & 1u;
+
+
+
+    int offset = 1;
+    for (int d = HALFBLOCKSIZE; d > 0; d >>= 1)
+    {
+        barrier();
+        memoryBarrier();
+
+        if (gl_LocalInvocationIndex < d) {
+            uint i = offset * (2 * gl_LocalInvocationIndex + 1) - 1;
+            uint j = offset * (2 * gl_LocalInvocationIndex + 2) - 1;
+            tmp[j] += tmp[i];
+        }
+        offset <<= 1;
+    }
+
+    barrier();
+    memoryBarrier();
+
+    // if (subGroupElect())
+    {
+        if (gl_LocalInvocationIndex == 0)
+        {
+            blocksums[gl_WorkGroupID.x] = tmp[BLOCKSIZE - 1];
+            tmp[BLOCKSIZE - 1] = 0;
+        }
+    }
+
+    for (uint d = 1; d < BLOCKSIZE; d <<= 1)
+    {
+        offset >>= 1;
+        barrier();
+        memoryBarrier();
+
+        if (gl_LocalInvocationIndex < d)
+        {
+            uint i = offset * (2 * gl_LocalInvocationIndex + 1) - 1;
+            uint j = offset * (2 * gl_LocalInvocationIndex + 2) - 1;
+            uint t = tmp[i];
+            tmp[i] = tmp[j];
+            tmp[j] += t;
+        }
+    }
+
+    barrier ();
+    memoryBarrierShared ();
+
+    particleSortKeys[gl_WorkGroupID.x * BLOCKSIZE + gl_LocalInvocationIndex] = tmp[gl_LocalInvocationIndex];
+    particleSortKeys[gl_WorkGroupID.x * BLOCKSIZE + gl_LocalInvocationIndex + HALFBLOCKSIZE] = tmp[gl_LocalInvocationIndex + HALFBLOCKSIZE];
+
+    // build prefix sums of gridData
+
+    outputData[gl_WorkGroupID.x * BLOCKSIZE + gl_LocalInvocationIndex] = currentParticle1;
+    outputData[gl_WorkGroupID.x * BLOCKSIZE + gl_LocalInvocationIndex].aux = tmp[gl_LocalInvocationIndex];
+    outputData[gl_WorkGroupID.x * BLOCKSIZE + gl_LocalInvocationIndex + HALFBLOCKSIZE] = currentParticle2;
+    outputData[gl_WorkGroupID.x * BLOCKSIZE + gl_LocalInvocationIndex + HALFBLOCKSIZE].aux = tmp[gl_LocalInvocationIndex + HALFBLOCKSIZE];
+}

@@ -27,7 +27,6 @@ Context::Context() {
         throw std::runtime_error("Vulkan not supported");
     }
     _glfw.windowHint(GLFW_CLIENT_API, GLFW_NO_API);
-	_glfw.windowHint(GLFW_RESIZABLE, GLFW_FALSE);
 	/*
 	auto* monitor = glfwGetPrimaryMonitor();
 	auto* mode = glfwGetVideoMode(monitor);
@@ -44,7 +43,7 @@ Context::Context() {
         auto extensions = _glfw.getRequiredInstanceExtensions();
 #ifndef NDEBUG
         extensions.push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
-        //layers.push_back("VK_LAYER_LUNARG_standard_validation"); //leads to crash
+        layers.push_back("VK_LAYER_KHRONOS_validation");
 #endif
         vk::ApplicationInfo appInfo{
                 .pApplicationName = "PBF",
@@ -110,7 +109,7 @@ Context::Context() {
         features.setMultiDrawIndirect(static_cast<vk::Bool32>(true));
         std::vector<const char *> layers;
 #ifndef NDEBUG
-        layers.push_back("VK_LAYER_LUNARG_standard_validation");
+        layers.push_back("VK_LAYER_KHRONOS_validation");
 #endif
         auto extensionName = VK_KHR_SWAPCHAIN_EXTENSION_NAME;
         _device = _physicalDevice.createDeviceUnique(vk::DeviceCreateInfo{
@@ -171,16 +170,8 @@ Context::Context() {
                                      .descriptorType = vk::DescriptorType::eUniformBuffer,
                                      .descriptorCount = 1,
                                      .stageFlags = vk::ShaderStageFlagBits::eAll
-                             },
-							 {
-								 .binding = 1,
-								 .descriptorType = vk::DescriptorType::eStorageBuffer,
-								 .descriptorCount = 1,
-								 .stageFlags = vk::ShaderStageFlagBits::eCompute | vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eFragment
-							 }}
-#ifndef NDEBUG
-                ,.debugName = "Global Descriptor Set Layout"
-#endif
+                             }},
+			PBF_DESC_DEBUG_NAME("Global Descriptor Set Layout")
         });
 /*
         for(auto [setLayout, descriptor] : crampl::ContainerContainer(_globalDescriptorSetLayouts,
@@ -217,9 +208,6 @@ Context::Context() {
 		vk::DescriptorBufferInfo uniformBufferDescriptorInfo {
 			_globalUniformBuffer->buffer(), 0, sizeof(GlobalUniformData)
 		};
-		vk::DescriptorBufferInfo particleDataBufferDescriptorInfo {
-			_scene->simulation().particleData().buffer(), 0, _scene->simulation().particleData().size()
-		};
 		globalUniformData = _globalUniformBuffer->as<GlobalUniformData>();
 		_device->updateDescriptorSets({vk::WriteDescriptorSet{
 			.dstSet = _globalDescriptorSet,
@@ -229,15 +217,6 @@ Context::Context() {
 			.descriptorType = vk::DescriptorType::eUniformBuffer,
 			.pImageInfo = nullptr,
 			.pBufferInfo = &uniformBufferDescriptorInfo,
-			.pTexelBufferView = nullptr
-		}, vk::WriteDescriptorSet{
-			.dstSet = _globalDescriptorSet,
-			.dstBinding = 1,
-			.dstArrayElement = 0,
-			.descriptorCount = 1,
-			.descriptorType = vk::DescriptorType::eStorageBuffer,
-			.pImageInfo = nullptr,
-			.pBufferInfo = &particleDataBufferDescriptorInfo,
 			.pTexelBufferView = nullptr
 		}}, {});
 	}
@@ -310,7 +289,7 @@ void Context::run() {
     spdlog::get("console")->debug("Entering main loop.");
 	float rot = 0.0f;
 	double lastTime = glfwGetTime();
-	_camera.SetPosition(glm::vec3 (0, 0, -5));
+	_camera.SetPosition(glm::vec3 (0, 0, -100));
     while (!_window->shouldClose()) {
 		double now = glfwGetTime();
 		double timePassed = now - lastTime;
@@ -326,9 +305,6 @@ void Context::run() {
 		rot += 1.0f * timePassed;
 		globalUniformData->mvpmatrix = clip * projmat * mvmat;
 		globalUniformData->viewrot = _camera.GetViewRot();
-		globalUniformData->numParticles = scene().simulation().getNumParticles();
-		globalUniformData->sourceIndex = renderer().previousFrameSync();
-		globalUniformData->destIndex = renderer().currentFrameSync();
         _globalDescriptorSetLayout.keepAlive();
         _renderer->render();
         _cache.frame();
