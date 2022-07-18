@@ -1,6 +1,6 @@
 #if defined(__clang__) && defined(clangd_feature_macro_workarounds)
 #if __cpp_concepts != 201907U
-#error "Weird"
+//#error "Weird"
 #endif
 #undef __cpp_concepts
 #define __cpp_concepts 201907U
@@ -58,8 +58,8 @@ void main()
 					}),
 				.entryPoint = "main",
 				.specialization = {
-					Specialization<uint32_t>{.constantID = 0, .value = uint32_t(4)},
-					Specialization<uint32_t>{.constantID = 2, .value = uint32_t(7)}
+					Specialization<uint32_t>{.constantID = 0, .value = 4},
+					Specialization<uint32_t>{.constantID = 2, .value = 7}
 				}
 			},
 			.pipelineLayout = cache().fetch(

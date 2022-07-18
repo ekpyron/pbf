@@ -42,6 +42,7 @@ struct ShaderStage
 		}
 		const void* data() const { return _data.data(); }
 		size_t size() const { return _data.size(); }
+		static constexpr bool AllowNativeComparison = true;
 	private:
 		template<typename ConstantIDTuple, typename ValueTuple, size_t... I>
 		SpecializationInfo(ConstantIDTuple&& constantIDs, ValueTuple&& values, std::index_sequence<I...>):

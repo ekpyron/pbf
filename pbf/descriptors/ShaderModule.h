@@ -17,11 +17,11 @@ namespace pbf::descriptors {
 struct ShaderModule {
 	struct File {
 		std::string filename;
-		bool operator<(const File& _rhs) const { return filename < _rhs.filename; }
+		using Compare = PBFMemberComparator<&File::filename>;
 	};
 	struct RawSPIRV {
 		std::vector<std::uint32_t> content;
-		bool operator<(const RawSPIRV& _rhs) const {  return content < _rhs.content; }
+		using Compare = PBFMemberComparator<&RawSPIRV::content>;
 	};
 	std::variant<File, RawSPIRV> source;
 
