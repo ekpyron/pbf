@@ -1,0 +1,36 @@
+#version 450
+#extension GL_ARB_separate_shader_objects : enable
+#extension GL_KHR_shader_subgroup_basic : enable
+
+layout (local_size_x_id = 0, local_size_y = 1, local_size_z = 1) in;
+
+const uint HALFBLOCKSIZE = gl_WorkGroupSize.x;
+const uint BLOCKSIZE = 2 * HALFBLOCKSIZE;
+
+struct ParticleData {
+    vec3 position;
+    float aux;
+};
+
+layout(std430, binding = 0) readonly buffer ParticleKeys
+{
+    uint data[];
+};
+
+layout(std430, binding = 1) readonly buffer particleInputData
+{
+    ParticleData inputData[];
+};
+
+layout(std430, binding = 2) writeonly buffer particleOutputData
+{
+    ParticleData outputData[];
+};
+
+
+
+void main()
+{
+    outputData[gl_WorkGroupID.x * HALFBLOCKSIZE + gl_LocalInvocationIndex] = inputData[gl_WorkGroupID.x * HALFBLOCKSIZE + gl_LocalInvocationIndex];
+    outputData[gl_WorkGroupID.x * HALFBLOCKSIZE + gl_LocalInvocationIndex].aux = data[gl_WorkGroupID.x * HALFBLOCKSIZE + gl_LocalInvocationIndex];
+}

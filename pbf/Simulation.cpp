@@ -26,9 +26,9 @@ _context(context), _numParticles(numParticles), _input(input), _output(output)
 	assert(!_scanStages.empty());
 
 	{
-		std::uint32_t numDescriptorSets = 1 + _scanStages.size();
+		std::uint32_t numDescriptorSets = 512; // 1 + _scanStages.size();
 		static std::array<vk::DescriptorPoolSize, 1> sizes {{
-			{ vk::DescriptorType::eStorageBuffer, 2 }
+			{ vk::DescriptorType::eStorageBuffer, 1024 }
 		}};
 		_descriptorPool = context->device().createDescriptorPoolUnique(vk::DescriptorPoolCreateInfo{
 			.maxSets = numDescriptorSets,
@@ -65,7 +65,10 @@ _context(context), _numParticles(numParticles), _input(input), _output(output)
 						.source = pbf::descriptors::ShaderModule::File{"shaders/sort/scan.comp.spv"},
 						PBF_DESC_DEBUG_NAME("shaders/sort/scan.comp.spv Compute Shader")
 					}),
-				.entryPoint = "main"
+				.entryPoint = "main",
+				.specialization = {
+					Specialization<uint32_t> { .constantID = 0, .value = 128 }
+				}
 			},
 			.pipelineLayout = _context->cache().fetch(
 				pbf::descriptors::PipelineLayout{
@@ -140,7 +143,7 @@ _context(context), _numParticles(numParticles), _input(input), _output(output)
 						 .descriptorCount = 1, // TODO: check if this can be = 3
 						 .stageFlags = vk::ShaderStageFlagBits::eCompute
 					 }},
-		PBF_DESC_DEBUG_NAME("Simulation Descriptor Set Layout")
+		PBF_DESC_DEBUG_NAME("Simulation Prescan Descriptor Set Layout")
 	});
 	_prescanParams = context->device().allocateDescriptorSets(vk::DescriptorSetAllocateInfo{
 		.descriptorPool = *_descriptorPool,
@@ -148,15 +151,20 @@ _context(context), _numParticles(numParticles), _input(input), _output(output)
 		.pSetLayouts = &*_prescanParamsLayout
 	}).front();
 	{
-		std::array<vk::DescriptorBufferInfo, 4> descriptorInfos {{input, output, vk::DescriptorBufferInfo{
-			_particleSortKeys.buffer(),
-			0,
-			VK_WHOLE_SIZE
-		}, vk::DescriptorBufferInfo{
-			_scanStages.front().buffer.buffer(),
-			0,
-			VK_WHOLE_SIZE
-		}}};
+		std::array<vk::DescriptorBufferInfo, 4> descriptorInfos {{
+			vk::DescriptorBufferInfo{
+				_particleSortKeys.buffer(),
+				0,
+				VK_WHOLE_SIZE
+			},
+			vk::DescriptorBufferInfo{
+				_scanStages.front().buffer.buffer(),
+				0,
+				VK_WHOLE_SIZE
+			},
+			input,
+			output,
+		}};
 		context->device().updateDescriptorSets({vk::WriteDescriptorSet{
 			.dstSet = _prescanParams,
 			.dstBinding = 0,
@@ -179,7 +187,11 @@ _context(context), _numParticles(numParticles), _input(input), _output(output)
 						.source = pbf::descriptors::ShaderModule::File{"shaders/sort/prescan.comp.spv"},
 						PBF_DESC_DEBUG_NAME("shaders/sort/prescan.comp.spv Compute Shader")
 					}),
-				.entryPoint = "main"
+				.entryPoint = "main",
+				.specialization = {
+					Specialization<uint32_t> { .constantID = 0, .value = 128 },
+					Specialization<uint32_t> { .constantID = 1, .value = 0 }
+				}
 			},
 			.pipelineLayout = _context->cache().fetch(
 				pbf::descriptors::PipelineLayout{
@@ -214,6 +226,79 @@ _context(context), _numParticles(numParticles), _input(input), _output(output)
 
 	}
 
+	_assignParamsLayout = context->cache().fetch(descriptors::DescriptorSetLayout{
+		.createFlags = {},
+		.bindings = {{
+						 .binding = 0,
+						 .descriptorType = vk::DescriptorType::eStorageBuffer,
+						 .descriptorCount = 1,
+						 .stageFlags = vk::ShaderStageFlagBits::eCompute
+					 },
+					 {
+						 .binding = 1,
+						 .descriptorType = vk::DescriptorType::eStorageBuffer,
+						 .descriptorCount = 1,
+						 .stageFlags = vk::ShaderStageFlagBits::eCompute
+					 },
+					 {
+						 .binding = 2,
+						 .descriptorType = vk::DescriptorType::eStorageBuffer,
+						 .descriptorCount = 1,
+						 .stageFlags = vk::ShaderStageFlagBits::eCompute
+					 }},
+		PBF_DESC_DEBUG_NAME("Simulation Assign Descriptor Set Layout")
+	});
+	_assignParams = context->device().allocateDescriptorSets(vk::DescriptorSetAllocateInfo{
+		.descriptorPool = *_descriptorPool,
+		.descriptorSetCount = 1,
+		.pSetLayouts = &*_assignParamsLayout
+	}).front();
+	{
+		auto descriptorInfos = {
+			vk::DescriptorBufferInfo{
+				_particleSortKeys.buffer(),
+				0,
+				VK_WHOLE_SIZE
+			},
+			input,
+			output,
+		};
+		context->device().updateDescriptorSets({vk::WriteDescriptorSet{
+			.dstSet = _assignParams,
+			.dstBinding = 0,
+			.dstArrayElement = 0,
+			.descriptorCount = static_cast<uint32_t>(descriptorInfos.size()),
+			.descriptorType = vk::DescriptorType::eStorageBuffer,
+			.pImageInfo = nullptr,
+			.pBufferInfo = &*descriptorInfos.begin(),
+			.pTexelBufferView = nullptr
+		}}, {});
+	}
+	_assignPipeline = _context->cache().fetch(
+		descriptors::ComputePipeline{
+			.flags = {},
+			.shaderStage = descriptors::ShaderStage {
+				.stage = vk::ShaderStageFlagBits::eCompute,
+				.module = _context->cache().fetch(
+					pbf::descriptors::ShaderModule{
+						.source = pbf::descriptors::ShaderModule::File{"shaders/sort/assign.comp.spv"},
+						PBF_DESC_DEBUG_NAME("shaders/sort/assign.comp.spv Compute Shader")
+					}),
+				.entryPoint = "main",
+				.specialization = {
+					Specialization<uint32_t> { .constantID = 0, .value = 256 }
+				}
+			},
+			.pipelineLayout = _context->cache().fetch(
+				pbf::descriptors::PipelineLayout{
+					.setLayouts = {{
+						_assignParamsLayout
+					}},
+					PBF_DESC_DEBUG_NAME("assign pipeline Layout")
+				}),
+			PBF_DESC_DEBUG_NAME("assign pipeline")
+		}
+	);
 }
 
 void Simulation::run(vk::CommandBuffer buf)
@@ -223,26 +308,6 @@ void Simulation::run(vk::CommandBuffer buf)
 
 	_prescanParamsLayout.keepAlive();
 	_prescanPipeline.keepAlive();
-
-	/*auto buffer = std::move(_context->device().allocateCommandBuffersUnique(vk::CommandBufferAllocateInfo{
-		.commandPool = _context->commandPool(true),
-		.level = vk::CommandBufferLevel::ePrimary,
-		.commandBufferCount = 1U
-	}).front());
-
-#ifndef NDEBUG
-	{
-		static std::size_t __counter{0};
-		PBF_DEBUG_SET_OBJECT_NAME(_context, *buffer, fmt::format("Compute Command Buffer #{}", __counter++));
-	}
-#endif
-
-	buffer->begin(vk::CommandBufferBeginInfo{
-		.flags = vk::CommandBufferUsageFlagBits::eOneTimeSubmit,
-		.pInheritanceInfo = nullptr
-	});
-*/
-
 
 	buf.bindPipeline(vk::PipelineBindPoint::eCompute, *_prescanPipeline);
 	buf.bindDescriptorSets(vk::PipelineBindPoint::eCompute, *(_prescanPipeline.descriptor().pipelineLayout), 0, { _prescanParams }, {});
@@ -284,9 +349,27 @@ void Simulation::run(vk::CommandBuffer buf)
 
 	}
 
-//	buffer->end();
+	buf.bindPipeline(vk::PipelineBindPoint::eCompute, *_assignPipeline);
+	buf.bindDescriptorSets(vk::PipelineBindPoint::eCompute, *(_assignPipeline.descriptor().pipelineLayout), 0, { _assignParams }, {});
+	{
+		std::uint32_t numGroups = (getNumParticles() + 255)/256;
+		buf.dispatch(numGroups, 1, 1);
+	}
 
-//	return buffer;
+	buf.pipelineBarrier(
+		vk::PipelineStageFlagBits::eComputeShader,
+		vk::PipelineStageFlagBits::eVertexInput,
+		{},
+		{},
+		{vk::BufferMemoryBarrier{
+		.srcAccessMask = vk::AccessFlagBits::eShaderWrite,
+		.dstAccessMask = vk::AccessFlagBits::eVertexAttributeRead,
+		.srcQueueFamilyIndex = 0,
+		.dstQueueFamilyIndex = 0,
+		.buffer = _output.buffer,
+		.offset = 0,
+		.size = _output.range
+	}}, {});
 }
 
 void Simulation::initialize(vk::CommandBuffer buf)
