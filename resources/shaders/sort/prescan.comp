@@ -36,19 +36,21 @@ layout(std430, binding = 1) writeonly buffer BlockSumOutput
 };
 
 
-uvec3 GRID_HASHWEIGHTS = uvec3(1,0,0); // uvec3(1, 64, 64*64);
-vec3 GRID_MAX = vec3(31, 31, 31);
-vec3 GRID_MIN = vec3(-32, -32, -32);
+highp ivec3 GRID_HASHWEIGHTS = ivec3(1, 64, 64*64);
+highp ivec3 GRID_MAX = ivec3(1023, 31, 31);
+highp ivec3 GRID_MIN = ivec3(-32, -32, -32);
 
-uint GetHash (in vec3 pos)
+highp uint GetHash (in vec3 pos)
 {
-    ivec3 grid = ivec3 (clamp (pos.xyz, GRID_MIN, GRID_MAX));
+    highp ivec3 grid = ivec3 (clamp (pos.xyz, GRID_MIN, GRID_MAX));
     return uint (dot (grid - GRID_MIN, GRID_HASHWEIGHTS));
 }
 
-layout(constant_id = 1) const uint selectedBit = 0;
+layout(push_constant) uniform constants {
+    int selectedBit;
+};
 
-shared uint tmp[BLOCKSIZE];
+shared highp uint tmp[BLOCKSIZE];
 
 void do_scan();
 
@@ -57,13 +59,13 @@ void main() {
     // gl_WorkGroupID.x
     // gl_LocalInvocationIndex
 
-    ParticleData currentParticle1 = inputData[gl_WorkGroupID.x * BLOCKSIZE + gl_LocalInvocationIndex];
-    ParticleData currentParticle2 = inputData[gl_WorkGroupID.x * BLOCKSIZE + gl_LocalInvocationIndex + HALFBLOCKSIZE];
+    ParticleData currentParticle1 = inputData[gl_WorkGroupID.x * BLOCKSIZE + 2 * gl_LocalInvocationIndex];
+    ParticleData currentParticle2 = inputData[gl_WorkGroupID.x * BLOCKSIZE + 2 * gl_LocalInvocationIndex + 1];
     uint hash1 = GetHash(currentParticle1.position);
     uint hash2 = GetHash(currentParticle2.position);
 
-    tmp[gl_LocalInvocationIndex * 2] = (hash1 >> selectedBit) & 1u;
-    tmp[gl_LocalInvocationIndex * 2 + 1] = (hash2 >> selectedBit) & 1u;
+    tmp[gl_LocalInvocationIndex * 2] = bitfieldExtract(hash1,  selectedBit, 1);
+    tmp[gl_LocalInvocationIndex * 2 + 1] = bitfieldExtract(hash2,  selectedBit, 1);
 
     do_scan();
 }

@@ -42,7 +42,8 @@ private:
 
 	struct ScanStage {
 		Buffer buffer;
-		vk::DescriptorSet params;
+		vk::DescriptorSet params; // TODO rename
+		vk::DescriptorSet addBlockSumsParams;
 	};
 
 	std::vector<ScanStage> _scanStages;
@@ -54,8 +55,10 @@ private:
 	vk::DescriptorSet _assignParams;
 	CacheReference<descriptors::DescriptorSetLayout> _assignParamsLayout;
 
+	CacheReference<descriptors::ComputePipeline> _addBlockSumsPipeline;
+	CacheReference<descriptors::DescriptorSetLayout> _addBlockSumsParamsLayout;
 
-	static constexpr std::uint32_t blockSize = 256;
+	static constexpr std::uint32_t blockSize = 64;
 
 	bool initialized = false;
 	void initialize(vk::CommandBuffer buf);

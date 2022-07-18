@@ -6,7 +6,6 @@ macro(add_shader OUTPUT_NAME)
 
     list(APPEND shaders_out "${FULL_OUT}")
 
-
     add_custom_command(OUTPUT ${FULL_OUT}
             DEPENDS ${ARGN} ${Vulkan_GLSLANG_VALIDATOR_EXECUTABLE}
             COMMAND ${Vulkan_GLSLANG_VALIDATOR_EXECUTABLE} --enhanced-msgs --target-env vulkan1.1 -t -o "${FULL_OUT}" ${ARGN}
@@ -24,5 +23,6 @@ add_shader(particle.frag.spv particle.frag)
 add_shader(sort/prescan.comp.spv sort/scan_shared.comp sort/prescan.comp)
 add_shader(sort/scan.comp.spv sort/scan_shared.comp sort/scan.comp)
 add_shader(sort/assign.comp.spv sort/assign.comp)
+add_shader(sort/addblocksum.comp.spv sort/addblocksum.comp)
 
 add_custom_target(shaders-target DEPENDS "${shaders_out}")

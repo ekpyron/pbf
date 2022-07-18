@@ -4,8 +4,7 @@
 
 layout (local_size_x_id = 0, local_size_y = 1, local_size_z = 1) in;
 
-const uint HALFBLOCKSIZE = gl_WorkGroupSize.x;
-const uint BLOCKSIZE = 2 * HALFBLOCKSIZE;
+const uint BLOCKSIZE = gl_WorkGroupSize.x;
 
 struct ParticleData {
     vec3 position;
@@ -14,7 +13,7 @@ struct ParticleData {
 
 layout(std430, binding = 0) readonly buffer ParticleKeys
 {
-    uint data[];
+    uint keys[];
 };
 
 layout(std430, binding = 1) readonly buffer particleInputData
@@ -27,10 +26,38 @@ layout(std430, binding = 2) writeonly buffer particleOutputData
     ParticleData outputData[];
 };
 
+highp ivec3 GRID_HASHWEIGHTS = ivec3(1, 64, 64*64);
+highp ivec3 GRID_MAX = ivec3(1023, 31, 31);
+highp ivec3 GRID_MIN = ivec3(-32, -32, -32);
 
+highp uint GetHash (in vec3 pos)
+{
+    highp ivec3 grid = ivec3 (clamp (pos.xyz, GRID_MIN, GRID_MAX));
+    return uint (dot (grid - GRID_MIN, GRID_HASHWEIGHTS));
+}
+
+layout(push_constant) uniform constants {
+    int selectedBit;
+};
 
 void main()
 {
-    outputData[gl_WorkGroupID.x * HALFBLOCKSIZE + gl_LocalInvocationIndex] = inputData[gl_WorkGroupID.x * HALFBLOCKSIZE + gl_LocalInvocationIndex];
-    outputData[gl_WorkGroupID.x * HALFBLOCKSIZE + gl_LocalInvocationIndex].aux = data[gl_WorkGroupID.x * HALFBLOCKSIZE + gl_LocalInvocationIndex];
+    ParticleData currentParticle = inputData[gl_GlobalInvocationID.x];
+    uint hash = GetHash(currentParticle.position);
+
+    uint prefixSum = keys[gl_GlobalInvocationID.x];
+    // prefixSum = number of particles globally with selected bit = 1 before me.
+
+    outputData[prefixSum] = currentParticle;
+    outputData[prefixSum].aux = selectedBit * 64;
+
+/*
+    outputData[keys[gl_WorkGroupID.x * BLOCKSIZE + gl_LocalInvocationIndex] * 2 + ((hash >> selectedBit) & 1u)] = currentParticle;
+    outputData[keys[gl_WorkGroupID.x * BLOCKSIZE + gl_LocalInvocationIndex] * 2 + ((hash >> selectedBit) & 1u)].aux = selectedBit * 64;
+*/
+
+/*
+    outputData[gl_WorkGroupID.x * BLOCKSIZE + gl_LocalInvocationIndex] = inputData[gl_WorkGroupID.x * BLOCKSIZE + gl_LocalInvocationIndex];
+    outputData[gl_WorkGroupID.x * BLOCKSIZE + gl_LocalInvocationIndex].aux = keys[gl_WorkGroupID.x * BLOCKSIZE + gl_LocalInvocationIndex];
+    */
 }
