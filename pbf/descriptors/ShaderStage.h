@@ -12,8 +12,8 @@ concept SpecializationType = std::is_trivial_v<T> && std::is_standard_layout_v<T
 
 template<SpecializationType T>
 struct Specialization {
-	uint32_t constantID{};
-	T value{};
+	uint32_t constantID;
+	T value;
 };
 }
 

@@ -1,13 +1,16 @@
 macro(add_shader OUTPUT_NAME)
 
     set(FULL_OUT "${CMAKE_CURRENT_BINARY_DIR}/${OUTPUT_NAME}")
+    get_filename_component(OUT_DIR "${FULL_OUT}" DIRECTORY)
+    file(MAKE_DIRECTORY "${OUT_DIR}")
+
     list(APPEND shaders_out "${FULL_OUT}")
 
 
     add_custom_command(OUTPUT ${FULL_OUT}
             DEPENDS ${ARGN} ${Vulkan_GLSLANG_VALIDATOR_EXECUTABLE}
-            COMMAND ${Vulkan_GLSLANG_VALIDATOR_EXECUTABLE} --target-env vulkan1.1 -t -o ${FULL_OUT} ${ARGN}
-            WORKING_DIRECTORY ${CMAKE_CURRENT_LIST_DIR}
+            COMMAND ${Vulkan_GLSLANG_VALIDATOR_EXECUTABLE} --target-env vulkan1.1 -t -o "${FULL_OUT}" ${ARGN}
+            WORKING_DIRECTORY "${CMAKE_CURRENT_LIST_DIR}"
             VERBATIM
     )
 endmacro()
