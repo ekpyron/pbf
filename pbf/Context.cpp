@@ -300,7 +300,7 @@ void Context::run() {
 									    0.0f, -1.0f, 0.0f, 0.0f,
 									    0.0f,  0.0f, 0.5f, 0.0f,
 									    0.0f,  0.0f, 0.5f, 1.0f);
-		glm::mat4 projmat = glm::perspective(glm::radians(60.0f), float(width) / float(height), 0.1f, 100.0f);
+		glm::mat4 projmat = glm::perspective(glm::radians(60.0f), float(width) / float(height), 0.1f, 1000.0f);
 		glm::mat4 mvmat = _camera.GetViewMatrix(); // glm::rotate(glm::translate(glm::mat4(1), glm::vec3(0,0,-3)), rot, glm::vec3(0,0,1));
 		rot += 1.0f * timePassed;
 		globalUniformData->mvpmatrix = clip * projmat * mvmat;

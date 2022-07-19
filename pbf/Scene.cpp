@@ -23,7 +23,8 @@ Scene::Scene(Context *context)
 : _context(context), _particleData{
 	context,
 	sizeof(ParticleData) * _numParticles * context->renderer().framePrerenderCount(),
-	vk::BufferUsageFlagBits::eTransferDst | vk::BufferUsageFlagBits::eStorageBuffer | vk::BufferUsageFlagBits::eVertexBuffer,
+	// TODO: maybe remove transfer src
+	vk::BufferUsageFlagBits::eTransferSrc | vk::BufferUsageFlagBits::eTransferDst | vk::BufferUsageFlagBits::eStorageBuffer | vk::BufferUsageFlagBits::eVertexBuffer,
 	pbf::MemoryType::STATIC
 } {
 
@@ -56,14 +57,15 @@ void Scene::frame(vk::CommandBuffer &buf) {
 
 		ParticleData* data = reinterpret_cast<ParticleData*>(initializeBuffer.data());
 
-		for (int32_t x = 0; x < 64; ++x)
+		for (int32_t x = 0; x < 256; ++x)
+			data[x].position = glm::vec3(x - 32, 0, 0);
+/*		for (int32_t x = 0; x < 64; ++x)
 			for (int32_t y = 0; y < 64; ++y)
 				for (int32_t z = 0; z < 64; ++z)
 				{
-					auto id = (64 * 64 * x + 64 * y + z);
+					auto id = (64 * 64 * z + 64 * y + x);
 					data[id].position = glm::vec3(x - 32, y - 32, z - 32);
-				}
-
+				}*/
 		initializeBuffer.flush();
 
 		buf.copyBuffer(initializeBuffer.buffer(), _particleData.buffer(), {

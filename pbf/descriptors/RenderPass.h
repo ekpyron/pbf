@@ -28,15 +28,14 @@ struct RenderPass {
         std::optional<vk::AttachmentReference> depthStencilAttachment;
         std::vector<std::uint32_t> preserveAttachments;
 
-        template<typename T = Subpass>
+	private:
+		using T = Subpass;
+	public:
         using Compare = PBFMemberComparator<&T::flags, &T::pipelineBindPoint, &T::inputAttachments, &T::colorAttachments, &T::resolveAttachments,
                     &T::depthStencilAttachment, &T::preserveAttachments>;
     };
 
     vk::UniqueRenderPass realize(ContextInterface *context) const;
-
-    template<typename T = RenderPass>
-    using Compare = PBFMemberComparator<&T::attachments, &T::subpasses, &T::subpassDependencies>;
 
     std::vector<vk::AttachmentDescription> attachments;
     std::vector<Subpass> subpasses;
@@ -45,6 +44,12 @@ struct RenderPass {
 #ifndef NDEBUG
     std::string debugName;
 #endif
+
+private:
+	using T = RenderPass;
+public:
+	using Compare = PBFMemberComparator<&T::attachments, &T::subpasses, &T::subpassDependencies>;
+
 };
 
 }

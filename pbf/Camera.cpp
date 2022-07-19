@@ -49,8 +49,8 @@ void Camera::SetPosition (const glm::vec3 &_pos)
 
 void Camera::Rotate (float _xangle, float _yangle)
 {
-    xangle += 1.0f * _xangle;
-    yangle += 1.0f * _yangle;
+    xangle += 2.0f * _xangle;
+    yangle += 2.0f * _yangle;
 
     rot = glm::rotate (glm::quat (1, 0, 0, 0), yangle, glm::vec3 (0.0f, 1.0f, 0.0f));
     rot = glm::rotate (rot, xangle, glm::vec3 (1.0f, 0.0f, 0.0f));
@@ -58,15 +58,15 @@ void Camera::Rotate (float _xangle, float _yangle)
 
 void Camera::Zoom (float value)
 {
-    pos += 10.0f * value * (rot * glm::vec3 (0, 0, 1));
+    pos += 50.0f * value * (rot * glm::vec3 (0, 0, 1));
 }
 
 void Camera::MoveX (float value)
 {
-    pos += 10.0f * value * (rot * glm::vec3 (1, 0, 0));
+    pos += 50.0f * value * (rot * glm::vec3 (1, 0, 0));
 }
 
 void Camera::MoveY (float value)
 {
-    pos += 10.0f * value * (rot * glm::vec3 (0, 1, 0));
+    pos += 50.0f * value * (rot * glm::vec3 (0, 1, 0));
 }

@@ -29,18 +29,22 @@ struct DescriptorSetLayout {
         vk::ShaderStageFlags stageFlags;
         //mutable const std::vector<CacheReference<Sampler>> immutableSamplers; // todo immutable samplers
 
-        template<typename T = Binding>
+	private:
+		using T = Binding;
+	public:
         using Compare = PBFMemberComparator<&T::binding, &T::descriptorType, &T::descriptorCount, &T::stageFlags>;
     };
-
-    template<typename T = DescriptorSetLayout>
-    using Compare = PBFMemberComparator<&T::createFlags, &T::bindings>;
 
     vk::DescriptorSetLayoutCreateFlags createFlags;
     vector32<Binding> bindings;
 #ifndef NDEBUG
     std::string debugName;
 #endif
+
+private:
+	using T = DescriptorSetLayout;
+public:
+	using Compare = PBFMemberComparator<&T::createFlags, &T::bindings>;
 
 };
 }

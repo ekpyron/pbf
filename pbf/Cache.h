@@ -193,6 +193,7 @@ public:
         return _obj < rhs._obj;
     }
 
+	static constexpr bool AllowNativeComparison = true;
 private:
 
     const CachedObject<T> *_obj = nullptr;

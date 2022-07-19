@@ -31,23 +31,34 @@ private:
 	vk::DescriptorBufferInfo _input;
 	vk::DescriptorBufferInfo _output;
 
-	CacheReference<descriptors::ComputePipeline> _prescanPipeline;
-	CacheReference<descriptors::ComputePipeline> _scanPipeline;
-	CacheReference<descriptors::DescriptorSetLayout> _scanParamsLayout;
+	vk::UniqueDescriptorPool _descriptorPool;
 
 	Buffer _prescanBlocksums;
+
+	CacheReference<descriptors::ComputePipeline> _prescanPipeline;
+	CacheReference<descriptors::DescriptorSetLayout> _prescanParamsLayout;
+	vk::DescriptorSet _prescanParams;
+
+
 	struct ScanStage {
 		Buffer buffer;
-		vk::DescriptorSet params;
+		vk::DescriptorSet params; // TODO rename
+		vk::DescriptorSet addBlockSumsParams;
 	};
 
 	std::vector<ScanStage> _scanStages;
 
-	static constexpr std::uint32_t blockSize = 256;
+	CacheReference<descriptors::ComputePipeline> _scanPipeline;
+	CacheReference<descriptors::DescriptorSetLayout> _scanParamsLayout;
 
-	vk::UniqueDescriptorPool _descriptorPool;
-	CacheReference<descriptors::DescriptorSetLayout> _prescanParamsLayout;
-	vk::DescriptorSet _prescanParams;
+	CacheReference<descriptors::ComputePipeline> _assignPipeline;
+	vk::DescriptorSet _assignParams;
+	CacheReference<descriptors::DescriptorSetLayout> _assignParamsLayout;
+
+	CacheReference<descriptors::ComputePipeline> _addBlockSumsPipeline;
+	CacheReference<descriptors::DescriptorSetLayout> _addBlockSumsParamsLayout;
+
+	static constexpr std::uint32_t blockSize = 64;
 
 	bool initialized = false;
 	void initialize(vk::CommandBuffer buf);

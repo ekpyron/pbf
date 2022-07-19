@@ -1,7 +1,7 @@
 find_package(Threads REQUIRED)
 
 add_library(pbf_common STATIC
-        Cache.h Cache.cpp descriptors/RenderPass.h descriptors/Order.h descriptors/VkOrder.h descriptors/RenderPass.cpp
+        Cache.h Cache.cpp descriptors/RenderPass.h descriptors/Order.h descriptors/RenderPass.cpp
         descriptors/GraphicsPipeline.cpp descriptors/GraphicsPipeline.h descriptors/ShaderModule.cpp
         descriptors/ShaderModule.h descriptors/PipelineLayout.cpp descriptors/PipelineLayout.h
         descriptors/ComputePipeline.h descriptors/ComputePipeline.cpp

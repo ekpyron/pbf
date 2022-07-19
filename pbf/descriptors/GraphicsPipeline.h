@@ -20,14 +20,6 @@ namespace pbf::descriptors {
 struct GraphicsPipeline {
     vk::UniquePipeline realize(ContextInterface* context) const;
 
-    template<typename T = GraphicsPipeline>
-    using Compare = PBFMemberComparator<&T::shaderStages, &T::vertexBindingDescriptions, &T::vertexInputAttributeDescriptions,
-                &T::primitiveTopology, &T::primitiveRestartEnable, &T::tessellationPatchControlPoints,
-                &T::rasterizationStateCreateInfo, &T::multisampleStateCreateInfo, &T::depthStencilStateCreateInfo,
-                &T::colorBlendAttachmentStates,
-                &T::dynamicStates, &T::blendConstants, &T::blendLogicOp, &T::subpass,
-                &T::viewport, &T::scissor, &T::pipelineLayout, &T::renderPass>;
-
     std::vector<ShaderStage> shaderStages;
     std::vector<vk::VertexInputBindingDescription> vertexBindingDescriptions;
     std::vector<vk::VertexInputAttributeDescription> vertexInputAttributeDescriptions;
@@ -52,9 +44,16 @@ struct GraphicsPipeline {
 #ifndef NDEBUG
     std::string debugName;
 #endif
-
-    template<typename T = GraphicsPipeline>
-    using Depends = crampl::NonTypeList<&T::renderPass>;
+private:
+    using T = GraphicsPipeline;
+public:
+	using Compare = PBFMemberComparator<&T::shaderStages, &T::vertexBindingDescriptions, &T::vertexInputAttributeDescriptions,
+		&T::primitiveTopology, &T::primitiveRestartEnable, &T::tessellationPatchControlPoints,
+		&T::rasterizationStateCreateInfo, &T::multisampleStateCreateInfo, &T::depthStencilStateCreateInfo,
+		&T::colorBlendAttachmentStates,
+		&T::dynamicStates, &T::blendConstants, &T::blendLogicOp, &T::subpass,
+		&T::viewport, &T::scissor, &T::pipelineLayout, &T::renderPass>;
+	using Depends = crampl::NonTypeList<&T::renderPass>;
 };
 
 }
