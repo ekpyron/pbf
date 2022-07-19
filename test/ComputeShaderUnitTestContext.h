@@ -50,12 +50,16 @@ public:
 			.commandBufferCount = 1,
 			.pCommandBuffers = &_commandBuffer
 		}});
+		_queue.waitIdle();
 
 		_device->waitIdle();
 	}
 
 	static descriptors::ShaderModule::RawSPIRV compileComputeShader(const std::string& _source);
 
+	std::uint32_t queueFamilyIndex() const {
+		return _queueFamilyIndex;
+	}
 private:
 	vk::DispatchLoaderStatic _dls;
 	vk::UniqueInstance _instance;

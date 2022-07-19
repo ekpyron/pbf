@@ -52,16 +52,22 @@ protected:
 	void flush_() override {}
 };
 
+struct Loggers {
+	Loggers() {
+		auto sink = std::make_shared<Catch2Sink>();
+		auto loggerVulkan = std::make_shared<spdlog::logger>("vulkan", sink);
+		loggerVulkan->set_pattern("[%T.%f] %^[%l] [Vulkan] %v%$");
+		loggerVulkan->set_level(spdlog::level::debug);
+		spdlog::register_logger(loggerVulkan);
+		auto consoleLogger = std::make_shared<spdlog::logger>("console", sink);
+		consoleLogger->set_pattern("[%T.%f] %^[%l] %v%$");
+		consoleLogger->set_level(spdlog::level::debug);
+		spdlog::register_logger(consoleLogger);
+	}
+};
+
 ComputeShaderUnitTestContext::ComputeShaderUnitTestContext() {
-	auto sink = std::make_shared<Catch2Sink>();
-	auto loggerVulkan = std::make_shared<spdlog::logger>("vulkan", sink);
-	loggerVulkan->set_pattern("[%T.%f] %^[%l] [Vulkan] %v%$");
-	loggerVulkan->set_level(spdlog::level::debug);
-	spdlog::register_logger(loggerVulkan);
-	auto consoleLogger = std::make_shared<spdlog::logger>("console", sink);
-	consoleLogger->set_pattern("[%T.%f] %^[%l] %v%$");
-	consoleLogger->set_level(spdlog::level::debug);
-	spdlog::register_logger(consoleLogger);
+	static Loggers loggers;
 
 	auto extensions = {VK_EXT_DEBUG_UTILS_EXTENSION_NAME};
 	auto layers = {"VK_LAYER_KHRONOS_validation"};
