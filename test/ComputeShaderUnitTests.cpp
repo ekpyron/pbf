@@ -11,6 +11,7 @@
 #include <catch2/catch_test_macros.hpp>
 #include "ComputeShaderUnitTestContext.h"
 #include <ranges>
+#include <random>
 
 using ComputeShaderUnitTest = pbf::test::ComputeShaderUnitTestContext;
 
@@ -36,7 +37,7 @@ TEST_CASE_METHOD(ComputeShaderUnitTest, "Compute Shader Stub Test", "[stub]")
 				.module = cache().fetch(
 					descriptors::ShaderModule{
 						.source = compileComputeShader(R"(
-#version 450
+#version 460
 #extension GL_ARB_separate_shader_objects : enable
 #extension GL_KHR_shader_subgroup_basic : enable
 
@@ -120,31 +121,365 @@ void main()
 }
 
 
+uint32_t bitfieldExtract(uint32_t value, int32_t offset, int32_t size) {
+	return (value >> offset) & ((1 << size) - 1);
+}
+
+TEST_CASE_METHOD(ComputeShaderUnitTest, "Bitfield Extract", "[bitfield extract]")
+{
+	CHECK(bitfieldExtract(0, 0, 2) == 0);
+	CHECK(bitfieldExtract(1, 0, 2) == 1);
+	CHECK(bitfieldExtract(2, 0, 2) == 2);
+	CHECK(bitfieldExtract(3, 0, 2) == 3);
+
+	CHECK(bitfieldExtract(4, 0, 2) == 0);
+	CHECK(bitfieldExtract(5, 0, 2) == 1);
+	CHECK(bitfieldExtract(6, 0, 2) == 2);
+	CHECK(bitfieldExtract(7, 0, 2) == 3);
+
+	CHECK(bitfieldExtract(4, 2, 2) == 1);
+	CHECK(bitfieldExtract(5, 2, 2) == 1);
+	CHECK(bitfieldExtract(6, 2, 2) == 1);
+	CHECK(bitfieldExtract(7, 2, 2) == 1);
+
+	CHECK(bitfieldExtract(0b0000, 2, 2) == 0b00);
+	CHECK(bitfieldExtract(0b0100, 2, 2) == 0b01);
+	CHECK(bitfieldExtract(0b1000, 2, 2) == 0b10);
+	CHECK(bitfieldExtract(0b1100, 2, 2) == 0b11);
+}
+
+
+TEST_CASE("CPU Sort Test", "[cpu sort]")
+{
+	std::vector<uint32_t> initialKeys;
+	{
+		std::random_device rd;  //Will be used to obtain a seed for the random number engine
+		std::mt19937 gen(rd()); //Standard mersenne_twister_engine seeded with rd()
+		std::uniform_int_distribution<uint32_t> distrib(0u, std::numeric_limits<uint32_t>::max());
+		for (size_t i = 0; i < 32 * 32 * 33 + 16; ++i)
+			initialKeys.emplace_back(distrib(gen));
+	}
+	const uint32_t numKeys = static_cast<uint32_t>(initialKeys.size());
+	const uint32_t sortBitCount = 32;
+	const uint32_t blockSize = 16;
+	const uint32_t BLOCKSIZE = blockSize;
+	const uint32_t halfBlockSize = blockSize / 2;
+	const uint32_t HALFBLOCKSIZE = halfBlockSize;
+	const uint32_t numGroups = (numKeys + blockSize - 1) / blockSize;
+
+	const uint32_t LOG2HALFBLOCKSIZE = []()
+	{
+		uint result = 0;
+		for (uint d = blockSize / 2; d > 0; d /= 2)
+			result++;
+		return result;
+	}();
+	const uint32_t LOG2BLOCKSIZE = []()
+	{
+		uint result = 0;
+		for (uint d = 1; d < blockSize; d *= 2)
+			result++;
+		return result;
+	}();
+
+	auto keys = initialKeys;
+	auto GetHash = [&keys](uint32_t index) {
+		return keys[index];
+	};
+
+	std::vector<uint32_t> result;
+	result.resize(keys.size());
+
+
+	std::vector<uint32_t> prefixSum;
+	prefixSum.resize(numKeys);
+
+	std::vector<std::vector<uint32_t>> blockSums;
+	for (ssize_t blockSumSize = 4 * numGroups; blockSumSize > 1; blockSumSize = (blockSumSize + blockSize - 1) / blockSize) {
+		blockSums.emplace_back((blockSumSize + blockSize - 1)&~(blockSize - 1));
+	}
+	blockSums.emplace_back(blockSize);
+
+	auto& prescanBlockSum = blockSums.front();
+
+	const glm::u32vec4 blockSumOffsets = {
+		0, numGroups, numGroups * 2, numGroups * 3
+	};
+
+	for (uint32_t bit = 0; bit < sortBitCount; bit += 2)
+	{
+		uint32_t bitShift = bit;
+		using uvec4 = glm::uvec4;
+
+		// prescan
+		for (uint32_t workGroupID = 0; workGroupID < numGroups; workGroupID++)
+		{
+			glm::uvec3 gl_WorkGroupID(workGroupID, 0, 0);
+
+			glm::uvec4 tmp[blockSize];
+			for (uint32_t gl_LocalInvocationIndex = 0; gl_LocalInvocationIndex < halfBlockSize; gl_LocalInvocationIndex++)
+			{
+				uint bits1 =
+					bitfieldExtract(GetHash(gl_WorkGroupID.x * BLOCKSIZE + gl_LocalInvocationIndex), bitShift, 2);
+				uint bits2 = bitfieldExtract(
+					GetHash(gl_WorkGroupID.x * BLOCKSIZE + gl_LocalInvocationIndex + HALFBLOCKSIZE),
+					bitShift,
+					2
+				);
+
+				tmp[gl_LocalInvocationIndex] = uvec4(equal(bits1 * uvec4(1, 1, 1, 1), uvec4(0, 1, 2, 3)));
+				tmp[gl_LocalInvocationIndex + HALFBLOCKSIZE] =
+					uvec4(equal(bits2 * uvec4(1, 1, 1, 1), uvec4(0, 1, 2, 3)));
+			}
+			int offset = 1;
+			uint d = HALFBLOCKSIZE;
+			for (uint c = 0; c < LOG2HALFBLOCKSIZE; c++)
+			{
+				for (uint32_t gl_LocalInvocationIndex = 0; gl_LocalInvocationIndex < halfBlockSize; gl_LocalInvocationIndex++)
+				{
+					{
+						if (gl_LocalInvocationIndex < d)
+						{
+							uint i = offset * (2 * gl_LocalInvocationIndex + 1) - 1;
+							uint j = offset * (2 * gl_LocalInvocationIndex + 2) - 1;
+							tmp[j] += tmp[i];
+						}
+					}
+				}
+				offset *= 2;
+				d /= 2;
+			}
+			for (uint32_t gl_LocalInvocationIndex = 0; gl_LocalInvocationIndex < halfBlockSize; gl_LocalInvocationIndex++)
+			{
+				if (gl_LocalInvocationIndex == 0)
+				{
+					for (uint i = 0; i < 4; ++i)
+					{
+						auto ix = uvec4(blockSumOffsets)[i] + gl_WorkGroupID.x;
+						prescanBlockSum[ix] = uvec4(tmp[BLOCKSIZE - 1])[i];
+					}
+					tmp[BLOCKSIZE - 1] = uvec4(0, 0, 0, 0);
+				}
+			}
+			d = 1;
+			for (uint ctr = 0; ctr < LOG2BLOCKSIZE; ctr++)
+			{
+				offset /= 2;
+
+				for (uint32_t gl_LocalInvocationIndex = 0; gl_LocalInvocationIndex < halfBlockSize; gl_LocalInvocationIndex++)
+				{
+					if (gl_LocalInvocationIndex < d)
+					{
+						uint i = offset * (2 * gl_LocalInvocationIndex + 1) - 1;
+						uint j = offset * (2 * gl_LocalInvocationIndex + 2) - 1;
+						uvec4 t = tmp[i];
+						tmp[i] = tmp[j];
+						tmp[j] += t;
+					}
+				}
+				d *= 2;
+			}
+
+			for (uint32_t gl_LocalInvocationIndex = 0; gl_LocalInvocationIndex < halfBlockSize; gl_LocalInvocationIndex++)
+			{
+				uint bits1 =
+					bitfieldExtract(GetHash(gl_WorkGroupID.x * BLOCKSIZE + gl_LocalInvocationIndex), bitShift, 2);
+				uint bits2 = bitfieldExtract(
+					GetHash(gl_WorkGroupID.x * BLOCKSIZE + gl_LocalInvocationIndex + HALFBLOCKSIZE),
+					bitShift,
+					2
+				);
+
+
+				prefixSum[gl_WorkGroupID.x * BLOCKSIZE + gl_LocalInvocationIndex] = uvec4(tmp[gl_LocalInvocationIndex])[bits1];
+				prefixSum[gl_WorkGroupID.x * BLOCKSIZE + gl_LocalInvocationIndex + HALFBLOCKSIZE] = uvec4(tmp[gl_LocalInvocationIndex + HALFBLOCKSIZE])[bits2];
+
+			}
+		}
+
+		// scan
+		auto scan = [BLOCKSIZE, HALFBLOCKSIZE, LOG2BLOCKSIZE, LOG2HALFBLOCKSIZE](auto& prefixSum, auto& blockSum) {
+			// const uint32_t numBlockSums_alt = (4 * numGroups + blockSize - 1) / blockSize;
+			const uint32_t numBlockSums = (prefixSum.size() + blockSize - 1) / blockSize;
+			for (uint32_t workGroupID = 0; workGroupID < numBlockSums; workGroupID++)
+			{
+
+				glm::uvec3 gl_WorkGroupID(workGroupID, 0, 0);
+
+				uint32_t tmp[blockSize];
+				for (uint32_t gl_LocalInvocationIndex = 0; gl_LocalInvocationIndex < halfBlockSize; gl_LocalInvocationIndex++)
+				{
+					tmp[gl_LocalInvocationIndex] = prefixSum[gl_WorkGroupID.x * BLOCKSIZE + gl_LocalInvocationIndex];
+					tmp[gl_LocalInvocationIndex + HALFBLOCKSIZE] =
+						prefixSum[gl_WorkGroupID.x * BLOCKSIZE + gl_LocalInvocationIndex + HALFBLOCKSIZE];
+				}
+				int offset = 1;
+				uint d = HALFBLOCKSIZE;
+				for (uint ctr = 0; ctr < LOG2HALFBLOCKSIZE; ctr++)
+				{
+					for (uint32_t gl_LocalInvocationIndex = 0; gl_LocalInvocationIndex < halfBlockSize; gl_LocalInvocationIndex++)
+					{
+						{
+							{
+								if (gl_LocalInvocationIndex < d)
+								{
+									uint i = offset * (2 * gl_LocalInvocationIndex + 1) - 1;
+									uint j = offset * (2 * gl_LocalInvocationIndex + 2) - 1;
+									tmp[j] += tmp[i];
+								}
+							}
+						}
+					}
+					offset *= 2;
+					d /= 2;
+				}
+				for (uint32_t gl_LocalInvocationIndex = 0; gl_LocalInvocationIndex < halfBlockSize; gl_LocalInvocationIndex++)
+				{
+					if (gl_LocalInvocationIndex == 0)
+					{
+						blockSum[gl_WorkGroupID.x] = tmp[BLOCKSIZE - 1];
+						tmp[BLOCKSIZE - 1] = 0;
+					}
+				}
+
+				d = 1;
+				{
+					{
+						for (uint ctr = 0; ctr < LOG2BLOCKSIZE; ctr++)
+						{
+							offset /= 2;
+							for (uint32_t gl_LocalInvocationIndex = 0; gl_LocalInvocationIndex < halfBlockSize; gl_LocalInvocationIndex++)
+							{
+								if (gl_LocalInvocationIndex < d)
+								{
+									uint i = offset * (2 * gl_LocalInvocationIndex + 1) - 1;
+									uint j = offset * (2 * gl_LocalInvocationIndex + 2) - 1;
+									uint t = tmp[i];
+									tmp[i] = tmp[j];
+									tmp[j] += t;
+								}
+							}
+							d *= 2;
+						}
+					}
+				}
+
+				for (uint32_t gl_LocalInvocationIndex = 0; gl_LocalInvocationIndex < halfBlockSize; gl_LocalInvocationIndex++)
+				{
+					auto ix = gl_WorkGroupID.x * BLOCKSIZE + gl_LocalInvocationIndex;
+					prefixSum[ix] = tmp[gl_LocalInvocationIndex];
+					ix = gl_WorkGroupID.x * BLOCKSIZE + gl_LocalInvocationIndex + HALFBLOCKSIZE;
+					prefixSum.at(ix) = tmp[gl_LocalInvocationIndex + HALFBLOCKSIZE];
+				}
+			}
+		};
+
+		for (size_t i = 0; i < blockSums.size() - 1; ++i) {
+			scan(blockSums[i], blockSums[i + 1]);
+		}
+
+		auto addblocksums = [](auto& prefixSum, auto const& blockSum) {
+			const uint32_t numBlockSums = (prefixSum.size() + blockSize - 1) / blockSize;
+			for (uint32_t workGroupID = 0; workGroupID < numBlockSums; workGroupID++)
+			{
+				for (uint32_t gl_LocalInvocationIndex = 0; gl_LocalInvocationIndex < blockSize; gl_LocalInvocationIndex++)
+				{
+					prefixSum[workGroupID * blockSize + gl_LocalInvocationIndex] += blockSum[workGroupID];
+				}
+			}
+		};
+
+		for (ssize_t i = blockSums.size() - 2; i > 0; i--) {
+			addblocksums(blockSums[i - 1], blockSums[i]);
+		}
+
+/*		std::vector<uint32_t> blockSum2((blockSum.size() + blockSize - 1) / blockSize);
+
+		scan(blockSum, blockSum2);*/
+
+		// TODO: propagate block sums back down, i.e. addblocksum
+
+		// globalsort
+		for (uint32_t workGroupID = 0; workGroupID < numGroups; workGroupID++)
+		{
+			for (uint32_t gl_LocalInvocationIndex = 0; gl_LocalInvocationIndex < blockSize; gl_LocalInvocationIndex++)
+			{
+				uint32_t globalInvocationID = workGroupID * blockSize + gl_LocalInvocationIndex;
+
+				uint bits = bitfieldExtract(GetHash(globalInvocationID), bitShift, 2);
+
+				result[prescanBlockSum[blockSumOffsets[bits] + workGroupID] + prefixSum[globalInvocationID]] = keys[globalInvocationID];
+
+			}
+		}
+
+		keys = result;
+	}
+
+	std::sort(std::begin(initialKeys), std::end(initialKeys));
+	for (size_t i = 0; i < keys.size(); ++i) {
+		CHECK(keys[i] == initialKeys[i]);
+	}
+}
+
 TEST_CASE_METHOD(ComputeShaderUnitTest, "Compute Shader Sort Test", "[sort]")
 {
 	using namespace pbf;
 
-	std::vector<uint32_t> initialKeys{
-		100, 1, 14, 13, 4, 5, 6, 7, 300, 9, 10, 11, 12, 3, 2, 15,
-		100, 1, 142314, 13, 4, 5, 6, 7, 421269, 9, 10, 11, 12, 3, 2, 15
-	};
-	std::reverse(initialKeys.begin(), initialKeys.end());
-	uint32_t numKeys = static_cast<uint32_t>(initialKeys.size());
+
+	std::vector<uint32_t> initialKeys;
+//	{
+//		0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,
+//		0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15
+//		100, 1, 14, 13, 4, 5, 6, 7, 300, 9, 10, 11, 12, 3, 2, 15,
+//		100, 1, 142314, 13, 4, 5, 6, 7, 421269, 9, 10, 11, 12, 3, 2, 15
+//	};
+//	std::reverse(initialKeys.begin(), initialKeys.end());
+
+	{
+		std::random_device rd;  //Will be used to obtain a seed for the random number engine
+		std::mt19937 gen(rd()); //Standard mersenne_twister_engine seeded with rd()
+		std::uniform_int_distribution<> distrib(0, 15);
+		for (size_t i = 0; i < 32; ++i)
+			initialKeys.emplace_back(distrib(gen));
+	}
+
+	/*{
+		auto rd = std::random_device {};
+		auto rng = std::default_random_engine { rd() };
+		std::shuffle(std::begin(initialKeys), std::end(initialKeys), rng);
+	}*/
+	for (auto v: initialKeys)
+		UNSCOPED_INFO("Key: " + std::to_string(v));
+
+	const uint32_t numKeys = static_cast<uint32_t>(initialKeys.size());
 	const uint32_t blockSize = 16; // apparently has to be >= initialKeys.size() / 2 right now
+	const uint32_t sortBitCount = 4; // sort up to # of bits
+	struct PushConstants {
+		glm::u32vec4 blockSumOffset;
+		uint32_t bit = 0;
+	};
 
 	device().waitIdle();
+	Buffer hostBuffer{
+		this,
+		numKeys * sizeof(uint32_t),
+		vk::BufferUsageFlagBits::eTransferSrc|vk::BufferUsageFlagBits::eTransferDst,
+		MemoryType::DYNAMIC
+	};
 	Buffer keys{
 		this,
 		numKeys * sizeof(uint32_t),
-		vk::BufferUsageFlagBits::eStorageBuffer|vk::BufferUsageFlagBits::eTransferDst,
-		MemoryType::DYNAMIC
+		vk::BufferUsageFlagBits::eStorageBuffer|vk::BufferUsageFlagBits::eTransferDst|vk::BufferUsageFlagBits::eTransferSrc,
+		MemoryType::STATIC
 	};
+	device().waitIdle();
 	{
-		uint32_t *data = keys.as<uint32_t>();
+		uint32_t *data = hostBuffer.as<uint32_t>();
 		for (uint32_t i = 0; i < numKeys; ++i)
 			data[i] = initialKeys[i];
+		hostBuffer.flush();
 	}
-	keys.flush();
 	device().waitIdle();
 	Buffer result{
 		this,
@@ -160,7 +495,7 @@ TEST_CASE_METHOD(ComputeShaderUnitTest, "Compute Shader Sort Test", "[sort]")
 		MemoryType::STATIC
 	};
 
-	uint32_t numGroups = (numKeys + blockSize - 1) / blockSize;
+	const uint32_t numGroups = (numKeys + blockSize - 1) / blockSize;
 
 	Buffer blockSums{
 		this,
@@ -207,8 +542,7 @@ TEST_CASE_METHOD(ComputeShaderUnitTest, "Compute Shader Sort Test", "[sort]")
 			vk::PushConstantRange{
 				vk::ShaderStageFlagBits::eCompute,
 				0,
-				sizeof(uint32_t) * 4 +
-				sizeof(uint32_t)
+				sizeof(PushConstants)
 			}
 		},
 		PBF_DESC_DEBUG_NAME("prescan pipeline Layout")
@@ -221,27 +555,31 @@ TEST_CASE_METHOD(ComputeShaderUnitTest, "Compute Shader Sort Test", "[sort]")
 				.module = cache().fetch(
 					descriptors::ShaderModule{
 						.source = compileComputeShader(R"(
-#version 450
+#version 460
 #extension GL_ARB_separate_shader_objects : enable
 #extension GL_KHR_shader_subgroup_basic : enable
 
 layout (local_size_x_id = 0, local_size_y = 1, local_size_z = 1) in;
 
+precision highp float;
+precision highp int;
+
 const uint HALFBLOCKSIZE = gl_WorkGroupSize.x;
 const uint BLOCKSIZE = 2 * HALFBLOCKSIZE;
+layout (constant_id = 1) const uint LOG2HALFBLOCKSIZE = 0;
+layout (constant_id = 2) const uint LOG2BLOCKSIZE = 0;
 
-
-layout(std430, binding = 0) readonly buffer Keys
+layout(std430, binding = 0) readonly volatile coherent  buffer Keys
 {
     uint keys[];
 };
 
-layout(std430, binding = 1) writeonly buffer PrefixSums
+layout(std430, binding = 1) writeonly volatile coherent  buffer PrefixSums
 {
     uint prefixSum[];
 };
 
-layout(std430, binding = 2) writeonly buffer BlockSums
+layout(std430, binding = 2) writeonly volatile coherent  buffer BlockSums
 {
     uint blockSum[];
 };
@@ -259,7 +597,9 @@ shared uvec4 tmp[BLOCKSIZE];
 
 // TODO: what *exactly* is needed :-)?
 //#define BARRIER() barrier(); memoryBarrier(); memoryBarrierShared(); groupMemoryBarrier(); barrier()
-#define BARRIER() memoryBarrier(); groupMemoryBarrier(); barrier()
+//#define BARRIER() memoryBarrier(); groupMemoryBarrier(); barrier()
+#define BARRIER() memoryBarrier(); barrier()
+//#define BARRIER() barrier()
 
 void main()
 {
@@ -271,41 +611,49 @@ void main()
 
 
     int offset = 1;
-    for (uint d = HALFBLOCKSIZE; d > 0; d >>= 1)
-    {
-        BARRIER();
+	{
+		uint d = HALFBLOCKSIZE;
+		for (uint c = 0; c < LOG2HALFBLOCKSIZE; c++)
+		{
+			BARRIER();
 
-        if (gl_LocalInvocationIndex < d) {
-            uint i = offset * (2 * gl_LocalInvocationIndex + 1) - 1;
-            uint j = offset * (2 * gl_LocalInvocationIndex + 2) - 1;
-            tmp[j] += tmp[i];
-        }
-        offset <<= 1;
-    }
+			if (gl_LocalInvocationIndex < d) {
+				uint i = offset * (2 * gl_LocalInvocationIndex + 1) - 1;
+				uint j = offset * (2 * gl_LocalInvocationIndex + 2) - 1;
+				tmp[j] += tmp[i];
+			}
+			offset *= 2;
+			d /= 2;
+		}
+	}
 
 	BARRIER();
 
 	if (gl_LocalInvocationIndex == 0)
 	{
 		for(uint i = 0; i < 4; ++i)
-			blockSum[blockSumOffsets[i] + gl_WorkGroupID.x] = uvec4(tmp[BLOCKSIZE - 1])[i];
+			blockSum[uvec4(blockSumOffsets)[i] + gl_WorkGroupID.x] = uvec4(tmp[BLOCKSIZE - 1])[i];
 		tmp[BLOCKSIZE - 1] = uvec4(0, 0, 0, 0);
 	}
 
-    for (uint d = 1; d < BLOCKSIZE; d <<= 1)
-    {
-        offset >>= 1;
-        BARRIER();
+	{
+		uint d = 1;
+		for (uint ctr = 0; ctr < LOG2BLOCKSIZE; ctr++)
+		{
+			offset /= 2;
+			BARRIER();
 
-        if (gl_LocalInvocationIndex < d)
-        {
-            uint i = offset * (2 * gl_LocalInvocationIndex + 1) - 1;
-            uint j = offset * (2 * gl_LocalInvocationIndex + 2) - 1;
-            uvec4 t = tmp[i];
-            tmp[i] = tmp[j];
-            tmp[j] += t;
-        }
-    }
+			if (gl_LocalInvocationIndex < d)
+			{
+				uint i = offset * (2 * gl_LocalInvocationIndex + 1) - 1;
+				uint j = offset * (2 * gl_LocalInvocationIndex + 2) - 1;
+				uvec4 t = tmp[i];
+				tmp[i] = tmp[j];
+				tmp[j] += t;
+			}
+			d *= 2;
+		}
+	}
 
     BARRIER();
 
@@ -313,11 +661,23 @@ void main()
     prefixSum[gl_WorkGroupID.x * BLOCKSIZE + gl_LocalInvocationIndex + HALFBLOCKSIZE] = uvec4(tmp[gl_LocalInvocationIndex + HALFBLOCKSIZE])[bits2];
 }
 						)"),
-						PBF_DESC_DEBUG_NAME("Sort Compute Shader")
+						PBF_DESC_DEBUG_NAME("Prescan Compute Shader")
 					}),
 				.entryPoint = "main",
 				.specialization = {
-					Specialization<uint32_t>{.constantID = 0, .value = blockSize / 2 }
+					Specialization<uint32_t>{.constantID = 0, .value = blockSize / 2 },
+					Specialization<uint32_t>{.constantID = 1, .value = [&]() {
+						uint result = 0;
+						for (uint d = blockSize / 2; d > 0; d /= 2)
+							result++;
+						return result;
+					}()},
+					Specialization<uint32_t>{.constantID = 2, .value = [&]() {
+						uint result = 0;
+						for (uint d = 1; d < blockSize; d *= 2)
+							result++;
+						return result;
+					}()}
 				}
 			},
 			.pipelineLayout = sortPipelineLayout,
@@ -332,25 +692,32 @@ void main()
 				.module = cache().fetch(
 					descriptors::ShaderModule{
 						.source = compileComputeShader(R"(
-#version 450
+#version 460
 #extension GL_ARB_separate_shader_objects : enable
 #extension GL_KHR_shader_subgroup_basic : enable
 
 layout (local_size_x_id = 0, local_size_y = 1, local_size_z = 1) in;
 
+precision highp float;
+precision highp int;
+
 const uint HALFBLOCKSIZE = gl_WorkGroupSize.x;
 const uint BLOCKSIZE = 2 * HALFBLOCKSIZE;
+layout (constant_id = 1) const uint LOG2HALFBLOCKSIZE = 0;
+layout (constant_id = 2) const uint LOG2BLOCKSIZE = 0;
 
 // TODO: what *exactly* is needed :-)?
 //#define BARRIER() barrier(); memoryBarrier(); memoryBarrierShared(); groupMemoryBarrier(); barrier()
-#define BARRIER() memoryBarrier(); groupMemoryBarrier(); barrier()
+//#define BARRIER() memoryBarrier(); groupMemoryBarrier(); barrier()
+#define BARRIER() memoryBarrier(); barrier()
+//#define BARRIER() barrier()
 
-layout(std430, binding = 1) buffer PrefixSums
+layout(std430, binding = 1) volatile coherent buffer PrefixSums
 {
     uint prefixSum[];
 };
 
-layout(std430, binding = 2) buffer BlockSums
+layout(std430, binding = 2) volatile coherent buffer BlockSums
 {
     uint blockSum[];
 };
@@ -364,17 +731,23 @@ void main()
 
 
     int offset = 1;
-    for (uint d = HALFBLOCKSIZE; d > 0; d >>= 1)
-    {
-        BARRIER();
+	{
+		uint d = HALFBLOCKSIZE;
+#pragma unroll_loop_start
+		for (uint ctr = 0; ctr < LOG2HALFBLOCKSIZE; ctr++)
+		{
+			BARRIER();
 
-        if (gl_LocalInvocationIndex < d) {
-            uint i = offset * (2 * gl_LocalInvocationIndex + 1) - 1;
-            uint j = offset * (2 * gl_LocalInvocationIndex + 2) - 1;
-            tmp[j] += tmp[i];
-        }
-        offset <<= 1;
-    }
+			if (gl_LocalInvocationIndex < d) {
+				uint i = offset * (2 * gl_LocalInvocationIndex + 1) - 1;
+				uint j = offset * (2 * gl_LocalInvocationIndex + 2) - 1;
+				tmp[j] += tmp[i];
+			}
+			offset *= 2;
+			d /= 2;
+		}
+#pragma unroll_loop_end
+	}
 
     BARRIER();
 
@@ -383,21 +756,28 @@ void main()
 		blockSum[gl_WorkGroupID.x] = tmp[BLOCKSIZE - 1];
 		tmp[BLOCKSIZE - 1] = 0;
 	}
+    BARRIER();
 
-    for (uint d = 1; d < BLOCKSIZE; d <<= 1)
-    {
-        offset >>= 1;
-        BARRIER();
+	{
+		uint d = 1;
+#pragma unroll_loop_start
+		for (uint ctr = 0; ctr < LOG2BLOCKSIZE; ctr++)
+		{
+			offset /= 2;
+			BARRIER();
 
-        if (gl_LocalInvocationIndex < d)
-        {
-            uint i = offset * (2 * gl_LocalInvocationIndex + 1) - 1;
-            uint j = offset * (2 * gl_LocalInvocationIndex + 2) - 1;
-            uint t = tmp[i];
-            tmp[i] = tmp[j];
-            tmp[j] += t;
-        }
-    }
+			if (gl_LocalInvocationIndex < d)
+			{
+				uint i = offset * (2 * gl_LocalInvocationIndex + 1) - 1;
+				uint j = offset * (2 * gl_LocalInvocationIndex + 2) - 1;
+				uint t = tmp[i];
+				tmp[i] = tmp[j];
+				tmp[j] += t;
+			}
+			d *= 2;
+		}
+#pragma unroll_loop_end
+	}
 
     BARRIER();
 
@@ -409,7 +789,19 @@ void main()
 					}),
 				.entryPoint = "main",
 				.specialization = {
-					Specialization<uint32_t>{.constantID = 0, .value = blockSize / 2 }
+					Specialization<uint32_t>{.constantID = 0, .value = blockSize / 2 },
+					Specialization<uint32_t>{.constantID = 1, .value = [&]() {
+						uint result = 0;
+						for (uint d = blockSize / 2; d > 0; d /= 2)
+							result++;
+						return result;
+					}()},
+					Specialization<uint32_t>{.constantID = 2, .value = [&]() {
+						uint result = 0;
+						for (uint d = 1; d < blockSize; d *= 2)
+							result++;
+						return result;
+					}()}
 				}
 			},
 			.pipelineLayout = sortPipelineLayout,
@@ -425,7 +817,7 @@ void main()
 				.module = cache().fetch(
 					descriptors::ShaderModule{
 						.source = compileComputeShader(R"(
-#version 450
+#version 460
 #extension GL_ARB_separate_shader_objects : enable
 #extension GL_KHR_shader_subgroup_basic : enable
 
@@ -471,30 +863,33 @@ void main()
 				.module = cache().fetch(
 					descriptors::ShaderModule{
 						.source = compileComputeShader(R"(
-#version 450
+#version 460
 #extension GL_ARB_separate_shader_objects : enable
 #extension GL_KHR_shader_subgroup_basic : enable
+
+precision highp float;
+precision highp int;
 
 layout (local_size_x_id = 0, local_size_y = 1, local_size_z = 1) in;
 
 const uint BLOCKSIZE = gl_WorkGroupSize.x;
 
-layout(std430, binding = 0) readonly buffer Keys
+layout(std430, binding = 0) volatile coherent readonly buffer Keys
 {
     uint keys[];
 };
 
-layout(std430, binding = 1) readonly buffer PrefixSums
+layout(std430, binding = 1) volatile coherent readonly buffer PrefixSums
 {
     uint prefixSum[];
 };
 
-layout(std430, binding = 2) readonly buffer BlockSums
+layout(std430, binding = 2) volatile coherent readonly buffer BlockSums
 {
     uint blockSum[];
 };
 
-layout(std430, binding = 3) writeonly buffer Result
+layout(std430, binding = 3) volatile coherent writeonly buffer Result
 {
     uint result[];
 };
@@ -512,8 +907,12 @@ void main()
 {
 	uint bits = bitfieldExtract(GetHash(gl_GlobalInvocationID.x), bitShift, 2);
 
-	result[blockSum[blockSumOffsets[bits] + gl_WorkGroupID.x] + prefixSum[gl_GlobalInvocationID.x]] = keys[gl_GlobalInvocationID.x];
 	//result[gl_GlobalInvocationID.x] = blockSum[blockSumOffsets[bits] + gl_WorkGroupID.x] + prefixSum[gl_GlobalInvocationID.x];
+
+	result[blockSum[blockSumOffsets[bits] + gl_WorkGroupID.x] + prefixSum[gl_GlobalInvocationID.x]] = keys[gl_GlobalInvocationID.x];
+
+
+//result[gl_GlobalInvocationID.x] = blockSum[blockSumOffsets[bits] + gl_WorkGroupID.x] + prefixSum[gl_GlobalInvocationID.x];
 }
 						)"),
 						PBF_DESC_DEBUG_NAME("Global Sort Compute Shader")
@@ -609,31 +1008,211 @@ void main()
 
 	uint32_t barrierQueueFamily = VK_QUEUE_FAMILY_IGNORED;
 
+#if 0
+	run([&](vk::CommandBuffer buf)
+		{
+
+			buf.pipelineBarrier(
+				vk::PipelineStageFlagBits::eHost, vk::PipelineStageFlagBits::eTransfer, {}, {
+					vk::MemoryBarrier{
+						.srcAccessMask = vk::AccessFlagBits::eHostWrite | vk::AccessFlagBits::eMemoryWrite,
+						.dstAccessMask = vk::AccessFlagBits::eTransferRead | vk::AccessFlagBits::eMemoryRead
+					}
+				}, {}, {}
+			);
+
+			buf.copyBuffer(
+				hostBuffer.buffer(), keys.buffer(), {
+					vk::BufferCopy{
+						.srcOffset = 0,
+						.dstOffset = 0,
+						.size = hostBuffer.size()
+					}
+				}
+			);
+
+			buf.pipelineBarrier(
+				vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eComputeShader, {}, {
+					vk::MemoryBarrier{
+						.srcAccessMask = vk::AccessFlagBits::eTransferWrite | vk::AccessFlagBits::eMemoryWrite,
+						.dstAccessMask = vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eMemoryRead
+					}
+				}, {}, {}
+			);
+	});
+	for (uint32_t bit = 0; bit < sortBitCount; bit += 2)
+	{
+		run(
+			[&](vk::CommandBuffer buf)
+			{
+
+				PushConstants pushConstants{
+					.blockSumOffset = glm::u32vec4{
+						0, numGroups, numGroups * 2, numGroups * 3
+					},
+					.bit = bit
+				};
+
+				buf.bindPipeline(vk::PipelineBindPoint::eCompute, *prescanPipeline);
+				buf.bindDescriptorSets(
+					vk::PipelineBindPoint::eCompute,
+					*(prescanPipeline.descriptor().pipelineLayout),
+					0,
+					{prescanParams},
+					{}
+				);
+				buf.pushConstants(
+					*(prescanPipeline.descriptor().pipelineLayout),
+					vk::ShaderStageFlagBits::eCompute,
+					0,
+					sizeof(pushConstants),
+					&pushConstants
+				);
+				// reads keys; writes prefix sums and block sums
+				buf.dispatch(((numKeys + blockSize - 1) / blockSize), 1, 1);
+
+				buf.pipelineBarrier(
+					vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {}, {
+						vk::MemoryBarrier{
+							.srcAccessMask = vk::AccessFlagBits::eShaderWrite |
+											 vk::AccessFlagBits::eShaderRead |
+											 vk::AccessFlagBits::eMemoryWrite |
+											 vk::AccessFlagBits::eMemoryRead,
+							.dstAccessMask = vk::AccessFlagBits::eShaderWrite |
+											 vk::AccessFlagBits::eShaderRead |
+											 vk::AccessFlagBits::eMemoryWrite |
+											 vk::AccessFlagBits::eMemoryRead
+						}
+					}, {}, {}
+				);
+
+				buf.bindPipeline(vk::PipelineBindPoint::eCompute, *scanPipeline);
+				buf.bindDescriptorSets(
+					vk::PipelineBindPoint::eCompute,
+					*(scanPipeline.descriptor().pipelineLayout),
+					0,
+					{scanParams},
+					{}
+				);
+				// reads and writes block sums; writes block sums2
+				buf.dispatch(2, 1, 1); // TODO
+
+				buf.pipelineBarrier(
+					vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {}, {
+						vk::MemoryBarrier{
+							.srcAccessMask = vk::AccessFlagBits::eShaderWrite |
+											 vk::AccessFlagBits::eShaderRead |
+											 vk::AccessFlagBits::eMemoryWrite |
+											 vk::AccessFlagBits::eMemoryRead,
+							.dstAccessMask = vk::AccessFlagBits::eShaderWrite |
+											 vk::AccessFlagBits::eShaderRead |
+											 vk::AccessFlagBits::eMemoryWrite |
+											 vk::AccessFlagBits::eMemoryRead
+						}
+					}, {}, {}
+				);
+
+				buf.bindPipeline(vk::PipelineBindPoint::eCompute, *globalSortPipeline);
+				buf.bindDescriptorSets(
+					vk::PipelineBindPoint::eCompute,
+					*(globalSortPipeline.descriptor().pipelineLayout),
+					0,
+					{globalSortParams},
+					{}
+				);
+				buf.pushConstants(
+					*(globalSortPipeline.descriptor().pipelineLayout),
+					vk::ShaderStageFlagBits::eCompute,
+					0,
+					sizeof(pushConstants),
+					&pushConstants
+				);
+				// reads keys, prefix sums and block sums; writes result
+				buf.dispatch(((numKeys + blockSize - 1) / blockSize), 1, 1);
+			});
+		run([&](vk::CommandBuffer buf)
+			{
+				buf.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eTransfer, {}, {
+					vk::MemoryBarrier{
+						.srcAccessMask = vk::AccessFlagBits::eShaderWrite|vk::AccessFlagBits::eShaderRead|vk::AccessFlagBits::eMemoryWrite|vk::AccessFlagBits::eMemoryRead,
+						.dstAccessMask = vk::AccessFlagBits::eTransferRead|vk::AccessFlagBits::eMemoryRead
+					}
+				}, {}, {});
+
+				// reads result; writes keys
+				buf.copyBuffer(result.buffer(), keys.buffer(), {
+					vk::BufferCopy{
+						.srcOffset = 0,
+						.dstOffset = 0,
+						.size = result.size()
+					}
+				});
+
+
+				buf.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eComputeShader, {}, {
+					vk::MemoryBarrier{
+						.srcAccessMask = vk::AccessFlagBits::eTransferWrite|vk::AccessFlagBits::eMemoryWrite,
+						.dstAccessMask = vk::AccessFlagBits::eShaderWrite|vk::AccessFlagBits::eShaderRead|vk::AccessFlagBits::eMemoryWrite|vk::AccessFlagBits::eMemoryRead
+					}
+				}, {}, {});
+			}
+		);
+	}
+	run(
+		[&](vk::CommandBuffer buf)
+		{
+
+			buf.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eTransfer, {}, {
+				vk::MemoryBarrier{
+					.srcAccessMask = vk::AccessFlagBits::eTransferWrite|vk::AccessFlagBits::eMemoryWrite,
+					.dstAccessMask = vk::AccessFlagBits::eTransferRead|vk::AccessFlagBits::eMemoryRead
+				}
+			}, {}, {});
+
+			buf.copyBuffer(keys.buffer(), hostBuffer.buffer(), {
+				vk::BufferCopy{
+					.srcOffset = 0,
+					.dstOffset = 0,
+					.size = hostBuffer.size()
+				}
+			});
+
+			buf.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eHost, {}, {
+				vk::MemoryBarrier{
+					.srcAccessMask = vk::AccessFlagBits::eTransferWrite|vk::AccessFlagBits::eMemoryWrite,
+					.dstAccessMask = vk::AccessFlagBits::eHostRead|vk::AccessFlagBits::eMemoryRead
+				}
+			}, {}, {});
+		}
+	);
+#endif
+#if 1
 	run([&](vk::CommandBuffer buf) {
 
-		buf.pipelineBarrier(vk::PipelineStageFlagBits::eHost, vk::PipelineStageFlagBits::eComputeShader, {}, {
-				vk::MemoryBarrier{
-					.srcAccessMask = vk::AccessFlagBits::eHostWrite,
-					.dstAccessMask = vk::AccessFlagBits::eShaderRead
-				}
-			}, {
-			vk::BufferMemoryBarrier{
-				.srcAccessMask = vk::AccessFlagBits::eHostWrite,
-				.dstAccessMask = vk::AccessFlagBits::eShaderRead,
-				.srcQueueFamilyIndex = barrierQueueFamily,
-				.dstQueueFamilyIndex = barrierQueueFamily,
-				.buffer = keys.buffer(),
-				.offset = 0,
-				.size = keys.size()
+		buf.pipelineBarrier(vk::PipelineStageFlagBits::eHost, vk::PipelineStageFlagBits::eTransfer, {}, {
+			vk::MemoryBarrier{
+				.srcAccessMask = vk::AccessFlagBits::eHostWrite|vk::AccessFlagBits::eMemoryWrite,
+				.dstAccessMask = vk::AccessFlagBits::eTransferRead|vk::AccessFlagBits::eMemoryRead
 			}
-		}, {});
+		}, {}, {});
 
-		for (uint32_t bit = 0; bit < 32; bit += 2) {
+		buf.copyBuffer(hostBuffer.buffer(), keys.buffer(), {
+			vk::BufferCopy{
+				.srcOffset = 0,
+				.dstOffset = 0,
+				.size = hostBuffer.size()
+			}
+		});
 
-		struct PushConstants {
-			glm::u32vec4 blockSumOffset;
-			uint32_t bit = 0;
-		};
+		buf.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eComputeShader, {}, {
+			vk::MemoryBarrier{
+				.srcAccessMask = vk::AccessFlagBits::eTransferWrite|vk::AccessFlagBits::eMemoryWrite,
+				.dstAccessMask = vk::AccessFlagBits::eShaderRead|vk::AccessFlagBits::eMemoryRead
+			}
+		}, {}, {});
+
+		for (uint32_t bit = 0; bit < sortBitCount; bit += 2) {
+
 		PushConstants pushConstants {
 			.blockSumOffset = glm::u32vec4{
 				0, numGroups, numGroups * 2, numGroups * 3
@@ -645,33 +1224,14 @@ void main()
 		buf.bindDescriptorSets(vk::PipelineBindPoint::eCompute, *(prescanPipeline.descriptor().pipelineLayout), 0, {prescanParams}, {});
 		buf.pushConstants(*(prescanPipeline.descriptor().pipelineLayout), vk::ShaderStageFlagBits::eCompute, 0, sizeof(pushConstants), &pushConstants);
 		// reads keys; writes prefix sums and block sums
-		buf.dispatch(((numKeys + blockSize - 1) / blockSize) * 2, 1, 1);
+		buf.dispatch(((numKeys + blockSize - 1) / blockSize), 1, 1);
 
 		buf.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {}, {
 				vk::MemoryBarrier{
-					.srcAccessMask = vk::AccessFlagBits::eShaderWrite,
-					.dstAccessMask = vk::AccessFlagBits::eShaderRead
+					.srcAccessMask = vk::AccessFlagBits::eShaderWrite|vk::AccessFlagBits::eShaderRead|vk::AccessFlagBits::eMemoryWrite|vk::AccessFlagBits::eMemoryRead,
+					.dstAccessMask = vk::AccessFlagBits::eShaderWrite|vk::AccessFlagBits::eShaderRead|vk::AccessFlagBits::eMemoryWrite|vk::AccessFlagBits::eMemoryRead
 				}
-			}, {
-			vk::BufferMemoryBarrier{
-				.srcAccessMask = vk::AccessFlagBits::eShaderWrite,
-				.dstAccessMask = vk::AccessFlagBits::eShaderRead,
-				.srcQueueFamilyIndex = barrierQueueFamily,
-				.dstQueueFamilyIndex = barrierQueueFamily,
-				.buffer = prefixSums.buffer(),
-				.offset = 0,
-				.size = prefixSums.size()
-			},
-			vk::BufferMemoryBarrier{
-				.srcAccessMask = vk::AccessFlagBits::eShaderWrite,
-				.dstAccessMask = vk::AccessFlagBits::eShaderRead,
-				.srcQueueFamilyIndex = barrierQueueFamily,
-				.dstQueueFamilyIndex = barrierQueueFamily,
-				.buffer = blockSums.buffer(),
-				.offset = 0,
-				.size = blockSums.size()
-			}
-		}, {});
+			}, {}, {});
 
 		buf.bindPipeline(vk::PipelineBindPoint::eCompute, *scanPipeline);
 		buf.bindDescriptorSets(vk::PipelineBindPoint::eCompute, *(scanPipeline.descriptor().pipelineLayout), 0, {scanParams}, {});
@@ -680,38 +1240,10 @@ void main()
 
 		buf.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {}, {
 				vk::MemoryBarrier{
-					.srcAccessMask = vk::AccessFlagBits::eShaderWrite,
-					.dstAccessMask = vk::AccessFlagBits::eShaderRead
+					.srcAccessMask = vk::AccessFlagBits::eShaderWrite|vk::AccessFlagBits::eShaderRead|vk::AccessFlagBits::eMemoryWrite|vk::AccessFlagBits::eMemoryRead,
+					.dstAccessMask = vk::AccessFlagBits::eShaderWrite|vk::AccessFlagBits::eShaderRead|vk::AccessFlagBits::eMemoryWrite|vk::AccessFlagBits::eMemoryRead
 				}
-			}, {
-			/*vk::BufferMemoryBarrier{
-				.srcAccessMask = vk::AccessFlagBits::eShaderWrite,
-				.dstAccessMask = vk::AccessFlagBits::eShaderRead,
-				.srcQueueFamilyIndex = barrierQueueFamily,
-				.dstQueueFamilyIndex = barrierQueueFamily,
-				.buffer = prefixSums.buffer(),
-				.offset = 0,
-				.size = prefixSums.size()
-			},*/
-			vk::BufferMemoryBarrier{
-				.srcAccessMask = vk::AccessFlagBits::eShaderWrite,
-				.dstAccessMask = vk::AccessFlagBits::eShaderRead,
-				.srcQueueFamilyIndex = barrierQueueFamily,
-				.dstQueueFamilyIndex = barrierQueueFamily,
-				.buffer = blockSums.buffer(),
-				.offset = 0,
-				.size = blockSums.size()
-			},
-			vk::BufferMemoryBarrier{
-				.srcAccessMask = vk::AccessFlagBits::eShaderWrite,
-				.dstAccessMask = vk::AccessFlagBits::eShaderRead,
-				.srcQueueFamilyIndex = barrierQueueFamily,
-				.dstQueueFamilyIndex = barrierQueueFamily,
-				.buffer = blockSums2.buffer(),
-				.offset = 0,
-				.size = blockSums2.size()
-			}
-		}, {});
+			}, {}, {});
 
 		buf.bindPipeline(vk::PipelineBindPoint::eCompute, *globalSortPipeline);
 		buf.bindDescriptorSets(vk::PipelineBindPoint::eCompute, *(globalSortPipeline.descriptor().pipelineLayout), 0, {globalSortParams}, {});
@@ -721,20 +1253,10 @@ void main()
 
 		buf.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eTransfer, {}, {
 				vk::MemoryBarrier{
-					.srcAccessMask = vk::AccessFlagBits::eShaderWrite,
-					.dstAccessMask = vk::AccessFlagBits::eTransferRead
+					.srcAccessMask = vk::AccessFlagBits::eShaderWrite|vk::AccessFlagBits::eShaderRead|vk::AccessFlagBits::eMemoryWrite|vk::AccessFlagBits::eMemoryRead,
+					.dstAccessMask = vk::AccessFlagBits::eTransferRead|vk::AccessFlagBits::eMemoryRead
 				}
-			}, {
-			vk::BufferMemoryBarrier{
-				.srcAccessMask = vk::AccessFlagBits::eShaderWrite,
-				.dstAccessMask = vk::AccessFlagBits::eTransferRead,
-				.srcQueueFamilyIndex = barrierQueueFamily,
-				.dstQueueFamilyIndex = barrierQueueFamily,
-				.buffer = result.buffer(),
-				.offset = 0,
-				.size = result.size()
-			}
-		}, {});
+			}, {}, {});
 
 		// reads result; writes keys
 		buf.copyBuffer(result.buffer(), keys.buffer(), {
@@ -748,84 +1270,56 @@ void main()
 
 		buf.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eComputeShader, {}, {
 			vk::MemoryBarrier{
-				.srcAccessMask = vk::AccessFlagBits::eTransferWrite,
-				.dstAccessMask = vk::AccessFlagBits::eShaderRead
+				.srcAccessMask = vk::AccessFlagBits::eTransferWrite|vk::AccessFlagBits::eMemoryWrite,
+				.dstAccessMask = vk::AccessFlagBits::eShaderWrite|vk::AccessFlagBits::eShaderRead|vk::AccessFlagBits::eMemoryWrite|vk::AccessFlagBits::eMemoryRead
 			}
-		}, {
-			vk::BufferMemoryBarrier{
-				.srcAccessMask = vk::AccessFlagBits::eTransferWrite,
-				.dstAccessMask = vk::AccessFlagBits::eShaderRead,
-				.srcQueueFamilyIndex = barrierQueueFamily,
-				.dstQueueFamilyIndex = barrierQueueFamily,
-				.buffer = keys.buffer(),
-				.offset = 0,
-				.size = keys.size()
-			}
-		}, {});
+		}, {}, {});
 
-		}
+		} // END OF BIT LOOP
+
+		buf.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eTransfer, {}, {
+			vk::MemoryBarrier{
+				.srcAccessMask = vk::AccessFlagBits::eTransferWrite|vk::AccessFlagBits::eMemoryWrite,
+				.dstAccessMask = vk::AccessFlagBits::eTransferRead|vk::AccessFlagBits::eMemoryRead
+			}
+		}, {}, {});
+
+		buf.copyBuffer(keys.buffer(), hostBuffer.buffer(), {
+			vk::BufferCopy{
+				.srcOffset = 0,
+				.dstOffset = 0,
+				.size = hostBuffer.size()
+			}
+		});
 
 		buf.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eHost, {}, {
-				vk::MemoryBarrier{
-					.srcAccessMask = vk::AccessFlagBits::eTransferWrite,
-					.dstAccessMask = vk::AccessFlagBits::eHostRead
-				}
-			}, {
-			vk::BufferMemoryBarrier{
-				.srcAccessMask = vk::AccessFlagBits::eTransferWrite,
-				.dstAccessMask = vk::AccessFlagBits::eHostRead,
-				.srcQueueFamilyIndex = barrierQueueFamily,
-				.dstQueueFamilyIndex = barrierQueueFamily,
-				.buffer = keys.buffer(),
-				.offset = 0,
-				.size = keys.size()
+			vk::MemoryBarrier{
+				.srcAccessMask = vk::AccessFlagBits::eTransferWrite|vk::AccessFlagBits::eMemoryWrite,
+				.dstAccessMask = vk::AccessFlagBits::eHostRead|vk::AccessFlagBits::eMemoryRead
 			}
-		}, {});
-
+		}, {}, {});
 	});
+#endif
 
 	device().waitIdle();
-	keys.flush();
+	hostBuffer.flush();
 	device().waitIdle();
-/*
-	{
-		UNSCOPED_INFO("prefixSums");
-		uint32_t *data = prefixSums.as<uint32_t>();
-		for (size_t i = 0; i < prefixSums.size() / sizeof(uint32_t); ++i)
-			UNSCOPED_INFO(std::to_string(i) + ": " + std::to_string(data[i]));
-		CHECK(false);
-	}
-	{
-		UNSCOPED_INFO("blockSums");
-		uint32_t *data = blockSums.as<uint32_t>();
-		for (size_t i = 0; i < blockSums.size() / sizeof(uint32_t); ++i)
-			UNSCOPED_INFO(std::to_string(i) + ": " + std::to_string(data[i]));
-		CHECK(false);
-	}
-	{
-		UNSCOPED_INFO("blockSums2");
-		uint32_t *data = blockSums2.as<uint32_t>();
-		for (size_t i = 0; i < blockSums2.size() / sizeof(uint32_t); ++i)
-			UNSCOPED_INFO(std::to_string(i) + ": " + std::to_string(data[i]));
-		CHECK(false);
-	}
-	{
-		UNSCOPED_INFO("result");
-		uint32_t *data = result.as<uint32_t>();
-		for (size_t i = 0; i < result.size() / sizeof(uint32_t); ++i)
-			UNSCOPED_INFO(std::to_string(i) + ": " + std::to_string(data[i]));
-		CHECK(false);
-	}*/
+
 	{
 		UNSCOPED_INFO("keys");
-		uint32_t *data = keys.as<uint32_t>();
-		size_t numKeys = keys.size() / sizeof(uint32_t);
+		uint32_t *data = hostBuffer.as<uint32_t>();
+		size_t numKeys = hostBuffer.size() / sizeof(uint32_t);
 		std::sort(initialKeys.begin(), initialKeys.end());
+		bool allFine = true;
 		for (size_t i = 0; i < numKeys; ++i)
+		{
 			UNSCOPED_INFO(std::to_string(i) + ": " + std::to_string(data[i]) +
-							  (i < numKeys - 1 ? (data[i] <= data[i+1] ? " <=" : " >") : "") +
-							  "    [" + (data[i] == initialKeys[i] ? "==" : "!=") + " reference (" + std::to_string(initialKeys[i]) + ")]"
+						  (i < numKeys - 1 ? (data[i] <= data[i+1] ? " <=" : " >") : "") +
+						  "    [" + (data[i] == initialKeys[i] ? "==" : "!=") + " reference (" + std::to_string(initialKeys[i]) + ")]"
 			);
-		CHECK(false);
+			if (data[i] != initialKeys[i])
+				allFine = false;
+		}
+		CHECK(allFine);
 	}
 }
