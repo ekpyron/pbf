@@ -428,20 +428,14 @@ TEST_CASE_METHOD(ComputeShaderUnitTest, "Compute Shader Sort Test", "[sort]")
 
 
 	std::vector<uint32_t> initialKeys;
-//	{
-//		0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,
-//		0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15
-//		100, 1, 14, 13, 4, 5, 6, 7, 300, 9, 10, 11, 12, 3, 2, 15,
-//		100, 1, 142314, 13, 4, 5, 6, 7, 421269, 9, 10, 11, 12, 3, 2, 15
-//	};
-//	std::reverse(initialKeys.begin(), initialKeys.end());
 
 	{
 		std::random_device rd;  //Will be used to obtain a seed for the random number engine
 		std::mt19937 gen(rd()); //Standard mersenne_twister_engine seeded with rd()
-		std::uniform_int_distribution<> distrib(0, 15);
-		for (size_t i = 0; i < 32; ++i)
+		std::uniform_int_distribution<uint32_t> distrib(0, std::numeric_limits<uint32_t>::max());
+		for (size_t i = 0; i < 32 * 32 * 32 + 32 + 32 + 76; ++i)
 			initialKeys.emplace_back(distrib(gen));
+
 	}
 
 	/*{
@@ -449,12 +443,19 @@ TEST_CASE_METHOD(ComputeShaderUnitTest, "Compute Shader Sort Test", "[sort]")
 		auto rng = std::default_random_engine { rd() };
 		std::shuffle(std::begin(initialKeys), std::end(initialKeys), rng);
 	}*/
-	for (auto v: initialKeys)
-		UNSCOPED_INFO("Key: " + std::to_string(v));
+	/*for (auto v: initialKeys)
+		UNSCOPED_INFO("Key: " + std::to_string(v));*/
 
+	const uint32_t blockSize = 32; // apparently has to be >= initialKeys.size() / 2 right now
+
+	while (initialKeys.size() % blockSize) {
+		initialKeys.emplace_back(std::numeric_limits<uint32_t>::max());
+	}
+	
 	const uint32_t numKeys = static_cast<uint32_t>(initialKeys.size());
-	const uint32_t blockSize = 16; // apparently has to be >= initialKeys.size() / 2 right now
-	const uint32_t sortBitCount = 4; // sort up to # of bits
+
+
+	const uint32_t sortBitCount = 32; // sort up to # of bits
 	struct PushConstants {
 		glm::u32vec4 blockSumOffset;
 		uint32_t bit = 0;
@@ -497,18 +498,18 @@ TEST_CASE_METHOD(ComputeShaderUnitTest, "Compute Shader Sort Test", "[sort]")
 
 	const uint32_t numGroups = (numKeys + blockSize - 1) / blockSize;
 
-	Buffer blockSums{
-		this,
-		4 * numGroups * sizeof(uint32_t),
-		vk::BufferUsageFlagBits::eStorageBuffer,
-		MemoryType::STATIC
-	};
-	Buffer blockSums2{
-		this,
-		4 * numGroups * sizeof(uint32_t), // TODO
-		vk::BufferUsageFlagBits::eStorageBuffer,
-		MemoryType::STATIC
-	};
+	std::vector<Buffer> blockSums;
+	for (ssize_t blockSumSize = 4 * numGroups; blockSumSize > 1; blockSumSize = (blockSumSize + blockSize - 1) / blockSize) {
+		blockSums.emplace_back(
+			this,
+			((blockSumSize + blockSize - 1) & ~(blockSize - 1)) * sizeof(uint32_t),
+			vk::BufferUsageFlagBits::eStorageBuffer,
+			MemoryType::STATIC
+		);
+	}
+	blockSums.emplace_back(this, blockSize * sizeof(uint32_t), vk::BufferUsageFlagBits::eStorageBuffer, MemoryType::STATIC);
+
+	Buffer& prescanBlockSum = blockSums.front();
 
 	auto sortLayout = cache().fetch(descriptors::DescriptorSetLayout{
 		.createFlags = {},
@@ -808,7 +809,7 @@ void main()
 			PBF_DESC_DEBUG_NAME("scan pipeline")
 		}
 	);
-/*
+
 	auto addBlockSumPipeline = cache().fetch(
 		descriptors::ComputePipeline{
 			.flags = {},
@@ -822,10 +823,6 @@ void main()
 #extension GL_KHR_shader_subgroup_basic : enable
 
 layout (local_size_x_id = 0, local_size_y = 1, local_size_z = 1) in;
-
-const uint HALFBLOCKSIZE = gl_WorkGroupSize.x;
-const uint BLOCKSIZE = 2 * HALFBLOCKSIZE;
-
 
 layout(std430, binding = 1) buffer PrefixSums
 {
@@ -853,7 +850,7 @@ void main()
 			PBF_DESC_DEBUG_NAME("add block sum pipeline")
 		}
 	);
-*/
+
 
 	auto globalSortPipeline = cache().fetch(
 		descriptors::ComputePipeline{
@@ -946,7 +943,7 @@ void main()
 		auto descriptorInfos = {
 			vk::DescriptorBufferInfo{keys.buffer(), 0, keys.size()},
 			vk::DescriptorBufferInfo{prefixSums.buffer(), 0, prefixSums.size()},
-			vk::DescriptorBufferInfo{blockSums.buffer(), 0, blockSums.size()}
+			vk::DescriptorBufferInfo{prescanBlockSum.buffer(), 0, prescanBlockSum.size()}
 		};
 		device().updateDescriptorSets({vk::WriteDescriptorSet{
 			.dstSet = prescanParams,
@@ -960,18 +957,20 @@ void main()
 		}}, {});
 	}
 
+	std::vector sortLayouts(blockSums.size() - 1, *sortLayout);
 	auto scanParams = device().allocateDescriptorSets(vk::DescriptorSetAllocateInfo{
 		.descriptorPool = *descriptorPool,
-		.descriptorSetCount = 1,
-		.pSetLayouts = &*sortLayout
-	}).front();
+		.descriptorSetCount = static_cast<uint32_t>(sortLayouts.size()),
+		.pSetLayouts = sortLayouts.data()
+	});
+	for (size_t i = 0; i < blockSums.size() - 1; ++i)
 	{
 		auto descriptorInfos = {
-			vk::DescriptorBufferInfo{blockSums.buffer(), 0, blockSums.size()},
-			vk::DescriptorBufferInfo{blockSums2.buffer(), 0, blockSums2.size()}
+			vk::DescriptorBufferInfo{blockSums[i].buffer(), 0, blockSums[i].size()},
+			vk::DescriptorBufferInfo{blockSums[i + 1].buffer(), 0, blockSums[i + 1].size()}
 		};
 		device().updateDescriptorSets({vk::WriteDescriptorSet{
-			.dstSet = scanParams,
+			.dstSet = scanParams[i],
 			.dstBinding = 1,
 			.dstArrayElement = 0,
 			.descriptorCount = static_cast<uint32_t>(descriptorInfos.size()),
@@ -991,7 +990,7 @@ void main()
 		auto descriptorInfos = {
 			vk::DescriptorBufferInfo{keys.buffer(), 0, keys.size()},
 			vk::DescriptorBufferInfo{prefixSums.buffer(), 0, prefixSums.size()},
-			vk::DescriptorBufferInfo{blockSums.buffer(), 0, blockSums.size()},
+			vk::DescriptorBufferInfo{prescanBlockSum.buffer(), 0, prescanBlockSum.size()},
 			vk::DescriptorBufferInfo{result.buffer(), 0, result.size()},
 		};
 		device().updateDescriptorSets({vk::WriteDescriptorSet{
@@ -1008,185 +1007,6 @@ void main()
 
 	uint32_t barrierQueueFamily = VK_QUEUE_FAMILY_IGNORED;
 
-#if 0
-	run([&](vk::CommandBuffer buf)
-		{
-
-			buf.pipelineBarrier(
-				vk::PipelineStageFlagBits::eHost, vk::PipelineStageFlagBits::eTransfer, {}, {
-					vk::MemoryBarrier{
-						.srcAccessMask = vk::AccessFlagBits::eHostWrite | vk::AccessFlagBits::eMemoryWrite,
-						.dstAccessMask = vk::AccessFlagBits::eTransferRead | vk::AccessFlagBits::eMemoryRead
-					}
-				}, {}, {}
-			);
-
-			buf.copyBuffer(
-				hostBuffer.buffer(), keys.buffer(), {
-					vk::BufferCopy{
-						.srcOffset = 0,
-						.dstOffset = 0,
-						.size = hostBuffer.size()
-					}
-				}
-			);
-
-			buf.pipelineBarrier(
-				vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eComputeShader, {}, {
-					vk::MemoryBarrier{
-						.srcAccessMask = vk::AccessFlagBits::eTransferWrite | vk::AccessFlagBits::eMemoryWrite,
-						.dstAccessMask = vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eMemoryRead
-					}
-				}, {}, {}
-			);
-	});
-	for (uint32_t bit = 0; bit < sortBitCount; bit += 2)
-	{
-		run(
-			[&](vk::CommandBuffer buf)
-			{
-
-				PushConstants pushConstants{
-					.blockSumOffset = glm::u32vec4{
-						0, numGroups, numGroups * 2, numGroups * 3
-					},
-					.bit = bit
-				};
-
-				buf.bindPipeline(vk::PipelineBindPoint::eCompute, *prescanPipeline);
-				buf.bindDescriptorSets(
-					vk::PipelineBindPoint::eCompute,
-					*(prescanPipeline.descriptor().pipelineLayout),
-					0,
-					{prescanParams},
-					{}
-				);
-				buf.pushConstants(
-					*(prescanPipeline.descriptor().pipelineLayout),
-					vk::ShaderStageFlagBits::eCompute,
-					0,
-					sizeof(pushConstants),
-					&pushConstants
-				);
-				// reads keys; writes prefix sums and block sums
-				buf.dispatch(((numKeys + blockSize - 1) / blockSize), 1, 1);
-
-				buf.pipelineBarrier(
-					vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {}, {
-						vk::MemoryBarrier{
-							.srcAccessMask = vk::AccessFlagBits::eShaderWrite |
-											 vk::AccessFlagBits::eShaderRead |
-											 vk::AccessFlagBits::eMemoryWrite |
-											 vk::AccessFlagBits::eMemoryRead,
-							.dstAccessMask = vk::AccessFlagBits::eShaderWrite |
-											 vk::AccessFlagBits::eShaderRead |
-											 vk::AccessFlagBits::eMemoryWrite |
-											 vk::AccessFlagBits::eMemoryRead
-						}
-					}, {}, {}
-				);
-
-				buf.bindPipeline(vk::PipelineBindPoint::eCompute, *scanPipeline);
-				buf.bindDescriptorSets(
-					vk::PipelineBindPoint::eCompute,
-					*(scanPipeline.descriptor().pipelineLayout),
-					0,
-					{scanParams},
-					{}
-				);
-				// reads and writes block sums; writes block sums2
-				buf.dispatch(2, 1, 1); // TODO
-
-				buf.pipelineBarrier(
-					vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {}, {
-						vk::MemoryBarrier{
-							.srcAccessMask = vk::AccessFlagBits::eShaderWrite |
-											 vk::AccessFlagBits::eShaderRead |
-											 vk::AccessFlagBits::eMemoryWrite |
-											 vk::AccessFlagBits::eMemoryRead,
-							.dstAccessMask = vk::AccessFlagBits::eShaderWrite |
-											 vk::AccessFlagBits::eShaderRead |
-											 vk::AccessFlagBits::eMemoryWrite |
-											 vk::AccessFlagBits::eMemoryRead
-						}
-					}, {}, {}
-				);
-
-				buf.bindPipeline(vk::PipelineBindPoint::eCompute, *globalSortPipeline);
-				buf.bindDescriptorSets(
-					vk::PipelineBindPoint::eCompute,
-					*(globalSortPipeline.descriptor().pipelineLayout),
-					0,
-					{globalSortParams},
-					{}
-				);
-				buf.pushConstants(
-					*(globalSortPipeline.descriptor().pipelineLayout),
-					vk::ShaderStageFlagBits::eCompute,
-					0,
-					sizeof(pushConstants),
-					&pushConstants
-				);
-				// reads keys, prefix sums and block sums; writes result
-				buf.dispatch(((numKeys + blockSize - 1) / blockSize), 1, 1);
-			});
-		run([&](vk::CommandBuffer buf)
-			{
-				buf.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eTransfer, {}, {
-					vk::MemoryBarrier{
-						.srcAccessMask = vk::AccessFlagBits::eShaderWrite|vk::AccessFlagBits::eShaderRead|vk::AccessFlagBits::eMemoryWrite|vk::AccessFlagBits::eMemoryRead,
-						.dstAccessMask = vk::AccessFlagBits::eTransferRead|vk::AccessFlagBits::eMemoryRead
-					}
-				}, {}, {});
-
-				// reads result; writes keys
-				buf.copyBuffer(result.buffer(), keys.buffer(), {
-					vk::BufferCopy{
-						.srcOffset = 0,
-						.dstOffset = 0,
-						.size = result.size()
-					}
-				});
-
-
-				buf.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eComputeShader, {}, {
-					vk::MemoryBarrier{
-						.srcAccessMask = vk::AccessFlagBits::eTransferWrite|vk::AccessFlagBits::eMemoryWrite,
-						.dstAccessMask = vk::AccessFlagBits::eShaderWrite|vk::AccessFlagBits::eShaderRead|vk::AccessFlagBits::eMemoryWrite|vk::AccessFlagBits::eMemoryRead
-					}
-				}, {}, {});
-			}
-		);
-	}
-	run(
-		[&](vk::CommandBuffer buf)
-		{
-
-			buf.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eTransfer, {}, {
-				vk::MemoryBarrier{
-					.srcAccessMask = vk::AccessFlagBits::eTransferWrite|vk::AccessFlagBits::eMemoryWrite,
-					.dstAccessMask = vk::AccessFlagBits::eTransferRead|vk::AccessFlagBits::eMemoryRead
-				}
-			}, {}, {});
-
-			buf.copyBuffer(keys.buffer(), hostBuffer.buffer(), {
-				vk::BufferCopy{
-					.srcOffset = 0,
-					.dstOffset = 0,
-					.size = hostBuffer.size()
-				}
-			});
-
-			buf.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eHost, {}, {
-				vk::MemoryBarrier{
-					.srcAccessMask = vk::AccessFlagBits::eTransferWrite|vk::AccessFlagBits::eMemoryWrite,
-					.dstAccessMask = vk::AccessFlagBits::eHostRead|vk::AccessFlagBits::eMemoryRead
-				}
-			}, {}, {});
-		}
-	);
-#endif
-#if 1
 	run([&](vk::CommandBuffer buf) {
 
 		buf.pipelineBarrier(vk::PipelineStageFlagBits::eHost, vk::PipelineStageFlagBits::eTransfer, {}, {
@@ -1233,17 +1053,40 @@ void main()
 				}
 			}, {}, {});
 
-		buf.bindPipeline(vk::PipelineBindPoint::eCompute, *scanPipeline);
-		buf.bindDescriptorSets(vk::PipelineBindPoint::eCompute, *(scanPipeline.descriptor().pipelineLayout), 0, {scanParams}, {});
-		// reads and writes block sums; writes block sums2
-		buf.dispatch(2, 1, 1); // TODO
+		for (size_t i = 0; i < blockSums.size() - 1; ++i)
+		{
+			auto& prefixSum = blockSums[i];
+			auto& blockSum = blockSums[i + 1];
+			const uint32_t numBlockSums = ((prefixSum.size() / sizeof(uint32_t)) + blockSize - 1) / blockSize;
 
-		buf.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {}, {
+			buf.bindPipeline(vk::PipelineBindPoint::eCompute, *scanPipeline);
+			buf.bindDescriptorSets(vk::PipelineBindPoint::eCompute, *(scanPipeline.descriptor().pipelineLayout), 0, {scanParams[i]}, {});
+			buf.dispatch(numBlockSums, 1, 1);
+
+			buf.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {}, {
 				vk::MemoryBarrier{
 					.srcAccessMask = vk::AccessFlagBits::eShaderWrite|vk::AccessFlagBits::eShaderRead|vk::AccessFlagBits::eMemoryWrite|vk::AccessFlagBits::eMemoryRead,
 					.dstAccessMask = vk::AccessFlagBits::eShaderWrite|vk::AccessFlagBits::eShaderRead|vk::AccessFlagBits::eMemoryWrite|vk::AccessFlagBits::eMemoryRead
 				}
 			}, {}, {});
+		}
+
+		// TODO: addblocksums
+		for (ssize_t i = blockSums.size() - 2; i > 0; i--) {
+			auto& prefixSum = blockSums[i - 1];
+			const uint32_t numBlockSums = ((prefixSum.size() / sizeof(uint32_t)) + blockSize - 1) / blockSize;
+
+			buf.bindPipeline(vk::PipelineBindPoint::eCompute, *addBlockSumPipeline);
+			buf.bindDescriptorSets(vk::PipelineBindPoint::eCompute, *(scanPipeline.descriptor().pipelineLayout), 0, {scanParams[i - 1]}, {});
+			buf.dispatch(numBlockSums, 1, 1);
+
+			buf.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {}, {
+				vk::MemoryBarrier{
+					.srcAccessMask = vk::AccessFlagBits::eShaderWrite|vk::AccessFlagBits::eShaderRead|vk::AccessFlagBits::eMemoryWrite|vk::AccessFlagBits::eMemoryRead,
+					.dstAccessMask = vk::AccessFlagBits::eShaderWrite|vk::AccessFlagBits::eShaderRead|vk::AccessFlagBits::eMemoryWrite|vk::AccessFlagBits::eMemoryRead
+				}
+			}, {}, {});
+		}
 
 		buf.bindPipeline(vk::PipelineBindPoint::eCompute, *globalSortPipeline);
 		buf.bindDescriptorSets(vk::PipelineBindPoint::eCompute, *(globalSortPipeline.descriptor().pipelineLayout), 0, {globalSortParams}, {});
@@ -1299,7 +1142,6 @@ void main()
 			}
 		}, {}, {});
 	});
-#endif
 
 	device().waitIdle();
 	hostBuffer.flush();
@@ -1313,10 +1155,10 @@ void main()
 		bool allFine = true;
 		for (size_t i = 0; i < numKeys; ++i)
 		{
-			UNSCOPED_INFO(std::to_string(i) + ": " + std::to_string(data[i]) +
+			/*UNSCOPED_INFO(std::to_string(i) + ": " + std::to_string(data[i]) +
 						  (i < numKeys - 1 ? (data[i] <= data[i+1] ? " <=" : " >") : "") +
 						  "    [" + (data[i] == initialKeys[i] ? "==" : "!=") + " reference (" + std::to_string(initialKeys[i]) + ")]"
-			);
+			);*/
 			if (data[i] != initialKeys[i])
 				allFine = false;
 		}
