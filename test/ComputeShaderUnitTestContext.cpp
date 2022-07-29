@@ -128,7 +128,7 @@ ComputeShaderUnitTestContext::ComputeShaderUnitTestContext() {
 	_queue = _device->getQueue(_queueFamilyIndex, 0);
 	_memoryManager = std::make_unique<MemoryManager>(this);
 	_commandPool = _device->createCommandPoolUnique(vk::CommandPoolCreateInfo{
-		.flags = vk::CommandPoolCreateFlagBits::eTransient,
+		.flags = vk::CommandPoolCreateFlagBits::eTransient|vk::CommandPoolCreateFlagBits::eResetCommandBuffer,
 		.queueFamilyIndex = _queueFamilyIndex
 	});
 	_commandBuffer = device().allocateCommandBuffers(vk::CommandBufferAllocateInfo{
@@ -273,10 +273,10 @@ descriptors::ShaderModule::RawSPIRV ComputeShaderUnitTestContext::compileCompute
 		.target_language = GLSLANG_TARGET_SPV,
 		.target_language_version = GLSLANG_TARGET_SPV_1_3,
 		.code = _source.c_str(),
-		.default_version = 100,
-		.default_profile = GLSLANG_NO_PROFILE,
+		.default_version = 460,
+		.default_profile = GLSLANG_CORE_PROFILE,
 		.force_default_version_and_profile = false,
-		.forward_compatible = false,
+		.forward_compatible = true,
 		.messages = GLSLANG_MSG_DEFAULT_BIT,
 		.resource = &resources
 	};

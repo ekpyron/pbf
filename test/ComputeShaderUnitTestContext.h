@@ -40,6 +40,7 @@ public:
 
 	template<typename Callable>
 	void run(Callable _callable) {
+		_commandBuffer.reset();
 		_commandBuffer.begin(vk::CommandBufferBeginInfo{
 			.flags = vk::CommandBufferUsageFlagBits::eOneTimeSubmit
 		});
