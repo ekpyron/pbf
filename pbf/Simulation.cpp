@@ -12,9 +12,9 @@ _context(context), _numParticles(numParticles), _input(input), _output(output)
 	if (!getNumParticles())
 		throw std::runtime_error("Need at least block size particles.");
 
-	_particleSortKeys = Buffer{
+	_particleSortKeys = Buffer<uint32_t>{
 		context,
-		4 * _numParticles,
+		_numParticles,
 		vk::BufferUsageFlagBits::eStorageBuffer,
 		pbf::MemoryType::DYNAMIC
 	};
@@ -82,9 +82,9 @@ _context(context), _numParticles(numParticles), _input(input), _output(output)
 	);
 
 	for (auto& scanStage: _scanStages) {
-		scanStage.buffer = Buffer{
+		scanStage.buffer = Buffer<std::uint32_t> {
 			context,
-			numBlockSums > 0 ? numBlockSums * 4u : 4u,
+			numBlockSums > 0 ? numBlockSums : 1,
 			vk::BufferUsageFlagBits::eStorageBuffer,
 			MemoryType::DYNAMIC
 		};
@@ -102,8 +102,8 @@ _context(context), _numParticles(numParticles), _input(input), _output(output)
 
 	{
 		std::array<vk::DescriptorBufferInfo, 2> descriptorInfos {{
-			{_particleSortKeys.buffer(), 0, _particleSortKeys.size()},
-			{_scanStages.front().buffer.buffer(), 0, _scanStages.front().buffer.size()}
+			{_particleSortKeys.buffer(), 0, _particleSortKeys.deviceSize()},
+			{_scanStages.front().buffer.buffer(), 0, _scanStages.front().buffer.deviceSize()}
 		}};
 
 		context->device().updateDescriptorSets({vk::WriteDescriptorSet{
@@ -217,8 +217,8 @@ _context(context), _numParticles(numParticles), _input(input), _output(output)
 		auto& nextScanStage = _scanStages[i + 1];
 
 		std::array<vk::DescriptorBufferInfo, 2> descriptorInfos {{
-			{scanStage.buffer.buffer(), 0, scanStage.buffer.size()},
-			{nextScanStage.buffer.buffer(), 0, nextScanStage.buffer.size()}
+			{scanStage.buffer.buffer(), 0, scanStage.buffer.deviceSize()},
+			{nextScanStage.buffer.buffer(), 0, nextScanStage.buffer.deviceSize()}
 		}};
 
 		context->device().updateDescriptorSets({vk::WriteDescriptorSet{
@@ -383,12 +383,12 @@ _context(context), _numParticles(numParticles), _input(input), _output(output)
 				vk::DescriptorBufferInfo{
 					_particleSortKeys.buffer(),
 					0,
-					_particleSortKeys.size()
+					_particleSortKeys.deviceSize()
 				},
 				vk::DescriptorBufferInfo{
 					stage.buffer.buffer(),
 					0,
-					stage.buffer.size()
+					stage.buffer.deviceSize()
 				}
 			}};
 			context->device().updateDescriptorSets({vk::WriteDescriptorSet{
@@ -475,7 +475,7 @@ void Simulation::run(vk::CommandBuffer buf)
 			.dstQueueFamilyIndex = 0,
 			.buffer = scanStage.buffer.buffer(),
 			.offset = 0,
-			.size = scanStage.buffer.size()
+			.size = scanStage.buffer.deviceSize()
 		}}, {});
 	}
 
@@ -485,7 +485,7 @@ void Simulation::run(vk::CommandBuffer buf)
 		auto& previousStageBuffer = (i > 0) ? _scanStages.at(i - 1).buffer : _particleSortKeys;
 		auto& scanStage = _scanStages.at(i);
 		buf.bindDescriptorSets(vk::PipelineBindPoint::eCompute, *(_addBlockSumsPipeline.descriptor().pipelineLayout), 0, { scanStage.addBlockSumsParams }, {});
-		buf.dispatch((previousStageBuffer.size() / 4 + blockSize - 1) / blockSize, 1, 1);
+		buf.dispatch((previousStageBuffer.deviceSize() + blockSize - 1) / blockSize, 1, 1);
 
 		buf.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {}, {}, {vk::BufferMemoryBarrier{
 			.srcAccessMask = vk::AccessFlagBits::eShaderWrite,
@@ -494,7 +494,7 @@ void Simulation::run(vk::CommandBuffer buf)
 			.dstQueueFamilyIndex = 0,
 			.buffer = previousStageBuffer.buffer(),
 			.offset = 0,
-			.size = previousStageBuffer.size()
+			.size = previousStageBuffer.deviceSize()
 		}}, {});
 	}
 
@@ -564,7 +564,7 @@ void Simulation::run(vk::CommandBuffer buf)
 */
 
 	{
-		uint32_t *data = reinterpret_cast<uint32_t*>(_particleSortKeys.data());
+		auto *data = _particleSortKeys.data();
 		std::stringstream stream;
 		for (size_t i = 0; i < getNumParticles(); ++i)
 			stream << "[" << i << "]: " << data[i] << "; ";
@@ -574,7 +574,7 @@ void Simulation::run(vk::CommandBuffer buf)
 	{
 		uint32_t *data = reinterpret_cast<uint32_t*>(_scanStages[i].buffer.data());
 		std::stringstream stream;
-		for (size_t j = 0; j < _scanStages[i].buffer.size() / 4; ++j)
+		for (size_t j = 0; j < _scanStages[i].buffer.size(); ++j)
 			stream << "[" << j << "]: " << data[j] << "; ";
 		spdlog::get("console")->debug("scanStage({}): {}", i, stream.str());
 	}

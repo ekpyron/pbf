@@ -22,7 +22,7 @@ namespace pbf {
 Scene::Scene(Context *context)
 : _context(context), _particleData{
 	context,
-	sizeof(ParticleData) * _numParticles * context->renderer().framePrerenderCount(),
+	_numParticles * context->renderer().framePrerenderCount(),
 	// TODO: maybe remove transfer src
 	vk::BufferUsageFlagBits::eTransferSrc | vk::BufferUsageFlagBits::eTransferDst | vk::BufferUsageFlagBits::eStorageBuffer | vk::BufferUsageFlagBits::eVertexBuffer,
 	pbf::MemoryType::STATIC
@@ -53,9 +53,9 @@ void Scene::frame(vk::CommandBuffer &buf) {
 
 	if (!_initialized) {
 
-		Buffer initializeBuffer {_context, sizeof(ParticleData) * _numParticles, vk::BufferUsageFlagBits::eTransferSrc, pbf::MemoryType::TRANSIENT};
+		Buffer<ParticleData> initializeBuffer {_context, _numParticles, vk::BufferUsageFlagBits::eTransferSrc, pbf::MemoryType::TRANSIENT};
 
-		ParticleData* data = reinterpret_cast<ParticleData*>(initializeBuffer.data());
+		ParticleData* data = initializeBuffer.data();
 
 		for (int32_t x = 0; x < 256; ++x)
 			data[x].position = glm::vec3(x - 32, 0, 0);
@@ -72,7 +72,7 @@ void Scene::frame(vk::CommandBuffer &buf) {
 			vk::BufferCopy {
 				.srcOffset = 0,
 				.dstOffset = sizeof(ParticleData) * _numParticles * (_context->renderer().framePrerenderCount() - 1),
-				.size = initializeBuffer.size()
+				.size = initializeBuffer.deviceSize()
 			}
 		});
 
@@ -83,7 +83,7 @@ void Scene::frame(vk::CommandBuffer &buf) {
 			.dstQueueFamilyIndex = 0,
 			.buffer = _particleData.buffer(),
 			.offset = sizeof(ParticleData) * _numParticles * (_context->renderer().framePrerenderCount() - 1),
-			.size = initializeBuffer.size(),
+			.size = initializeBuffer.deviceSize(),
 		}}, {});
 
 
@@ -125,7 +125,7 @@ void Scene::enqueueCommands(vk::CommandBuffer &buf) {
 				{
 					std::vector<vk::Buffer> vkBuffers;
 					std::vector<vk::DeviceSize> offsets;
-					for (BufferRef const& vertexBufferRef: vertexBufferRefs) {
+					for (BufferRef<Quad::VertexData> const& vertexBufferRef: vertexBufferRefs) {
 						vkBuffers.emplace_back(vertexBufferRef.buffer->buffer());
 						offsets.emplace_back(vertexBufferRef.offset);
 					}

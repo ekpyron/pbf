@@ -91,14 +91,14 @@ void main()
 	}).front();
 
 
-	Buffer buffer{
+	Buffer<uint32_t> buffer{
 		this,
-		4 * 4 * sizeof(uint32_t),
+		4 * 4,
 		vk::BufferUsageFlagBits::eStorageBuffer,
 		MemoryType::DYNAMIC
 	};
 	{
-		auto descriptorInfos = {vk::DescriptorBufferInfo{buffer.buffer(), 0, buffer.size()}};
+		auto descriptorInfos = {vk::DescriptorBufferInfo{buffer.buffer(), 0, buffer.deviceSize()}};
 		device().updateDescriptorSets({vk::WriteDescriptorSet{
 			.dstSet = stubParams,
 			.dstBinding = 0,
@@ -117,7 +117,7 @@ void main()
 		buf.dispatch(4, 1, 1);
 	});
 
-	uint32_t *data = buffer.as<uint32_t>();
+	const auto *data = buffer.data();
 	for (size_t i = 0; i < 4*4; ++i)
 		CHECK(data[i] == (i + 7) * 42);
 }
@@ -459,54 +459,54 @@ TEST_CASE_METHOD(ComputeShaderUnitTest, "Compute Shader Sort Test", "[sort]")
 	};
 
 	device().waitIdle();
-	Buffer hostBuffer{
+	Buffer<uint32_t> hostBuffer{
 		this,
-		numKeys * sizeof(uint32_t),
+		numKeys,
 		vk::BufferUsageFlagBits::eTransferSrc|vk::BufferUsageFlagBits::eTransferDst,
 		MemoryType::DYNAMIC
 	};
-	Buffer keys{
+	Buffer<uint32_t> keys{
 		this,
-		numKeys * sizeof(uint32_t),
+		numKeys,
 		vk::BufferUsageFlagBits::eStorageBuffer|vk::BufferUsageFlagBits::eTransferDst|vk::BufferUsageFlagBits::eTransferSrc,
 		MemoryType::STATIC
 	};
 	device().waitIdle();
 	{
-		uint32_t *data = hostBuffer.as<uint32_t>();
+		auto *data = hostBuffer.data();
 		for (uint32_t i = 0; i < numKeys; ++i)
 			data[i] = initialKeys[i];
 		hostBuffer.flush();
 	}
 	device().waitIdle();
-	Buffer result{
+	Buffer<uint32_t> result{
 		this,
-		numKeys * sizeof(uint32_t),
+		numKeys,
 		vk::BufferUsageFlagBits::eStorageBuffer|vk::BufferUsageFlagBits::eTransferSrc,
 		MemoryType::STATIC
 	};
 
-	Buffer prefixSums{
+	Buffer<uint32_t> prefixSums{
 		this,
-		numKeys * sizeof(uint32_t),
+		numKeys,
 		vk::BufferUsageFlagBits::eStorageBuffer,
 		MemoryType::STATIC
 	};
 
 	const uint32_t numGroups = (numKeys + blockSize - 1) / blockSize;
 
-	std::vector<Buffer> blockSums;
+	std::vector<Buffer<uint32_t>> blockSums;
 	for (ssize_t blockSumSize = 4 * numGroups; blockSumSize > 1; blockSumSize = (blockSumSize + blockSize - 1) / blockSize) {
 		blockSums.emplace_back(
 			this,
-			roundToNextMultiple(blockSumSize, blockSize) * sizeof(uint32_t),
+			roundToNextMultiple(blockSumSize, blockSize),
 			vk::BufferUsageFlagBits::eStorageBuffer,
 			MemoryType::STATIC
 		);
 	}
-	blockSums.emplace_back(this, blockSize * sizeof(uint32_t), vk::BufferUsageFlagBits::eStorageBuffer, MemoryType::STATIC);
+	blockSums.emplace_back(this, blockSize, vk::BufferUsageFlagBits::eStorageBuffer, MemoryType::STATIC);
 
-	Buffer& prescanBlockSum = blockSums.front();
+	auto& prescanBlockSum = blockSums.front();
 
 	auto sortLayout = cache().fetch(descriptors::DescriptorSetLayout{
 		.createFlags = {},
@@ -869,9 +869,9 @@ void main()
 	}).front();
 	{
 		auto descriptorInfos = {
-			vk::DescriptorBufferInfo{keys.buffer(), 0, keys.size()},
-			vk::DescriptorBufferInfo{prefixSums.buffer(), 0, prefixSums.size()},
-			vk::DescriptorBufferInfo{prescanBlockSum.buffer(), 0, prescanBlockSum.size()}
+			vk::DescriptorBufferInfo{keys.buffer(), 0, keys.deviceSize()},
+			vk::DescriptorBufferInfo{prefixSums.buffer(), 0, prefixSums.deviceSize()},
+			vk::DescriptorBufferInfo{prescanBlockSum.buffer(), 0, prescanBlockSum.deviceSize()}
 		};
 		device().updateDescriptorSets({vk::WriteDescriptorSet{
 			.dstSet = prescanParams,
@@ -894,8 +894,8 @@ void main()
 	for (size_t i = 0; i < blockSums.size() - 1; ++i)
 	{
 		auto descriptorInfos = {
-			vk::DescriptorBufferInfo{blockSums[i].buffer(), 0, blockSums[i].size()},
-			vk::DescriptorBufferInfo{blockSums[i + 1].buffer(), 0, blockSums[i + 1].size()}
+			vk::DescriptorBufferInfo{blockSums[i].buffer(), 0, blockSums[i].deviceSize()},
+			vk::DescriptorBufferInfo{blockSums[i + 1].buffer(), 0, blockSums[i + 1].deviceSize()}
 		};
 		device().updateDescriptorSets({vk::WriteDescriptorSet{
 			.dstSet = scanParams[i],
@@ -916,10 +916,10 @@ void main()
 	}).front();
 	{
 		auto descriptorInfos = {
-			vk::DescriptorBufferInfo{keys.buffer(), 0, keys.size()},
-			vk::DescriptorBufferInfo{prefixSums.buffer(), 0, prefixSums.size()},
-			vk::DescriptorBufferInfo{prescanBlockSum.buffer(), 0, prescanBlockSum.size()},
-			vk::DescriptorBufferInfo{result.buffer(), 0, result.size()},
+			vk::DescriptorBufferInfo{keys.buffer(), 0, keys.deviceSize()},
+			vk::DescriptorBufferInfo{prefixSums.buffer(), 0, prefixSums.deviceSize()},
+			vk::DescriptorBufferInfo{prescanBlockSum.buffer(), 0, prescanBlockSum.deviceSize()},
+			vk::DescriptorBufferInfo{result.buffer(), 0, result.deviceSize()},
 		};
 		device().updateDescriptorSets({vk::WriteDescriptorSet{
 			.dstSet = globalSortParams,
@@ -946,7 +946,7 @@ void main()
 			vk::BufferCopy{
 				.srcOffset = 0,
 				.dstOffset = 0,
-				.size = hostBuffer.size()
+				.size = hostBuffer.deviceSize()
 			}
 		});
 
@@ -983,7 +983,7 @@ void main()
 		{
 			auto& prefixSum = blockSums[i];
 			auto& blockSum = blockSums[i + 1];
-			const uint32_t numBlockSums = ((prefixSum.size() / sizeof(uint32_t)) + blockSize - 1) / blockSize;
+			const uint32_t numBlockSums = (prefixSum.size() + blockSize - 1) / blockSize;
 
 			buf.bindPipeline(vk::PipelineBindPoint::eCompute, *scanPipeline);
 			buf.bindDescriptorSets(vk::PipelineBindPoint::eCompute, *(scanPipeline.descriptor().pipelineLayout), 0, {scanParams[i]}, {});
@@ -999,7 +999,7 @@ void main()
 
 		for (ssize_t i = blockSums.size() - 2; i > 0; i--) {
 			auto& prefixSum = blockSums[i - 1];
-			const uint32_t numBlockSums = ((prefixSum.size() / sizeof(uint32_t)) + blockSize - 1) / blockSize;
+			const uint32_t numBlockSums = (prefixSum.size() + blockSize - 1) / blockSize;
 
 			buf.bindPipeline(vk::PipelineBindPoint::eCompute, *addBlockSumPipeline);
 			buf.bindDescriptorSets(vk::PipelineBindPoint::eCompute, *(scanPipeline.descriptor().pipelineLayout), 0, {scanParams[i - 1]}, {});
@@ -1031,7 +1031,7 @@ void main()
 			vk::BufferCopy{
 				.srcOffset = 0,
 				.dstOffset = 0,
-				.size = result.size()
+				.size = result.deviceSize()
 			}
 		});
 
@@ -1056,7 +1056,7 @@ void main()
 			vk::BufferCopy{
 				.srcOffset = 0,
 				.dstOffset = 0,
-				.size = hostBuffer.size()
+				.size = hostBuffer.deviceSize()
 			}
 		});
 
@@ -1069,5 +1069,5 @@ void main()
 	});
 
 	std::ranges::sort(initialKeys);
-	REQUIRE_THAT(std::span(hostBuffer.as<uint32_t>(), hostBuffer.size() / sizeof(uint32_t)), EqualsRange(initialKeys));
+	REQUIRE_THAT(std::span(hostBuffer.data(), hostBuffer.size()), EqualsRange(initialKeys));
 }

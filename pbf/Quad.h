@@ -20,21 +20,19 @@ class IndirectCommandsBuffer;
 
 class Quad {
 public:
-
     Quad(Scene* scene);
 
     void frame(uint32_t instanceCount);
 
-private:
     struct VertexData {
         float vertices[4];
     };
-
+private:
     Scene *scene;
     bool active = true;
     bool dirty = true;
-    Buffer buffer;
-    Buffer indexBuffer;
+    Buffer<VertexData> buffer;
+    Buffer<std::uint16_t> indexBuffer;
     IndirectCommandsBuffer* indirectCommandsBuffer {nullptr};
 	CacheReference<descriptors::GraphicsPipeline> graphicsPipeline;
 };

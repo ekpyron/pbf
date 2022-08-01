@@ -2,22 +2,23 @@
 // Created by daniel on 04.07.22.
 //
 
-#include "descriptors/DescriptorSetLayout.h"
-#include "Renderer.h"
-#include "Scene.h"
 #include <cstdint>
 #include <numeric>
+
+#include "Renderer.h"
+#include "Scene.h"
 #include "Quad.h"
 #include "IndirectCommandsBuffer.h"
+
+#include "descriptors/DescriptorSetLayout.h"
 
 namespace pbf {
 
 Quad::Quad(pbf::Scene *scene) : scene(scene) {
 
-    buffer = {scene->context(), sizeof(VertexData) * 4,
+    buffer = {scene->context(), 4,
               vk::BufferUsageFlagBits::eTransferDst | vk::BufferUsageFlagBits::eVertexBuffer, pbf::MemoryType::STATIC};
-    indexBuffer = {scene->context(), sizeof(std::uint16_t) * 6, vk::BufferUsageFlagBits::eTransferDst
-                                                                | vk::BufferUsageFlagBits::eIndexBuffer,
+    indexBuffer = {scene->context(), 6, vk::BufferUsageFlagBits::eTransferDst | vk::BufferUsageFlagBits::eIndexBuffer,
                    pbf::MemoryType::STATIC};
 
     graphicsPipeline = scene->context()->cache().fetch(
@@ -127,10 +128,10 @@ void Quad::frame(uint32_t instanceCount) {
 		indirectCommandsBuffer = scene->getIndirectCommandBuffer(
 			graphicsPipeline,
 			{},
-			std::make_tuple(pbf::BufferRef{&indexBuffer}, vk::IndexType::eUint16),
+			std::make_tuple(pbf::BufferRef<std::uint16_t>{&indexBuffer}, vk::IndexType::eUint16),
 			{
-				BufferRef{&buffer},
-				BufferRef{
+				BufferRef<VertexData>{&buffer},
+				BufferRef<VertexData>{
 					.buffer = &scene->particleData(),
 					.offset = sizeof(Scene::ParticleData) * scene->getNumParticles() * scene->context()->renderer().currentFrameSync()
 				}
@@ -141,7 +142,7 @@ void Quad::frame(uint32_t instanceCount) {
 
 
 	if (dirty) {
-        pbf::Buffer initializeBuffer {scene->context(), sizeof(VertexData) * 4 + sizeof(std::uint16_t) * 6, vk::BufferUsageFlagBits::eTransferSrc, pbf::MemoryType::TRANSIENT};
+        pbf::Buffer<std::byte> initializeBuffer {scene->context(), sizeof(VertexData) * 4 + sizeof(std::uint16_t) * 6, vk::BufferUsageFlagBits::eTransferSrc, pbf::MemoryType::TRANSIENT};
 
         VertexData *data = reinterpret_cast<VertexData *>(initializeBuffer.data());
         data[0].vertices[0]= -1.0f;
@@ -169,12 +170,12 @@ void Quad::frame(uint32_t instanceCount) {
                                            ] (vk::CommandBuffer& enqueueBuffer) {
             enqueueBuffer.copyBuffer(initializeBuffer.buffer(), buffer.buffer(), {
                     vk::BufferCopy {
-                            0, 0, buffer.size()
+                            0, 0, buffer.deviceSize()
                     }
             });
             enqueueBuffer.copyBuffer(initializeBuffer.buffer(), indexBuffer.buffer(), {
                     vk::BufferCopy {
-                            sizeof(VertexData) * 4, 0, indexBuffer.size()
+                            buffer.deviceSize(), 0, indexBuffer.deviceSize()
                     }
             });
 
@@ -185,7 +186,7 @@ void Quad::frame(uint32_t instanceCount) {
 				.dstQueueFamilyIndex = 0,
 				.buffer = buffer.buffer(),
 				.offset = 0,
-				.size = buffer.size()
+				.size = buffer.deviceSize()
 			}, vk::BufferMemoryBarrier{
 				.srcAccessMask = vk::AccessFlagBits::eTransferWrite,
 				.dstAccessMask = vk::AccessFlagBits::eIndexRead,
@@ -193,7 +194,7 @@ void Quad::frame(uint32_t instanceCount) {
 				.dstQueueFamilyIndex = 0,
 				.buffer = indexBuffer.buffer(),
 				.offset = 0,
-				.size = indexBuffer.size()
+				.size = indexBuffer.deviceSize()
 			}}, {});
         });
 

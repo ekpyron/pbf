@@ -176,7 +176,7 @@ private:
         glm::mat4 mvpmatrix;
 		glm::mat3x4 viewrot;
     };
-    std::unique_ptr<Buffer> _globalUniformBuffer;
+    std::unique_ptr<Buffer<GlobalUniformData>> _globalUniformBuffer;
     GlobalUniformData *globalUniformData;
     Cache _cache { this, 100 };
 

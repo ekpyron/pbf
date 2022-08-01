@@ -18,6 +18,7 @@ namespace pbf {
 
 class IndirectCommandsBuffer
 {
+    using CommandBuffer = pbf::Buffer<vk::DrawIndirectCommand>;
 public:
 	IndirectCommandsBuffer(Context *context);
 	void clear();
@@ -27,8 +28,8 @@ public:
 	static constexpr std::uint32_t bufferSize = 128;
 private:
 	pbf::Context *context;
-	std::list<pbf::Buffer> _buffers;
-	std::list<pbf::Buffer>::iterator _currentBuffer;
+	std::list<CommandBuffer> _buffers;
+	std::list<CommandBuffer>::iterator _currentBuffer;
 	std::uint32_t _elementsInLastBuffer {bufferSize};
 };
 

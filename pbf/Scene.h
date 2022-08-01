@@ -9,13 +9,14 @@
 #pragma once
 
 #include <map>
+#include <list>
+
+#include <crampl/MultiKeyMap.h>
 
 #include "Context.h"
 #include "Buffer.h"
 #include "Quad.h"
 #include "IndirectCommandsBuffer.h"
-#include <crampl/MultiKeyMap.h>
-#include <list>
 #include "Simulation.h"
 
 namespace pbf {
@@ -35,8 +36,8 @@ public:
 
     IndirectCommandsBuffer* getIndirectCommandBuffer(const CacheReference<descriptors::GraphicsPipeline> &graphicsPipeline,
 													 const std::vector<uint8_t>& pushConstantData,
-                                                     const std::tuple<BufferRef, vk::IndexType> &indexBuffer,
-                                                     const std::vector<BufferRef> &vertexBuffers)
+                                                     const std::tuple<BufferRef<std::uint16_t>, vk::IndexType> &indexBuffer,
+                                                     const std::vector<BufferRef<Quad::VertexData>> &vertexBuffers)
     {
         auto result = &crampl::emplace(indirectDrawCalls, std::piecewise_construct, std::forward_as_tuple(graphicsPipeline), std::forward_as_tuple(pushConstantData),
                                        std::forward_as_tuple(indexBuffer), std::forward_as_tuple(vertexBuffers), std::forward_as_tuple(_context));
@@ -45,18 +46,18 @@ public:
     }
 
 	auto& simulations() { return _simulations; }
-	const auto& simulations() const { return _simulations; }
-	uint32_t getNumParticles() const {
+	[[nodiscard]] const auto& simulations() const { return _simulations; }
+	[[nodiscard]] uint32_t getNumParticles() const {
 		return _numParticles;
 	}
 
-	Buffer& particleData() { return _particleData; }
-	const Buffer& particleData() const { return _particleData; }
+    struct ParticleData {
+        glm::vec3 position;
+        float aux = 0.0f;
+    };
 
-	struct ParticleData {
-		glm::vec3 position;
-		float aux = 0.0f;
-	};
+	Buffer<ParticleData>& particleData() { return _particleData; }
+	[[nodiscard]] const Buffer<ParticleData>& particleData() const { return _particleData; }
 
 private:
 
@@ -64,15 +65,15 @@ private:
 
 	uint32_t _numParticles = 256; // 64 * 64 * 64;
 
-	Buffer _particleData;
+	Buffer<ParticleData> _particleData;
 
 	std::vector<Simulation> _simulations;
 
 	crampl::MultiKeyMap<std::map,
                         CacheReference<descriptors::GraphicsPipeline>,
 						std::vector<uint8_t>,
-                        std::tuple<BufferRef, vk::IndexType> /* index buffer */,
-                        std::vector<BufferRef> /* vertex buffers */,
+                        std::tuple<BufferRef<std::uint16_t>, vk::IndexType> /* index buffer */,
+                        std::vector<BufferRef<Quad::VertexData>> /* vertex buffers */,
                         IndirectCommandsBuffer> indirectDrawCalls;
     std::set<IndirectCommandsBuffer*> indirectCommandBuffers;
 

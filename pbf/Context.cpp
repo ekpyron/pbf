@@ -204,11 +204,11 @@ Context::Context() {
 
 
 	{
-		_globalUniformBuffer = std::make_unique<Buffer>(this, sizeof(GlobalUniformData), vk::BufferUsageFlagBits::eUniformBuffer, MemoryType::DYNAMIC);
+		_globalUniformBuffer = std::make_unique<Buffer<GlobalUniformData>>(this, 1, vk::BufferUsageFlagBits::eUniformBuffer, MemoryType::DYNAMIC);
 		vk::DescriptorBufferInfo uniformBufferDescriptorInfo {
 			_globalUniformBuffer->buffer(), 0, sizeof(GlobalUniformData)
 		};
-		globalUniformData = _globalUniformBuffer->as<GlobalUniformData>();
+		globalUniformData = _globalUniformBuffer->data();
 		_device->updateDescriptorSets({vk::WriteDescriptorSet{
 			.dstSet = _globalDescriptorSet,
 			.dstBinding = 0,

@@ -26,14 +26,12 @@ public:
 private:
 	Context* _context;
 	size_t _numParticles = 0;
-	Buffer _particleSortKeys;
+	Buffer<uint32_t> _particleSortKeys;
 
 	vk::DescriptorBufferInfo _input;
 	vk::DescriptorBufferInfo _output;
 
 	vk::UniqueDescriptorPool _descriptorPool;
-
-	Buffer _prescanBlocksums;
 
 	CacheReference<descriptors::ComputePipeline> _prescanPipeline;
 	CacheReference<descriptors::DescriptorSetLayout> _prescanParamsLayout;
@@ -41,7 +39,7 @@ private:
 
 
 	struct ScanStage {
-		Buffer buffer;
+		Buffer<std::uint32_t>buffer;
 		vk::DescriptorSet params; // TODO rename
 		vk::DescriptorSet addBlockSumsParams;
 	};

@@ -13,6 +13,7 @@
 namespace pbf {
 
 class DeviceMemory;
+template<typename T>
 class Buffer;
 
 class HeapManager {
