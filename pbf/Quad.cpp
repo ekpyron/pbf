@@ -132,7 +132,7 @@ void Quad::frame(uint32_t instanceCount) {
 			{
 				BufferRef<VertexData>{&buffer},
 				BufferRef<VertexData>{
-					.buffer = &scene->particleData(),
+					.buffer = scene->particleData().as<VertexData>(),
 					.offset = sizeof(Scene::ParticleData) * scene->getNumParticles() * scene->context()->renderer().currentFrameSync()
 				}
 			}
