@@ -76,13 +76,11 @@ public:
 
     template<typename D>
     Buffer<D>* as() {
-        static_assert(sizeof(D) == sizeof(T));
         return reinterpret_cast<Buffer<D>*>(this);
     }
 
     template<typename D>
     const Buffer<D>* as() const {
-        static_assert(sizeof(D) == sizeof(T));
         return reinterpret_cast<Buffer<D>*>(this);
     }
 
