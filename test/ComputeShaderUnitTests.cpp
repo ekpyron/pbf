@@ -1120,7 +1120,6 @@ TEST_CASE_METHOD(ComputeShaderUnitTest, "Compute Shader Sort Test", "[sort] ")
 	};
 	RadixSort radixSort{
 		*this,
-		cache(),
 		blockSize,
 		numKeys / blockSize,
 		keyAndGlobalSortDescriptorSet,

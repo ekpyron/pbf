@@ -45,6 +45,28 @@ enum class MemoryType {
     STATIC, TRANSIENT, DYNAMIC
 };
 
+}
+
+template <>
+struct fmt::formatter<pbf::MemoryType>: fmt::formatter<std::string_view> {
+	template <typename FormatContext>
+	auto format(pbf::MemoryType p, FormatContext& ctx) const {
+		return formatter<string_view>::format([](auto p) {
+			switch (p) {
+				case pbf::MemoryType::STATIC:
+					return "STATIC";
+				case pbf::MemoryType::TRANSIENT:
+					return "TRANSIENT";
+				case pbf::MemoryType::DYNAMIC:
+					return "DYNAMIC";
+			}
+			return "UNKNOWN";
+		}(p), ctx);
+	}
+};
+
+namespace pbf {
+
 inline std::ostream& operator<<(std::ostream &os, const MemoryType& memoryType) {
     switch (memoryType) {
         case MemoryType::STATIC: { os << "STATIC"; break; }

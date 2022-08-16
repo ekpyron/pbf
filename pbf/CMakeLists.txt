@@ -8,7 +8,7 @@ add_library(pbf_common STATIC
         descriptors/DescriptorSetLayout.h descriptors/DescriptorSetLayout.cpp
         Buffer.cpp Buffer.h MemoryManager.cpp MemoryManager.h RadixSort.cpp RadixSort.h)
 target_include_directories(pbf_common PUBLIC ${CMAKE_CURRENT_LIST_DIR}/..)
-target_link_libraries(pbf_common PUBLIC fmt Vulkan::Vulkan spdlog glm crampl Threads::Threads)
+target_link_libraries(pbf_common PUBLIC fmt Vulkan::Vulkan spdlog_header_only glm crampl Threads::Threads)
 
 set(SOURCES main.cpp glfw.h Context.cpp Context.h ContextInterface.h common.h Swapchain.cpp Swapchain.h Renderer.cpp Renderer.h
         Scene.cpp Scene.h Camera.cpp Camera.h IndirectCommandsBuffer.h IndirectCommandsBuffer.cpp Quad.cpp Quad.h

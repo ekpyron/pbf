@@ -8,7 +8,7 @@ macro(add_shader OUTPUT_NAME)
 
     add_custom_command(OUTPUT ${FULL_OUT}
             DEPENDS ${ARGN} ${Vulkan_GLSLANG_VALIDATOR_EXECUTABLE}
-            COMMAND ${Vulkan_GLSLANG_VALIDATOR_EXECUTABLE} --enhanced-msgs --target-env vulkan1.1 -t -o "${FULL_OUT}" ${ARGN}
+            COMMAND ${Vulkan_GLSLANG_VALIDATOR_EXECUTABLE} -g --enhanced-msgs --target-env vulkan1.1 -t -o "${FULL_OUT}" ${ARGN}
             WORKING_DIRECTORY "${CMAKE_CURRENT_LIST_DIR}"
             VERBATIM
     )
@@ -25,15 +25,8 @@ add_shader(test.frag.spv test.frag)
 add_shader(particle.vert.spv particle.vert)
 add_shader(particle.frag.spv particle.frag)
 
-add_shader(sort/prescan.comp.spv sort/scan_shared.comp sort/prescan.comp)
-add_shader(sort/scan.comp.spv sort/scan_shared.comp sort/scan.comp)
-add_shader(sort/assign.comp.spv sort/assign.comp)
-add_shader(sort/addblocksum.comp.spv sort/addblocksum.comp)
-
-#add_shader(radixsort/prescan.comp.spv radixsort/prescan.comp)
 add_shader(radixsort/scan.comp.spv radixsort/scan.comp)
 add_shader(radixsort/addblocksum.comp.spv radixsort/addblocksum.comp)
-#add_shader(radixsort/globalsort.comp.spv radixsort/globalsort.comp)
 
 add_radix_sort(particlesort particlesort/hash.comp particlesort/globalsort.comp)
 

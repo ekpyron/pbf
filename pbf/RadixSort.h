@@ -21,11 +21,10 @@ class RadixSort
 public:
 	RadixSort(
 		ContextInterface& _context,
-		Cache& _cache,
 		uint32_t _blockSize,
 		uint32_t _numBlocks,
 		descriptors::DescriptorSetLayout const& _keyAndGlobalSortShaderDescriptors,
-		std::string _shaderPrefix
+		std::string_view _shaderPrefix
 	);
 	RadixSort(const RadixSort&) = delete;
 	~RadixSort() = default;
@@ -39,7 +38,6 @@ public:
 	) const;
 private:
 	ContextInterface& context;
-	Cache& cache;
 
 	const uint32_t blockSize = 0;
 	const uint32_t numBlocks = 0;

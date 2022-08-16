@@ -31,10 +31,7 @@ public:
 	}
 #endif
 
-	Cache& cache() {
-		return _cache;
-	}
-	const Cache& cache() const {
+	Cache& cache() override {
 		return _cache;
 	}
 

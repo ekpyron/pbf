@@ -52,7 +52,19 @@ Context::Context() {
                 .engineVersion = VK_MAKE_VERSION(0, 0, 0),
                 .apiVersion = VK_API_VERSION_1_1
         };
+#ifndef NDEBUG
+		vk::ValidationFeatureEnableEXT enables[] = {
+			vk::ValidationFeatureEnableEXT::eGpuAssisted
+		};
+		vk::ValidationFeaturesEXT validationFeatures{
+			.enabledValidationFeatureCount = 1,
+			.pEnabledValidationFeatures = enables
+		};
+#endif
         _instance = vk::createInstanceUnique(vk::InstanceCreateInfo{
+#ifndef NDEBUG
+			.pNext = &validationFeatures,
+#endif
 			.pApplicationInfo = &appInfo,
 			.enabledLayerCount = static_cast<uint32_t>(layers.size()),
 			.ppEnabledLayerNames = layers.data(),

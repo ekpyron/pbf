@@ -35,7 +35,7 @@ public:
     const vk::Queue &graphicsQueue() const { return _graphicsQueue; }
     const vk::Queue &presentQueue() const { return _presentQueue; }
     const vk::CommandPool &commandPool(bool transient) const { return *(transient ? _commandPoolTransient : _commandPool); }
-    Cache &cache() { return _cache; }
+    Cache &cache() override { return _cache; }
     const Renderer &renderer() const { return *_renderer; }
     Renderer &renderer() { return *_renderer; }
     Scene &scene() { return *_scene; }

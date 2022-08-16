@@ -8,6 +8,7 @@
 #include "common.h"
 #include "Buffer.h"
 #include "Cache.h"
+#include "RadixSort.h"
 #include <pbf/descriptors/ComputePipeline.h>
 
 namespace pbf {
@@ -26,39 +27,16 @@ public:
 private:
 	Context* _context;
 	size_t _numParticles = 0;
-	Buffer<uint32_t> _particleSortKeys;
+//	RadixSort _radixSort;
 
 	vk::DescriptorBufferInfo _input;
 	vk::DescriptorBufferInfo _output;
 
 	vk::UniqueDescriptorPool _descriptorPool;
 
-	CacheReference<descriptors::ComputePipeline> _prescanPipeline;
-	CacheReference<descriptors::DescriptorSetLayout> _prescanParamsLayout;
-	vk::DescriptorSet _prescanParams;
+	static constexpr std::uint32_t blockSize = 256;
 
-
-	struct ScanStage {
-		Buffer<std::uint32_t>buffer;
-		vk::DescriptorSet params; // TODO rename
-		vk::DescriptorSet addBlockSumsParams;
-	};
-
-	std::vector<ScanStage> _scanStages;
-
-	CacheReference<descriptors::ComputePipeline> _scanPipeline;
-	CacheReference<descriptors::DescriptorSetLayout> _scanParamsLayout;
-
-	CacheReference<descriptors::ComputePipeline> _assignPipeline;
-	vk::DescriptorSet _assignParams;
-	CacheReference<descriptors::DescriptorSetLayout> _assignParamsLayout;
-
-	CacheReference<descriptors::ComputePipeline> _addBlockSumsPipeline;
-	CacheReference<descriptors::DescriptorSetLayout> _addBlockSumsParamsLayout;
-
-	static constexpr std::uint32_t blockSize = 64;
-
-	bool initialized = false;
+	bool _initialized = false;
 	void initialize(vk::CommandBuffer buf);
 };
 

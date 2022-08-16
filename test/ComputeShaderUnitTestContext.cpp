@@ -72,20 +72,30 @@ ComputeShaderUnitTestContext::ComputeShaderUnitTestContext() {
 	auto extensions = {VK_EXT_DEBUG_UTILS_EXTENSION_NAME};
 	auto layers = {"VK_LAYER_KHRONOS_validation"};
 
-	vk::ApplicationInfo appInfo{
-		.pApplicationName = "PBF Compute Shader Unit Tests",
-		.applicationVersion = VK_MAKE_VERSION(0, 0, 0),
-		.pEngineName = "PBF",
-		.engineVersion = VK_MAKE_VERSION(0, 0, 0),
-		.apiVersion = VK_API_VERSION_1_1
-	};
-	_instance = vk::createInstanceUnique(vk::InstanceCreateInfo{
-		.pApplicationInfo = &appInfo,
-		.enabledLayerCount = static_cast<uint32_t>(layers.size()),
-		.ppEnabledLayerNames = &*layers.begin(),
-		.enabledExtensionCount = static_cast<uint32_t>(extensions.size()),
-		.ppEnabledExtensionNames = &*extensions.begin()
-	}, nullptr, _dls);
+	{
+		vk::ApplicationInfo appInfo{
+			.pApplicationName = "PBF Compute Shader Unit Tests",
+			.applicationVersion = VK_MAKE_VERSION(0, 0, 0),
+			.pEngineName = "PBF",
+			.engineVersion = VK_MAKE_VERSION(0, 0, 0),
+			.apiVersion = VK_API_VERSION_1_1
+		};
+		vk::ValidationFeatureEnableEXT enables[] = {
+			vk::ValidationFeatureEnableEXT::eGpuAssisted
+		};
+		vk::ValidationFeaturesEXT validationFeatures{
+			.enabledValidationFeatureCount = 1,
+			.pEnabledValidationFeatures = enables
+		};
+		_instance = vk::createInstanceUnique(vk::InstanceCreateInfo{
+			.pNext = &validationFeatures,
+			.pApplicationInfo = &appInfo,
+			.enabledLayerCount = static_cast<uint32_t>(layers.size()),
+			.ppEnabledLayerNames = &*layers.begin(),
+			.enabledExtensionCount = static_cast<uint32_t>(extensions.size()),
+			.ppEnabledExtensionNames = &*extensions.begin()
+		}, nullptr, _dls);
+	}
 
 	_dldi = std::make_unique<vk::DispatchLoaderDynamic>(*_instance, vkGetInstanceProcAddr);
 	_debugUtilsMessenger = _instance->createDebugUtilsMessengerEXTUnique(

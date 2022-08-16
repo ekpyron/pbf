@@ -19,13 +19,12 @@ namespace pbf {
 
 RadixSort::RadixSort(
 	ContextInterface& _context,
-	Cache& _cache,
 	uint32_t _blockSize,
 	uint32_t _numBlocks,
 	descriptors::DescriptorSetLayout const& _keyAndGlobalSortShaderDescriptors,
-	std::string _shaderPrefix
+	std::string_view _shaderPrefix
 ):
-context(_context), cache(_cache), blockSize(_blockSize), numBlocks(_numBlocks),
+context(_context), blockSize(_blockSize), numBlocks(_numBlocks),
 prefixSums(&_context, numKeys, vk::BufferUsageFlagBits::eStorageBuffer, MemoryType::STATIC)
 {
 	for (ssize_t blockSumSize = 4 * numBlocks; blockSumSize > 1; blockSumSize = (blockSumSize + blockSize - 1) / blockSize)
@@ -41,6 +40,8 @@ prefixSums(&_context, numKeys, vk::BufferUsageFlagBits::eStorageBuffer, MemoryTy
 
 
 	auto& prescanBlockSum = blockSums.front();
+
+	auto& cache = context.cache();
 
 	auto sortLayout = cache.fetch(descriptors::DescriptorSetLayout{
 		.createFlags = {},
@@ -81,7 +82,7 @@ prefixSums(&_context, numKeys, vk::BufferUsageFlagBits::eStorageBuffer, MemoryTy
 				.stage = vk::ShaderStageFlagBits::eCompute,
 				.module = cache.fetch(
 					descriptors::ShaderModule{
-						.source = descriptors::ShaderModule::File{_shaderPrefix + "_prescan.comp.spv"},
+						.source = descriptors::ShaderModule::File{fmt::format("{}_prescan.comp.spv", _shaderPrefix)},
 						PBF_DESC_DEBUG_NAME("RadixSort: Prescan Compute Shader")
 					}),
 				.entryPoint = "main",
@@ -141,7 +142,7 @@ prefixSums(&_context, numKeys, vk::BufferUsageFlagBits::eStorageBuffer, MemoryTy
 				.stage = vk::ShaderStageFlagBits::eCompute,
 				.module = cache.fetch(
 					descriptors::ShaderModule{
-						.source = descriptors::ShaderModule::File{_shaderPrefix + "_globalsort.comp.spv"},
+						.source = descriptors::ShaderModule::File{fmt::format("{}_globalsort.comp.spv", _shaderPrefix)},
 						PBF_DESC_DEBUG_NAME("Radix Sort: Global Sort Compute Shader")
 					}),
 				.entryPoint = "main",
