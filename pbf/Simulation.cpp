@@ -2,7 +2,6 @@
 #include "Context.h"
 #include "Renderer.h"
 
-
 namespace pbf {
 
 namespace {
@@ -21,17 +20,25 @@ constexpr auto radixSortDescriptorSetLayout() {
 				.descriptorType = vk::DescriptorType::eStorageBuffer,
 				.descriptorCount = 1,
 				.stageFlags = vk::ShaderStageFlagBits::eCompute
+			},
+			{
+				.binding = 2,
+				.descriptorType = vk::DescriptorType::eUniformBuffer,
+				.descriptorCount = 1,
+				.stageFlags = vk::ShaderStageFlagBits::eCompute
 			}
 		},
 		PBF_DESC_DEBUG_NAME("Simulation particle sort descriptor set layout")
 	};
 }
+
 }
 
 Simulation::Simulation(Context *context, size_t numParticles, vk::DescriptorBufferInfo input, vk::DescriptorBufferInfo output):
 _context(context),
 _numParticles(numParticles),
 _radixSort(*_context, blockSize, getNumParticles() / blockSize, radixSortDescriptorSetLayout(), "shaders/particlesort"),
+gridDataBuffer(context, 1, vk::BufferUsageFlagBits::eUniformBuffer|vk::BufferUsageFlagBits::eTransferDst, MemoryType::STATIC),
 _input(input),
 _output(output)
 {
@@ -52,6 +59,7 @@ _output(output)
 		});
 	}
 
+
 	{
 		std::vector pingPongLayouts(2, *context->cache().fetch(radixSortDescriptorSetLayout()));
 		auto descriptorSets = context->device().allocateDescriptorSets(vk::DescriptorSetAllocateInfo{
@@ -64,39 +72,59 @@ _output(output)
 	}
 
 	{
-		auto descriptorInfos = {
-			input,
-			output
+		vk::DescriptorBufferInfo gridDataBufferInfo{
+			.buffer = gridDataBuffer.buffer(),
+			.offset = 0u,
+			.range = sizeof(GridData)
 		};
-		context->device().updateDescriptorSets({vk::WriteDescriptorSet{
-			.dstSet = pingDescriptorSet,
-			.dstBinding = 0,
-			.dstArrayElement = 0,
-			.descriptorCount = static_cast<uint32_t>(descriptorInfos.size()),
-			.descriptorType = vk::DescriptorType::eStorageBuffer,
-			.pImageInfo = nullptr,
-			.pBufferInfo = &*descriptorInfos.begin(),
-			.pTexelBufferView = nullptr
-		}}, {});
+		{
+			auto pingDescriptorInfos = {
+				input,
+				output
+			};
+			auto pongDescriptorInfos = {
+				output,
+				input
+			};
+			context->device().updateDescriptorSets({vk::WriteDescriptorSet{
+				.dstSet = pingDescriptorSet,
+				.dstBinding = 0,
+				.dstArrayElement = 0,
+				.descriptorCount = static_cast<uint32_t>(pingDescriptorInfos.size()),
+				.descriptorType = vk::DescriptorType::eStorageBuffer,
+				.pImageInfo = nullptr,
+				.pBufferInfo = &*pingDescriptorInfos.begin(),
+				.pTexelBufferView = nullptr
+			}, vk::WriteDescriptorSet{
+				.dstSet = pingDescriptorSet,
+				.dstBinding = 2,
+				.dstArrayElement = 0,
+				.descriptorCount = 1,
+				.descriptorType = vk::DescriptorType::eUniformBuffer,
+				.pImageInfo = nullptr,
+				.pBufferInfo = &gridDataBufferInfo,
+				.pTexelBufferView = nullptr
+			}, vk::WriteDescriptorSet{
+				.dstSet = pongDescriptorSet,
+				.dstBinding = 0,
+				.dstArrayElement = 0,
+				.descriptorCount = static_cast<uint32_t>(pongDescriptorInfos.size()),
+				.descriptorType = vk::DescriptorType::eStorageBuffer,
+				.pImageInfo = nullptr,
+				.pBufferInfo = &*pongDescriptorInfos.begin(),
+				.pTexelBufferView = nullptr
+			}, vk::WriteDescriptorSet{
+				.dstSet = pongDescriptorSet,
+				.dstBinding = 2,
+				.dstArrayElement = 0,
+				.descriptorCount = 1,
+				.descriptorType = vk::DescriptorType::eUniformBuffer,
+				.pImageInfo = nullptr,
+				.pBufferInfo = &gridDataBufferInfo,
+				.pTexelBufferView = nullptr
+			}}, {});
+		}
 	}
-	{
-		auto descriptorInfos = {
-			output,
-			input
-		};
-		context->device().updateDescriptorSets({vk::WriteDescriptorSet{
-			.dstSet = pongDescriptorSet,
-			.dstBinding = 0,
-			.dstArrayElement = 0,
-			.descriptorCount = static_cast<uint32_t>(descriptorInfos.size()),
-			.descriptorType = vk::DescriptorType::eStorageBuffer,
-			.pImageInfo = nullptr,
-			.pBufferInfo = &*descriptorInfos.begin(),
-			.pTexelBufferView = nullptr
-		}}, {});
-	}
-
-
 }
 
 void Simulation::run(vk::CommandBuffer buf)
@@ -109,6 +137,50 @@ void Simulation::run(vk::CommandBuffer buf)
 
 void Simulation::initialize(vk::CommandBuffer buf)
 {
+	Buffer<GridData> gridDataInitBuffer{
+		_context,
+		1,
+		vk::BufferUsageFlagBits::eTransferSrc,
+		MemoryType::TRANSIENT
+	};
+	*gridDataInitBuffer.data() = {};
+	gridDataInitBuffer.flush();
+
+	buf.pipelineBarrier(
+		vk::PipelineStageFlagBits::eHost,
+		vk::PipelineStageFlagBits::eTransfer,
+		{},
+		{
+			vk::MemoryBarrier{
+				.srcAccessMask = vk::AccessFlagBits::eHostWrite,
+				.dstAccessMask = vk::AccessFlagBits::eTransferRead
+			}
+		},
+		{}, {}
+	);
+
+	buf.copyBuffer(gridDataInitBuffer.buffer(), gridDataBuffer.buffer(), {
+		vk::BufferCopy {
+			.srcOffset = 0,
+			.dstOffset = 0,
+			.size = sizeof(GridData)
+		}
+	});
+
+	buf.pipelineBarrier(
+		vk::PipelineStageFlagBits::eTransfer,
+		vk::PipelineStageFlagBits::eComputeShader,
+		{},
+		{
+			vk::MemoryBarrier{
+				.srcAccessMask = vk::AccessFlagBits::eTransferWrite,
+				.dstAccessMask = vk::AccessFlagBits::eUniformRead
+			}
+		},
+		{}, {}
+	);
+
+	_context->renderer().stage([gridDataInitBuffer = std::move(gridDataInitBuffer)](vk::CommandBuffer) {});
 
 	_initialized = true;
 }

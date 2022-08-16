@@ -14,10 +14,11 @@ layout(std430, binding = 0, set = 1) readonly buffer Particles
     ParticleData particles[];
 };
 
-// TODO: make specialization constants or push constants
-ivec3 GRID_HASHWEIGHTS = ivec3(1, 64, 64*64);
-ivec3 GRID_MAX = ivec3(1023, 31, 31);
-ivec3 GRID_MIN = ivec3(-32, -32, -32);
+layout(std140, binding = 2, set = 1) uniform GridData {
+    ivec3 GRID_MAX;
+    ivec3 GRID_MIN;
+    ivec3 GRID_HASHWEIGHTS;
+};
 
 uint GetHash(uint id) {
     highp ivec3 grid = ivec3 (clamp (particles[id].position, GRID_MIN, GRID_MAX));

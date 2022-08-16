@@ -31,6 +31,58 @@ public:
         _frameSync[_currentFrameSync].stagingFunctorQueue.emplace_back(std::unique_ptr<StagingFunctor>(new TypedClosureContainer(std::forward<Args>(f)...)));
     }
 
+	// TODO: not working! Fix.
+	template<typename Data>
+	void initUniformBuffer(vk::Buffer _dstBuffer, Data _data) {
+		Buffer<Data> srcBuffer{
+			_context,
+			1,
+			vk::BufferUsageFlagBits::eTransferSrc,
+			MemoryType::TRANSIENT
+		};
+		*srcBuffer.data() = _data;
+		srcBuffer.flush();
+		stage([
+			this,
+			_dstBuffer,
+		    gridDataInitBuffer = std::move(srcBuffer)
+		](vk::CommandBuffer buf) {
+			buf.pipelineBarrier(
+				vk::PipelineStageFlagBits::eHost,
+				vk::PipelineStageFlagBits::eTransfer,
+				{},
+				{
+					vk::MemoryBarrier{
+						.srcAccessMask = vk::AccessFlagBits::eHostWrite,
+						.dstAccessMask = vk::AccessFlagBits::eTransferRead
+					}
+				},
+				{}, {}
+			);
+
+			buf.copyBuffer(gridDataInitBuffer.buffer(), _dstBuffer, {
+				vk::BufferCopy {
+					.srcOffset = 0,
+					.dstOffset = 0,
+					.size = sizeof(Data)
+				}
+			});
+
+			buf.pipelineBarrier(
+				vk::PipelineStageFlagBits::eTransfer,
+				vk::PipelineStageFlagBits::eComputeShader,
+				{},
+				{
+					vk::MemoryBarrier{
+						.srcAccessMask = vk::AccessFlagBits::eTransferWrite,
+						.dstAccessMask = vk::AccessFlagBits::eUniformRead
+					}
+				},
+				{}, {}
+			);
+		});
+	}
+
 	auto framePrerenderCount() const {
 		return 3u;
 	}
@@ -41,6 +93,9 @@ public:
 	std::uint32_t previousFrameSync() const {
 		return (_currentFrameSync + framePrerenderCount() - 1) %  framePrerenderCount();
 	}
+
+	Context& context() { return *_context; }
+	Context const& context() const { return *_context; }
 
 private:
 
@@ -67,9 +122,7 @@ private:
     std::vector<vk::UniqueCommandBuffer> _commandBuffers;
 	bool firstRun = true;
 
-    vk::UniqueCommandBuffer _stagingCommandBuffer;
-
-    CacheReference<descriptors::RenderPass> _renderPass;
+	CacheReference<descriptors::RenderPass> _renderPass;
     //CacheReference<descriptors::GraphicsPipeline> _graphicsPipeline;
 };
 
