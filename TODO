@@ -1,0 +1,19 @@
+TODO:
+
+	Rethink order of execution in Renderer::render() + staging + initializing + lifetimes
+
+	Move Cache into Context?
+	
+	Buffer: ContextInterface constructor argument: pointer => ref
+
+	Move remove_cv_ref_t to different namespace
+
+	Nicer Cache with Concetps
+	
+	Rethink Cache.
+	
+	Better global descriptor set pool management.
+
+	Context ptr vs Context ref.
+	
+
