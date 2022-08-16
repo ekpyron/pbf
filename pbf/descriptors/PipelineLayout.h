@@ -22,8 +22,8 @@ struct PipelineLayout {
 
     vk::UniquePipelineLayout realize(ContextInterface *context) const;
 
-    vector32<CacheReference<DescriptorSetLayout>> setLayouts;
-    vector32<vk::PushConstantRange> pushConstants;
+    std::vector<CacheReference<DescriptorSetLayout>> setLayouts;
+    std::vector<vk::PushConstantRange> pushConstants;
 #ifndef NDEBUG
     std::string debugName;
 #endif

@@ -19,9 +19,9 @@ vk::UniquePipelineLayout PipelineLayout::realize(ContextInterface *context) cons
         return *_layout;
     });
     return device.createPipelineLayoutUnique(vk::PipelineLayoutCreateInfo{
-		.setLayoutCount = static_cast<uint32_t>(vkSetLayouts.size()),
+		.setLayoutCount = size32(vkSetLayouts),
 		.pSetLayouts = vkSetLayouts.data(),
-		.pushConstantRangeCount = pushConstants.size(),
+		.pushConstantRangeCount = size32(pushConstants),
 		.pPushConstantRanges = pushConstants.data()
     });
 }

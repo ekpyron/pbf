@@ -92,9 +92,6 @@ struct Order<std::variant<Args...>> {
 	}
 };
 
-template<typename T>
-struct Order<vector32<T>>: Order<std::vector<T>> {};
-
 template<typename... Args>
 struct Order<std::tuple<Args...>> {
 

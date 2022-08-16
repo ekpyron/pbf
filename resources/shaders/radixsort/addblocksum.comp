@@ -1,0 +1,20 @@
+#version 460
+#extension GL_ARB_separate_shader_objects : enable
+#extension GL_KHR_shader_subgroup_basic : enable
+
+layout (local_size_x_id = 0, local_size_y = 1, local_size_z = 1) in;
+
+layout(std430, binding = 1) buffer PrefixSums
+{
+    uint prefixSum[];
+};
+
+layout(std430, binding = 2) readonly buffer BlockSums
+{
+    uint blockSum[];
+};
+
+void main()
+{
+    prefixSum[gl_GlobalInvocationID.x] += blockSum[gl_WorkGroupID.x];
+}

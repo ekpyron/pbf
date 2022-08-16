@@ -6,7 +6,7 @@ add_library(pbf_common STATIC
         descriptors/ShaderModule.h descriptors/PipelineLayout.cpp descriptors/PipelineLayout.h
         descriptors/ComputePipeline.h descriptors/ComputePipeline.cpp
         descriptors/DescriptorSetLayout.h descriptors/DescriptorSetLayout.cpp
-        Buffer.cpp Buffer.h MemoryManager.cpp MemoryManager.h)
+        Buffer.cpp Buffer.h MemoryManager.cpp MemoryManager.h RadixSort.cpp RadixSort.h)
 target_include_directories(pbf_common PUBLIC ${CMAKE_CURRENT_LIST_DIR}/..)
 target_link_libraries(pbf_common PUBLIC fmt Vulkan::Vulkan spdlog glm crampl Threads::Threads)
 

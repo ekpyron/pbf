@@ -36,7 +36,7 @@ struct DescriptorSetLayout {
     };
 
     vk::DescriptorSetLayoutCreateFlags createFlags;
-    vector32<Binding> bindings;
+    std::vector<Binding> bindings;
 #ifndef NDEBUG
     std::string debugName;
 #endif

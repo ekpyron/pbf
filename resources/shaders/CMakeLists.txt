@@ -25,4 +25,9 @@ add_shader(sort/scan.comp.spv sort/scan_shared.comp sort/scan.comp)
 add_shader(sort/assign.comp.spv sort/assign.comp)
 add_shader(sort/addblocksum.comp.spv sort/addblocksum.comp)
 
+add_shader(radixsort/prescan.comp.spv radixsort/prescan.comp)
+add_shader(radixsort/scan.comp.spv radixsort/scan.comp)
+add_shader(radixsort/addblocksum.comp.spv radixsort/addblocksum.comp)
+add_shader(radixsort/globalsort.comp.spv radixsort/globalsort.comp)
+
 add_custom_target(shaders-target DEPENDS "${shaders_out}")

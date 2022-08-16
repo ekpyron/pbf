@@ -24,7 +24,7 @@ vk::UniqueDescriptorSetLayout DescriptorSetLayout::realize(ContextInterface *con
     });
     return context->device().createDescriptorSetLayoutUnique(vk::DescriptorSetLayoutCreateInfo{
 		.flags = createFlags,
-		.bindingCount = bindings.size(),
+		.bindingCount = size32(bindings),
 		.pBindings = vkBindings.data()
     });
 }
