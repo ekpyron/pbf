@@ -27,6 +27,7 @@ public:
 		std::string_view _shaderPrefix
 	);
 	RadixSort(const RadixSort&) = delete;
+	RadixSort(RadixSort&&) = default;
 	~RadixSort() = default;
 	RadixSort& operator=(const RadixSort&) = delete;
 

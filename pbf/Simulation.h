@@ -27,12 +27,15 @@ public:
 private:
 	Context* _context;
 	size_t _numParticles = 0;
-//	RadixSort _radixSort;
+	RadixSort _radixSort;
 
 	vk::DescriptorBufferInfo _input;
 	vk::DescriptorBufferInfo _output;
 
 	vk::UniqueDescriptorPool _descriptorPool;
+
+	vk::DescriptorSet pingDescriptorSet;
+	vk::DescriptorSet pongDescriptorSet;
 
 	static constexpr std::uint32_t blockSize = 256;
 

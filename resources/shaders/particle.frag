@@ -11,5 +11,5 @@ void main() {
         discard;
     }
     // outColor = vec4(fCoords * 0.5 + 0.5, 0, 1);
-    outColor = vec4(fAux/64, 0.0, 0.0, 1.0);
+    outColor = vec4(fAux, 0.0, 0.0, 1.0);
 }

@@ -1123,7 +1123,7 @@ TEST_CASE_METHOD(ComputeShaderUnitTest, "Compute Shader Sort Test", "[sort] ")
 		blockSize,
 		numKeys / blockSize,
 		keyAndGlobalSortDescriptorSet,
-		"shaders/particlesort"
+		"shaders/unittestsort"
 	};
 
 	vk::UniqueDescriptorPool descriptorPool;

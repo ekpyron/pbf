@@ -63,7 +63,7 @@ private:
 
     Context* _context;
 
-	uint32_t _numParticles = 256; // 64 * 64 * 64;
+	uint32_t _numParticles = 64 * 64 * 64;
 
 	Buffer<ParticleData> _particleData;
 

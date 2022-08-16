@@ -4,19 +4,26 @@
 
 layout (local_size_x_id = 0, local_size_y = 1, local_size_z = 1) in;
 
-layout(std430, binding = 0, set = 1) readonly buffer Keys
-{
-    uint keys[];
+struct ParticleData {
+    vec3 position;
+    float aux;
 };
 
-layout(std430, binding = 1, set = 1) writeonly buffer Result
+layout(std430, binding = 0, set = 1) readonly buffer Particles
 {
-    uint result[];
+    ParticleData particles[];
+};
+
+layout(std430, binding = 1, set = 1) writeonly buffer SortedParticles
+{
+    ParticleData particlesSorted[];
 };
 
 uint GetPermutation(uint id);
 
 void main()
 {
-    result[GetPermutation(gl_GlobalInvocationID.x)] = keys[gl_GlobalInvocationID.x];
+    ParticleData data = particles[gl_GlobalInvocationID.x];
+    data.aux = float(gl_GlobalInvocationID.x) / (64.0*64.0*64.0);
+    particlesSorted[GetPermutation(gl_GlobalInvocationID.x)] = data;
 }
