@@ -1139,18 +1139,6 @@ TEST_CASE_METHOD(ComputeShaderUnitTest, "Compute Shader Sort Test", "[sort] ")
 	}
 
 
-	vk::DescriptorSet pingDescriptorSet, pongDescriptorSet;
-	{
-		std::vector pingPongLayouts(2, *cache().fetch(keyAndGlobalSortDescriptorSet));
-		auto descriptorSets = device().allocateDescriptorSets(vk::DescriptorSetAllocateInfo{
-			.descriptorPool = *descriptorPool,
-			.descriptorSetCount = size32(pingPongLayouts),
-			.pSetLayouts = pingPongLayouts.data()
-		});
-		pingDescriptorSet = descriptorSets.front();
-		pongDescriptorSet = descriptorSets.back();
-	}
-
 	Buffer<uint32_t> keysBuffer{
 		this,
 		numKeys,
@@ -1169,6 +1157,18 @@ TEST_CASE_METHOD(ComputeShaderUnitTest, "Compute Shader Sort Test", "[sort] ")
 		for (auto i = 0; i < numKeys; ++i) {
 			ptr[i] = initialKeys[i];
 		}
+	}
+
+	vk::DescriptorSet pingDescriptorSet, pongDescriptorSet;
+	{
+		std::vector pingPongLayouts(2, *cache().fetch(keyAndGlobalSortDescriptorSet));
+		auto descriptorSets = device().allocateDescriptorSets(vk::DescriptorSetAllocateInfo{
+			.descriptorPool = *descriptorPool,
+			.descriptorSetCount = size32(pingPongLayouts),
+			.pSetLayouts = pingPongLayouts.data()
+		});
+		pingDescriptorSet = descriptorSets.front();
+		pongDescriptorSet = descriptorSets.back();
 	}
 
 	{
@@ -1206,15 +1206,16 @@ TEST_CASE_METHOD(ComputeShaderUnitTest, "Compute Shader Sort Test", "[sort] ")
 
 	bool swapped;
 	run([&](vk::CommandBuffer buf) {
-		swapped = radixSort.stage(buf, 32, pingDescriptorSet, pongDescriptorSet);
+		swapped = radixSort.stage(buf, sortBitCount, pingDescriptorSet, pongDescriptorSet);
 	});
 
 	{
 
 		auto ptr = swapped ? resultBuffer.data() : keysBuffer.data();
 
-		for (auto i = 0; i < numKeys - 1; ++i)
-			CHECK(ptr[i] <= ptr[i + 1]);
+		std::sort(initialKeys.begin(), initialKeys.end());
+		for (auto i = 0; i < numKeys; ++i)
+			CHECK(ptr[i] == initialKeys[i]);
 	}
 
 }

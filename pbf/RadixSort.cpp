@@ -240,14 +240,16 @@ bool RadixSort::stage(
 ) const
 {
 	bool isSwapped = false;
-	for (uint32_t bit = 0; bit < _sortBits; bit += 2) {
 
-		PushConstants pushConstants {
-			.blockSumOffset = glm::u32vec4{
-				0, numBlocks, numBlocks * 2, numBlocks * 3
-			},
-			.bit = bit
-		};
+	PushConstants pushConstants {
+		.blockSumOffset = glm::u32vec4{
+			0, numBlocks, numBlocks * 2, numBlocks * 3
+		},
+		.bit = 0
+	};
+
+	for (uint32_t bit = 0; bit < _sortBits; bit += 2) {
+		pushConstants.bit = bit;
 
 		buf.bindPipeline(vk::PipelineBindPoint::eCompute, *prescanPipeline);
 		buf.bindDescriptorSets(vk::PipelineBindPoint::eCompute, *(prescanPipeline.descriptor().pipelineLayout), 0, {prescanParams, _pingDescriptorSet}, {});
@@ -257,8 +259,8 @@ bool RadixSort::stage(
 
 		buf.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {}, {
 			vk::MemoryBarrier{
-				.srcAccessMask = vk::AccessFlagBits::eShaderWrite|vk::AccessFlagBits::eShaderRead|vk::AccessFlagBits::eMemoryWrite|vk::AccessFlagBits::eMemoryRead,
-				.dstAccessMask = vk::AccessFlagBits::eShaderWrite|vk::AccessFlagBits::eShaderRead|vk::AccessFlagBits::eMemoryWrite|vk::AccessFlagBits::eMemoryRead
+				.srcAccessMask = vk::AccessFlagBits::eShaderWrite,
+				.dstAccessMask = vk::AccessFlagBits::eShaderRead
 			}
 		}, {}, {});
 
@@ -274,8 +276,8 @@ bool RadixSort::stage(
 
 			buf.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {}, {
 				vk::MemoryBarrier{
-					.srcAccessMask = vk::AccessFlagBits::eShaderWrite|vk::AccessFlagBits::eShaderRead|vk::AccessFlagBits::eMemoryWrite|vk::AccessFlagBits::eMemoryRead,
-					.dstAccessMask = vk::AccessFlagBits::eShaderWrite|vk::AccessFlagBits::eShaderRead|vk::AccessFlagBits::eMemoryWrite|vk::AccessFlagBits::eMemoryRead
+					.srcAccessMask = vk::AccessFlagBits::eShaderWrite,
+					.dstAccessMask = vk::AccessFlagBits::eShaderRead
 				}
 			}, {}, {});
 		}
@@ -290,8 +292,8 @@ bool RadixSort::stage(
 
 			buf.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {}, {
 				vk::MemoryBarrier{
-					.srcAccessMask = vk::AccessFlagBits::eShaderWrite|vk::AccessFlagBits::eShaderRead|vk::AccessFlagBits::eMemoryWrite|vk::AccessFlagBits::eMemoryRead,
-					.dstAccessMask = vk::AccessFlagBits::eShaderWrite|vk::AccessFlagBits::eShaderRead|vk::AccessFlagBits::eMemoryWrite|vk::AccessFlagBits::eMemoryRead
+					.srcAccessMask = vk::AccessFlagBits::eShaderWrite,
+					.dstAccessMask = vk::AccessFlagBits::eShaderRead
 				}
 			}, {}, {});
 		}
@@ -304,8 +306,8 @@ bool RadixSort::stage(
 
 		buf.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {}, {
 			vk::MemoryBarrier{
-				.srcAccessMask = vk::AccessFlagBits::eShaderWrite|vk::AccessFlagBits::eShaderRead|vk::AccessFlagBits::eMemoryWrite|vk::AccessFlagBits::eMemoryRead,
-				.dstAccessMask = vk::AccessFlagBits::eShaderWrite|vk::AccessFlagBits::eShaderRead|vk::AccessFlagBits::eMemoryWrite|vk::AccessFlagBits::eMemoryRead
+				.srcAccessMask = vk::AccessFlagBits::eShaderWrite,
+				.dstAccessMask = vk::AccessFlagBits::eShaderRead
 			}
 		}, {}, {});
 
