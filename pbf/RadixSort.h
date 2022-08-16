@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Buffer.h"
+#include "Cache.h"
 
 #include <cstdint>
 #include <vector>
@@ -10,10 +11,10 @@ namespace pbf {
 namespace descriptors {
 class DescriptorSetLayout;
 class ShaderModule;
+class ComputePipeline;
 }
 
 class ContextInterface;
-class Cache;
 
 class RadixSort
 {
@@ -24,12 +25,18 @@ public:
 		uint32_t _blockSize,
 		uint32_t _numBlocks,
 		descriptors::DescriptorSetLayout const& _keyAndGlobalSortShaderDescriptors,
-		descriptors::ShaderModule const& _keyShaderModule,
-		descriptors::ShaderModule const& _globalSortShaderModule
+		std::string _shaderPrefix
 	);
 	RadixSort(const RadixSort&) = delete;
 	~RadixSort() = default;
 	RadixSort& operator=(const RadixSort&) = delete;
+
+	bool stage(
+		vk::CommandBuffer buf,
+		uint32_t _sortBits,
+		vk::DescriptorSet _pingDescriptorSet,
+		vk::DescriptorSet _pongDescriptorSet
+	) const;
 private:
 	ContextInterface& context;
 	Cache& cache;
@@ -40,6 +47,17 @@ private:
 
 	Buffer<uint32_t> prefixSums;
 	std::vector<Buffer<uint32_t>> blockSums;
+
+	CacheReference<descriptors::ComputePipeline> prescanPipeline;
+	CacheReference<descriptors::ComputePipeline> scanPipeline;
+	CacheReference<descriptors::ComputePipeline> addBlockSumPipeline;
+	CacheReference<descriptors::ComputePipeline> globalSortPipeline;
+
+	vk::UniqueDescriptorPool descriptorPool;
+
+	vk::DescriptorSet prescanParams;
+	std::vector<vk::DescriptorSet> scanParams;
+	vk::DescriptorSet globalSortParams;
 
 	struct PushConstants {
 		glm::u32vec4 blockSumOffset;

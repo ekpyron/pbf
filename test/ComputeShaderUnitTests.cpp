@@ -11,6 +11,7 @@
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/matchers/catch_matchers_templated.hpp>
 #include "ComputeShaderUnitTestContext.h"
+#include <pbf/RadixSort.h>
 #include <ranges>
 #include <random>
 #include <span>
@@ -424,7 +425,7 @@ auto EqualsRange(const Range& range) -> EqualsRangeMatcher<Range> {
 	return EqualsRangeMatcher<Range>{range};
 }
 
-TEST_CASE_METHOD(ComputeShaderUnitTest, "Compute Shader Sort Test", "[sort]")
+TEST_CASE_METHOD(ComputeShaderUnitTest, "Compute Shader Sort Test Old Reference", "[sort_old_ref]")
 {
 	using namespace pbf;
 
@@ -1070,4 +1071,150 @@ void main()
 
 	std::ranges::sort(initialKeys);
 	REQUIRE_THAT(std::span(hostBuffer.data(), hostBuffer.size()), EqualsRange(initialKeys));
+}
+
+TEST_CASE_METHOD(ComputeShaderUnitTest, "Compute Shader Sort Test", "[sort] ")
+{
+	const size_t maxParticleCount = 128*128*128;
+	const uint32_t sortBitCount = 32; // sort up to # of bits
+	const uint32_t blockSize = 256;
+
+	std::vector<uint32_t> initialKeys;
+
+	{
+		std::random_device rd;
+		std::mt19937 gen(rd());
+		std::uniform_int_distribution<uint32_t> distrib(0, std::numeric_limits<uint32_t>::max());
+		for (size_t i = 0; i < std::uniform_int_distribution<size_t>(0, maxParticleCount)(gen); ++i)
+			initialKeys.emplace_back(distrib(gen));
+	}
+
+
+	if (initialKeys.size() % blockSize)
+	{
+		initialKeys.reserve(roundToNextMultiple(initialKeys.size(), blockSize));
+		while (initialKeys.size() % blockSize)
+			initialKeys.emplace_back(std::numeric_limits<uint32_t>::max());
+	}
+
+	const auto numKeys = static_cast<uint32_t>(initialKeys.size());
+
+
+	using namespace pbf;
+	descriptors::DescriptorSetLayout keyAndGlobalSortDescriptorSet{
+		.createFlags = {},
+		.bindings = {
+			{
+				.binding = 0,
+				.descriptorType = vk::DescriptorType::eStorageBuffer,
+				.descriptorCount = 1,
+				.stageFlags = vk::ShaderStageFlagBits::eCompute
+			},
+			{
+				.binding = 1,
+				.descriptorType = vk::DescriptorType::eStorageBuffer,
+				.descriptorCount = 1,
+				.stageFlags = vk::ShaderStageFlagBits::eCompute
+			}
+		}
+	};
+	RadixSort radixSort{
+		*this,
+		cache(),
+		blockSize,
+		numKeys / blockSize,
+		keyAndGlobalSortDescriptorSet,
+		"shaders/particlesort"
+	};
+
+	vk::UniqueDescriptorPool descriptorPool;
+	{
+		std::uint32_t numDescriptorSets = 64;
+		static std::array<vk::DescriptorPoolSize, 1> sizes {{{ vk::DescriptorType::eStorageBuffer, 64 }}};
+		descriptorPool = device().createDescriptorPoolUnique(vk::DescriptorPoolCreateInfo{
+			.maxSets = numDescriptorSets,
+			.poolSizeCount = static_cast<std::uint32_t>(sizes.size()),
+			.pPoolSizes = sizes.data()
+		});
+	}
+
+
+	vk::DescriptorSet pingDescriptorSet, pongDescriptorSet;
+	{
+		std::vector pingPongLayouts(2, *cache().fetch(keyAndGlobalSortDescriptorSet));
+		auto descriptorSets = device().allocateDescriptorSets(vk::DescriptorSetAllocateInfo{
+			.descriptorPool = *descriptorPool,
+			.descriptorSetCount = size32(pingPongLayouts),
+			.pSetLayouts = pingPongLayouts.data()
+		});
+		pingDescriptorSet = descriptorSets.front();
+		pongDescriptorSet = descriptorSets.back();
+	}
+
+	Buffer<uint32_t> keysBuffer{
+		this,
+		numKeys,
+		vk::BufferUsageFlagBits::eStorageBuffer,
+		MemoryType::DYNAMIC
+	};
+	Buffer<uint32_t> resultBuffer{
+		this,
+		numKeys,
+		vk::BufferUsageFlagBits::eStorageBuffer,
+		MemoryType::DYNAMIC
+	};
+
+	{
+		auto ptr = keysBuffer.data();
+		for (auto i = 0; i < numKeys; ++i) {
+			ptr[i] = initialKeys[i];
+		}
+	}
+
+	{
+		auto descriptorInfos = {
+			vk::DescriptorBufferInfo{keysBuffer.buffer(), 0, keysBuffer.deviceSize()},
+			vk::DescriptorBufferInfo{resultBuffer.buffer(), 0, resultBuffer.deviceSize()}
+		};
+		device().updateDescriptorSets({vk::WriteDescriptorSet{
+			.dstSet = pingDescriptorSet,
+			.dstBinding = 0,
+			.dstArrayElement = 0,
+			.descriptorCount = static_cast<uint32_t>(descriptorInfos.size()),
+			.descriptorType = vk::DescriptorType::eStorageBuffer,
+			.pImageInfo = nullptr,
+			.pBufferInfo = &*descriptorInfos.begin(),
+			.pTexelBufferView = nullptr
+		}}, {});
+	}
+	{
+		auto descriptorInfos = {
+			vk::DescriptorBufferInfo{resultBuffer.buffer(), 0, resultBuffer.deviceSize()},
+			vk::DescriptorBufferInfo{keysBuffer.buffer(), 0, keysBuffer.deviceSize()}
+		};
+		device().updateDescriptorSets({vk::WriteDescriptorSet{
+			.dstSet = pongDescriptorSet,
+			.dstBinding = 0,
+			.dstArrayElement = 0,
+			.descriptorCount = static_cast<uint32_t>(descriptorInfos.size()),
+			.descriptorType = vk::DescriptorType::eStorageBuffer,
+			.pImageInfo = nullptr,
+			.pBufferInfo = &*descriptorInfos.begin(),
+			.pTexelBufferView = nullptr
+		}}, {});
+	}
+
+	bool swapped;
+	run([&](vk::CommandBuffer buf) {
+		swapped = radixSort.stage(buf, 32, pingDescriptorSet, pongDescriptorSet);
+	});
+
+	{
+
+		auto ptr = swapped ? resultBuffer.data() : keysBuffer.data();
+
+		for (auto i = 0; i < numKeys - 1; ++i)
+			CHECK(ptr[i] <= ptr[i + 1]);
+	}
+
 }

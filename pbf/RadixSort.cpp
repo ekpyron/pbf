@@ -23,8 +23,7 @@ RadixSort::RadixSort(
 	uint32_t _blockSize,
 	uint32_t _numBlocks,
 	descriptors::DescriptorSetLayout const& _keyAndGlobalSortShaderDescriptors,
-	descriptors::ShaderModule const& _keyShaderModule,
-	descriptors::ShaderModule const& _globalSortShaderModule
+	std::string _shaderPrefix
 ):
 context(_context), cache(_cache), blockSize(_blockSize), numBlocks(_numBlocks),
 prefixSums(&_context, numKeys, vk::BufferUsageFlagBits::eStorageBuffer, MemoryType::STATIC)
@@ -75,14 +74,14 @@ prefixSums(&_context, numKeys, vk::BufferUsageFlagBits::eStorageBuffer, MemoryTy
 			},
 			PBF_DESC_DEBUG_NAME("prescan pipeline Layout")
 		});
-	auto prescanPipeline = cache.fetch(
+	prescanPipeline = cache.fetch(
 		descriptors::ComputePipeline{
 			.flags = {},
 			.shaderStage = descriptors::ShaderStage {
 				.stage = vk::ShaderStageFlagBits::eCompute,
 				.module = cache.fetch(
 					descriptors::ShaderModule{
-						.source = descriptors::ShaderModule::File{"shaders/radixsort/prescan.comp.spv"},
+						.source = descriptors::ShaderModule::File{_shaderPrefix + "_prescan.comp.spv"},
 						PBF_DESC_DEBUG_NAME("RadixSort: Prescan Compute Shader")
 					}),
 				.entryPoint = "main",
@@ -94,7 +93,7 @@ prefixSums(&_context, numKeys, vk::BufferUsageFlagBits::eStorageBuffer, MemoryTy
 			PBF_DESC_DEBUG_NAME("prescan pipeline")
 		}
 	);
-	auto scanPipeline = cache.fetch(
+	scanPipeline = cache.fetch(
 		descriptors::ComputePipeline{
 			.flags = {},
 			.shaderStage = descriptors::ShaderStage {
@@ -114,7 +113,7 @@ prefixSums(&_context, numKeys, vk::BufferUsageFlagBits::eStorageBuffer, MemoryTy
 		}
 	);
 
-	auto addBlockSumPipeline = cache.fetch(
+	addBlockSumPipeline = cache.fetch(
 		descriptors::ComputePipeline{
 			.flags = {},
 			.shaderStage = descriptors::ShaderStage {
@@ -135,14 +134,14 @@ prefixSums(&_context, numKeys, vk::BufferUsageFlagBits::eStorageBuffer, MemoryTy
 	);
 
 
-	auto globalSortPipeline = cache.fetch(
+	globalSortPipeline = cache.fetch(
 		descriptors::ComputePipeline{
 			.flags = {},
 			.shaderStage = descriptors::ShaderStage {
 				.stage = vk::ShaderStageFlagBits::eCompute,
 				.module = cache.fetch(
 					descriptors::ShaderModule{
-						.source = descriptors::ShaderModule::File{"shaders/radixsort/globalsort.comp.spv"},
+						.source = descriptors::ShaderModule::File{_shaderPrefix + "_globalsort.comp.spv"},
 						PBF_DESC_DEBUG_NAME("Radix Sort: Global Sort Compute Shader")
 					}),
 				.entryPoint = "main",
@@ -154,7 +153,6 @@ prefixSums(&_context, numKeys, vk::BufferUsageFlagBits::eStorageBuffer, MemoryTy
 			PBF_DESC_DEBUG_NAME("global sort pipeline")
 		}
 	);
-	vk::UniqueDescriptorPool descriptorPool;
 	{
 		std::uint32_t numDescriptorSets = 1024;
 		static std::array<vk::DescriptorPoolSize, 1> sizes {{{ vk::DescriptorType::eStorageBuffer, 1024 }}};
@@ -165,7 +163,7 @@ prefixSums(&_context, numKeys, vk::BufferUsageFlagBits::eStorageBuffer, MemoryTy
 		});
 	}
 
-	auto prescanParams = context.device().allocateDescriptorSets(vk::DescriptorSetAllocateInfo{
+	prescanParams = context.device().allocateDescriptorSets(vk::DescriptorSetAllocateInfo{
 		.descriptorPool = *descriptorPool,
 		.descriptorSetCount = 1,
 		.pSetLayouts = &*sortLayout
@@ -188,7 +186,7 @@ prefixSums(&_context, numKeys, vk::BufferUsageFlagBits::eStorageBuffer, MemoryTy
 	}
 
 	std::vector sortLayouts(blockSums.size() - 1, *sortLayout);
-	auto scanParams = context.device().allocateDescriptorSets(vk::DescriptorSetAllocateInfo{
+	scanParams = context.device().allocateDescriptorSets(vk::DescriptorSetAllocateInfo{
 		.descriptorPool = *descriptorPool,
 		.descriptorSetCount = static_cast<uint32_t>(sortLayouts.size()),
 		.pSetLayouts = sortLayouts.data()
@@ -211,7 +209,7 @@ prefixSums(&_context, numKeys, vk::BufferUsageFlagBits::eStorageBuffer, MemoryTy
 		}}, {});
 	}
 
-	auto globalSortParams = context.device().allocateDescriptorSets(vk::DescriptorSetAllocateInfo{
+	globalSortParams = context.device().allocateDescriptorSets(vk::DescriptorSetAllocateInfo{
 		.descriptorPool = *descriptorPool,
 		.descriptorSetCount = 1,
 		.pSetLayouts = &*sortLayout
@@ -232,6 +230,89 @@ prefixSums(&_context, numKeys, vk::BufferUsageFlagBits::eStorageBuffer, MemoryTy
 			.pTexelBufferView = nullptr
 		}}, {});
 	}
+}
+
+bool RadixSort::stage(
+	vk::CommandBuffer buf,
+	uint32_t _sortBits,
+	vk::DescriptorSet _pingDescriptorSet,
+	vk::DescriptorSet _pongDescriptorSet
+) const
+{
+	bool isSwapped = false;
+	for (uint32_t bit = 0; bit < _sortBits; bit += 2) {
+
+		PushConstants pushConstants {
+			.blockSumOffset = glm::u32vec4{
+				0, numBlocks, numBlocks * 2, numBlocks * 3
+			},
+			.bit = bit
+		};
+
+		buf.bindPipeline(vk::PipelineBindPoint::eCompute, *prescanPipeline);
+		buf.bindDescriptorSets(vk::PipelineBindPoint::eCompute, *(prescanPipeline.descriptor().pipelineLayout), 0, {prescanParams, _pingDescriptorSet}, {});
+		buf.pushConstants(*(prescanPipeline.descriptor().pipelineLayout), vk::ShaderStageFlagBits::eCompute, 0, sizeof(pushConstants), &pushConstants);
+		// reads keys; writes prefix sums and block sums
+		buf.dispatch(((numKeys + blockSize - 1) / blockSize), 1, 1);
+
+		buf.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {}, {
+			vk::MemoryBarrier{
+				.srcAccessMask = vk::AccessFlagBits::eShaderWrite|vk::AccessFlagBits::eShaderRead|vk::AccessFlagBits::eMemoryWrite|vk::AccessFlagBits::eMemoryRead,
+				.dstAccessMask = vk::AccessFlagBits::eShaderWrite|vk::AccessFlagBits::eShaderRead|vk::AccessFlagBits::eMemoryWrite|vk::AccessFlagBits::eMemoryRead
+			}
+		}, {}, {});
+
+		for (size_t i = 0; i < blockSums.size() - 1; ++i)
+		{
+			auto& prefixSum = blockSums[i];
+			auto& blockSum = blockSums[i + 1];
+			const uint32_t numBlockSums = (prefixSum.size() + blockSize - 1) / blockSize;
+
+			buf.bindPipeline(vk::PipelineBindPoint::eCompute, *scanPipeline);
+			buf.bindDescriptorSets(vk::PipelineBindPoint::eCompute, *(scanPipeline.descriptor().pipelineLayout), 0, {scanParams[i]}, {});
+			buf.dispatch(numBlockSums, 1, 1);
+
+			buf.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {}, {
+				vk::MemoryBarrier{
+					.srcAccessMask = vk::AccessFlagBits::eShaderWrite|vk::AccessFlagBits::eShaderRead|vk::AccessFlagBits::eMemoryWrite|vk::AccessFlagBits::eMemoryRead,
+					.dstAccessMask = vk::AccessFlagBits::eShaderWrite|vk::AccessFlagBits::eShaderRead|vk::AccessFlagBits::eMemoryWrite|vk::AccessFlagBits::eMemoryRead
+				}
+			}, {}, {});
+		}
+
+		for (ssize_t i = blockSums.size() - 2; i > 0; i--) {
+			auto& prefixSum = blockSums[i - 1];
+			const uint32_t numBlockSums = (prefixSum.size() + blockSize - 1) / blockSize;
+
+			buf.bindPipeline(vk::PipelineBindPoint::eCompute, *addBlockSumPipeline);
+			buf.bindDescriptorSets(vk::PipelineBindPoint::eCompute, *(scanPipeline.descriptor().pipelineLayout), 0, {scanParams[i - 1]}, {});
+			buf.dispatch(numBlockSums, 1, 1);
+
+			buf.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {}, {
+				vk::MemoryBarrier{
+					.srcAccessMask = vk::AccessFlagBits::eShaderWrite|vk::AccessFlagBits::eShaderRead|vk::AccessFlagBits::eMemoryWrite|vk::AccessFlagBits::eMemoryRead,
+					.dstAccessMask = vk::AccessFlagBits::eShaderWrite|vk::AccessFlagBits::eShaderRead|vk::AccessFlagBits::eMemoryWrite|vk::AccessFlagBits::eMemoryRead
+				}
+			}, {}, {});
+		}
+
+		buf.bindPipeline(vk::PipelineBindPoint::eCompute, *globalSortPipeline);
+		buf.bindDescriptorSets(vk::PipelineBindPoint::eCompute, *(globalSortPipeline.descriptor().pipelineLayout), 0, {globalSortParams, _pingDescriptorSet}, {});
+		buf.pushConstants(*(globalSortPipeline.descriptor().pipelineLayout), vk::ShaderStageFlagBits::eCompute, 0, sizeof(pushConstants), &pushConstants);
+		// reads keys, prefix sums and block sums; writes result
+		buf.dispatch(((numKeys + blockSize - 1) / blockSize), 1, 1);
+
+		buf.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {}, {
+			vk::MemoryBarrier{
+				.srcAccessMask = vk::AccessFlagBits::eShaderWrite|vk::AccessFlagBits::eShaderRead|vk::AccessFlagBits::eMemoryWrite|vk::AccessFlagBits::eMemoryRead,
+				.dstAccessMask = vk::AccessFlagBits::eShaderWrite|vk::AccessFlagBits::eShaderRead|vk::AccessFlagBits::eMemoryWrite|vk::AccessFlagBits::eMemoryRead
+			}
+		}, {}, {});
+
+		std::swap(_pingDescriptorSet, _pongDescriptorSet);
+		isSwapped = !isSwapped;
+	} // END OF BIT LOOP
+	return isSwapped;
 }
 
 }

@@ -6,11 +6,6 @@ layout (local_size_x_id = 0, local_size_y = 1, local_size_z = 1) in;
 
 const uint BLOCKSIZE = gl_WorkGroupSize.x;
 
-layout(std430, binding = 0) readonly buffer Keys
-{
-    uint keys[];
-};
-
 layout(std430, binding = 1) readonly buffer PrefixSums
 {
     uint prefixSum[];
@@ -21,26 +16,14 @@ layout(std430, binding = 2) readonly buffer BlockSums
     uint blockSum[];
 };
 
-layout(std430, binding = 3) writeonly buffer Result
-{
-    uint result[];
-};
-
-uint GetHash(uint id) {
-    return keys[id];
-}
-
 layout(push_constant) uniform constants {
     uvec4 blockSumOffsets;
     int bitShift;
 };
 
+uint GetHash(uint);
+
 uint GetPermutation(uint id) {
     uint bits = bitfieldExtract(GetHash(id), bitShift, 2);
     return blockSum[blockSumOffsets[bits] + gl_WorkGroupID.x] + prefixSum[gl_GlobalInvocationID.x];
-}
-
-void main()
-{
-    result[GetPermutation(gl_GlobalInvocationID.x)] = keys[gl_GlobalInvocationID.x];
 }

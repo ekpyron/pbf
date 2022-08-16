@@ -7,15 +7,6 @@ layout (local_size_x_id = 0, local_size_y = 1, local_size_z = 1) in;
 const uint HALFBLOCKSIZE = gl_WorkGroupSize.x;
 const uint BLOCKSIZE = 2 * HALFBLOCKSIZE;
 
-layout(std430, binding = 0, set = 1) readonly buffer Keys
-{
-    uint keys[];
-};
-
-uint GetHash(uint id) {
-    return keys[id];
-}
-
 layout(std430, binding = 1) writeonly buffer PrefixSums
 {
     uint prefixSum[];
@@ -32,6 +23,8 @@ layout(push_constant) uniform constants {
 };
 
 shared uvec4 tmp[BLOCKSIZE];
+
+uint GetHash(uint);
 
 void main()
 {
