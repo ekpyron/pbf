@@ -64,11 +64,8 @@ private:
     std::unordered_map<std::type_index, std::unique_ptr<TypedCacheBase>> _map;
 };
 
-template<typename T, typename = void>
-struct HasDescriptor: std::false_type {};
-
 template<typename T>
-struct HasDescriptor<T, std::void_t<decltype(std::declval<T*>()->descriptor())>>: std::true_type {};
+concept DescriptorType = requires(T t) {t.descriptor();};
 
 template<typename T>
 class CachedObject {
@@ -96,7 +93,8 @@ public:
 #endif
             _obj = _objdesc.realize(_cache->context());
 #ifndef NDEBUG
-            if constexpr (IsKnownVulkanObject<std::decay_t<decltype(*_obj)>>) {
+            // if constexpr (KnownVulkanObject<std::decay_t<decltype(*_obj)>>) {
+            if constexpr (KnownVulkanObject<std::decay_t<decltype(*_obj)>>) {
                 if (!_objdesc.debugName.empty()) {
                     _cache->setGenericObjectName(
                             VulkanObjectType<std::decay_t<decltype(*_obj)>>,
@@ -156,7 +154,7 @@ private:
 
 
     void keepDepsAlive() const {
-		if constexpr (HasDescriptor<T>::value) {
+		if constexpr (DescriptorType<T>) {
 			keepDependenciesAlive<T>()(_obj->descriptor());
 		}
     }
@@ -182,7 +180,7 @@ public:
         **this;
     }
 
-    operator bool() const {
+    explicit operator bool() const {
         return _obj;
     }
 
