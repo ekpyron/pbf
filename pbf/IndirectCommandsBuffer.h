@@ -20,14 +20,14 @@ class IndirectCommandsBuffer
 {
     using CommandBuffer = pbf::Buffer<vk::DrawIndirectCommand>;
 public:
-	IndirectCommandsBuffer(Context *context);
+	IndirectCommandsBuffer(Context &context);
 	void clear();
 	void push_back(const vk::DrawIndirectCommand &cmd);
-	const auto &buffers() const { return _buffers; }
-	std::uint32_t elementsInLastBuffer() const { return _elementsInLastBuffer; }
+	[[nodiscard]] const auto &buffers() const { return _buffers; }
+	[[nodiscard]] std::uint32_t elementsInLastBuffer() const { return _elementsInLastBuffer; }
 	static constexpr std::uint32_t bufferSize = 128;
 private:
-	pbf::Context *context;
+	pbf::Context &context;
 	std::list<CommandBuffer> _buffers;
 	std::list<CommandBuffer>::iterator _currentBuffer;
 	std::uint32_t _elementsInLastBuffer {bufferSize};

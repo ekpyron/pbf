@@ -18,14 +18,14 @@ class Context;
 class Simulation
 {
 public:
-	Simulation(Context* context, size_t numParticles, vk::DescriptorBufferInfo input, vk::DescriptorBufferInfo output);
+	Simulation(Context& context, size_t numParticles, vk::DescriptorBufferInfo input, vk::DescriptorBufferInfo output);
 	uint32_t getNumParticles() const {
 		return _numParticles;
 	}
 	void run(vk::CommandBuffer buf);
 
 private:
-	Context* _context;
+	Context& _context;
 	size_t _numParticles = 0;
 	RadixSort _radixSort;
 

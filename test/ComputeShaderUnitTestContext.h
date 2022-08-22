@@ -67,7 +67,7 @@ private:
 	std::uint32_t _queueFamilyIndex = -1u;
 	vk::UniqueDevice _device;
 	vk::Queue _queue;
-	Cache _cache { this, 100 };
+	Cache _cache { *this, 100 };
 
 	vk::UniqueCommandPool _commandPool;
 	vk::CommandBuffer _commandBuffer;

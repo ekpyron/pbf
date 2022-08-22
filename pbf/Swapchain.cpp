@@ -12,16 +12,16 @@
 
 namespace pbf {
 
-Swapchain::Swapchain(Context *context, const vk::RenderPass& renderPass, vk::SwapchainKHR oldSwapChain) {
-    const auto &device = context->device();
-    const auto &physicalDevice = context->physicalDevice();
-    const auto &surfaceCapabilities = physicalDevice.getSurfaceCapabilitiesKHR(context->surface());
+Swapchain::Swapchain(Context &context, const vk::RenderPass& renderPass, vk::SwapchainKHR oldSwapChain) {
+    const auto &device = context.device();
+    const auto &physicalDevice = context.physicalDevice();
+    const auto &surfaceCapabilities = physicalDevice.getSurfaceCapabilitiesKHR(context.surface());
 
     {
         if (surfaceCapabilities.currentExtent.width != std::numeric_limits<std::uint32_t>::max()) {
             _extent = surfaceCapabilities.currentExtent;
         } else {
-            auto[width, height] = context->window().framebufferSize();
+            auto[width, height] = context.window().framebufferSize();
             _extent = vk::Extent2D{
                     glm::clamp(width, surfaceCapabilities.minImageExtent.width,
                                surfaceCapabilities.maxImageExtent.width),
@@ -35,25 +35,25 @@ Swapchain::Swapchain(Context *context, const vk::RenderPass& renderPass, vk::Swa
         std::size_t nOffscreen = 1;
         auto minImageCount = static_cast<uint32_t>(surfaceCapabilities.minImageCount + nOffscreen);
         vk::SwapchainCreateInfoKHR createInfo;
-        createInfo.setSurface(context->surface())
+        createInfo.setSurface(context.surface())
                 .setMinImageCount(minImageCount)
-                .setImageFormat(context->surfaceFormat().format)
-                .setImageColorSpace(context->surfaceFormat().colorSpace)
+                .setImageFormat(context.surfaceFormat().format)
+                .setImageColorSpace(context.surfaceFormat().colorSpace)
                 .setImageExtent(_extent)
                 .setImageArrayLayers(1)
                 .setImageUsage(vk::ImageUsageFlagBits::eColorAttachment)
                 .setPreTransform(surfaceCapabilities.currentTransform)
                 .setCompositeAlpha(vk::CompositeAlphaFlagBitsKHR::eOpaque)
-                .setPresentMode(context->presentMode())
+                .setPresentMode(context.presentMode())
                 .setClipped(VK_TRUE)
                 .setOldSwapchain(oldSwapChain);
 
-        if(context->families().same()) {
+        if(context.families().same()) {
             createInfo.setImageSharingMode(vk::SharingMode::eExclusive);
         } else {
             createInfo.setImageSharingMode(vk::SharingMode::eConcurrent)
-                .setQueueFamilyIndexCount(context->families().arr.size())
-                .setPQueueFamilyIndices(context->families().arr.data());
+                .setQueueFamilyIndexCount(context.families().arr.size())
+                .setPQueueFamilyIndices(context.families().arr.data());
         }
         _swapchain = device.createSwapchainKHRUnique(createInfo);
     }
@@ -64,7 +64,7 @@ Swapchain::Swapchain(Context *context, const vk::RenderPass& renderPass, vk::Swa
         _imageViews.emplace_back(device.createImageViewUnique(vk::ImageViewCreateInfo{
 			.image = image,
 			.viewType = vk::ImageViewType::e2D,
-			.format = context->surfaceFormat().format,
+			.format = context.surfaceFormat().format,
 			.subresourceRange = vk::ImageSubresourceRange{
 				.aspectMask = vk::ImageAspectFlagBits::eColor,
 				.baseMipLevel = 0,
@@ -73,7 +73,7 @@ Swapchain::Swapchain(Context *context, const vk::RenderPass& renderPass, vk::Swa
 				.layerCount = 1
 			}
 		}));
-		_depthBuffers.emplace_back(context, context->getDepthFormat(), vk::ImageUsageFlagBits::eDepthStencilAttachment, vk::Extent3D{
+		_depthBuffers.emplace_back(context, context.getDepthFormat(), vk::ImageUsageFlagBits::eDepthStencilAttachment, vk::Extent3D{
 			.width = _extent.width,
 			.height = _extent.height,
 			.depth = 1
@@ -81,7 +81,7 @@ Swapchain::Swapchain(Context *context, const vk::RenderPass& renderPass, vk::Swa
 		_depthBufferViews.emplace_back(device.createImageViewUnique(vk::ImageViewCreateInfo{
 			.image = _depthBuffers.back().image(),
 			.viewType = vk::ImageViewType::e2D,
-			.format = context->getDepthFormat(),
+			.format = context.getDepthFormat(),
 			.subresourceRange = vk::ImageSubresourceRange{
 				.aspectMask = vk::ImageAspectFlagBits::eDepth,
 				.baseMipLevel = 0,

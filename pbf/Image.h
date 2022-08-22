@@ -14,15 +14,14 @@ namespace pbf {
 class Image
 {
 public:
-	Image() = default;
-	Image(Context* context, vk::Format format, vk::ImageUsageFlags usageFlags, vk::Extent3D const& extents);
+	Image(Context& context, vk::Format format, vk::ImageUsageFlags usageFlags, vk::Extent3D const& extents);
 	Image(Image&& _image) = default;
 	~Image() = default;
 	vk::Image image() const {
 		return *_image;
 	}
 private:
-	Context* _context = nullptr;
+	Context& _context;
 	vk::UniqueImage _image;
 	DeviceMemory _imageMemory;
 };

@@ -12,7 +12,7 @@
 
 using namespace pbf::descriptors;
 
-vk::UniqueRenderPass RenderPass::realize(ContextInterface *context) const {
+vk::UniqueRenderPass RenderPass::realize(ContextInterface &context) const {
     std::vector<vk::SubpassDescription> subpassDescriptions;
 
     for (auto const& subpass: subpasses)
@@ -39,5 +39,5 @@ vk::UniqueRenderPass RenderPass::realize(ContextInterface *context) const {
 		.dependencyCount = static_cast<uint32_t>(subpassDependencies.size()),
 		.pDependencies = subpassDependencies.data()
 	};
-    return context->device().createRenderPassUnique(createInfo);
+    return context.device().createRenderPassUnique(createInfo);
 }

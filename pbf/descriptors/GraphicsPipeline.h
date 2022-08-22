@@ -18,7 +18,7 @@
 namespace pbf::descriptors {
 
 struct GraphicsPipeline {
-    vk::UniquePipeline realize(ContextInterface* context) const;
+    vk::UniquePipeline realize(ContextInterface &context) const;
 
     std::vector<ShaderStage> shaderStages;
     std::vector<vk::VertexInputBindingDescription> vertexBindingDescriptions;

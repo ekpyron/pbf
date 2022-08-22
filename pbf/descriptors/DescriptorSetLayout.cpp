@@ -10,7 +10,7 @@
 #include "../Context.h"
 namespace pbf::descriptors {
 
-vk::UniqueDescriptorSetLayout DescriptorSetLayout::realize(ContextInterface *context) const {
+vk::UniqueDescriptorSetLayout DescriptorSetLayout::realize(ContextInterface &context) const {
     std::vector<vk::DescriptorSetLayoutBinding> vkBindings;
     vkBindings.reserve(bindings.size());
     std::transform(bindings.begin(), bindings.end(), std::back_inserter(vkBindings), [](const Binding &binding) {
@@ -22,7 +22,7 @@ vk::UniqueDescriptorSetLayout DescriptorSetLayout::realize(ContextInterface *con
             nullptr // todo: immutable samplers
         };
     });
-    return context->device().createDescriptorSetLayoutUnique(vk::DescriptorSetLayoutCreateInfo{
+    return context.device().createDescriptorSetLayoutUnique(vk::DescriptorSetLayoutCreateInfo{
 		.flags = createFlags,
 		.bindingCount = size32(bindings),
 		.pBindings = vkBindings.data()

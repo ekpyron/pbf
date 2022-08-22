@@ -136,7 +136,7 @@ ComputeShaderUnitTestContext::ComputeShaderUnitTestContext() {
 		.pEnabledFeatures = &features
 	});
 	_queue = _device->getQueue(_queueFamilyIndex, 0);
-	_memoryManager = std::make_unique<MemoryManager>(this);
+	_memoryManager = std::make_unique<MemoryManager>(*this);
 	_commandPool = _device->createCommandPoolUnique(vk::CommandPoolCreateInfo{
 		.flags = vk::CommandPoolCreateFlagBits::eTransient|vk::CommandPoolCreateFlagBits::eResetCommandBuffer,
 		.queueFamilyIndex = _queueFamilyIndex

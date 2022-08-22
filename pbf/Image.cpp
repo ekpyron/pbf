@@ -6,10 +6,10 @@
 
 namespace pbf {
 
-Image::Image(Context* context, vk::Format format, vk::ImageUsageFlags usageFlags, vk::Extent3D const& _extents): _context(context)
+Image::Image(Context& context, vk::Format format, vk::ImageUsageFlags usageFlags, vk::Extent3D const& _extents): _context(context)
 {
-	uint32_t queueFamily = context->graphicsQueueFamily();
-	_image = context->device().createImageUnique(vk::ImageCreateInfo{
+	uint32_t queueFamily = context.graphicsQueueFamily();
+	_image = context.device().createImageUnique(vk::ImageCreateInfo{
 		.flags = {},
 		.imageType = vk::ImageType::e2D,
 		.format = format,
@@ -25,7 +25,7 @@ Image::Image(Context* context, vk::Format format, vk::ImageUsageFlags usageFlags
 		.initialLayout = vk::ImageLayout::eUndefined
 	});
 
-	_imageMemory = context->memoryManager().allocateImageMemory(MemoryType::STATIC, *_image);
+	_imageMemory = context.memoryManager().allocateImageMemory(MemoryType::STATIC, *_image);
 
 }
 

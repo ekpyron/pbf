@@ -25,7 +25,7 @@ struct ShaderModule {
 	};
 	std::variant<File, RawSPIRV> source;
 
-    vk::UniqueShaderModule realize(ContextInterface* context) const;
+    vk::UniqueShaderModule realize(ContextInterface &context) const;
 
     using Compare = PBFMemberComparator<&ShaderModule::source>;
 

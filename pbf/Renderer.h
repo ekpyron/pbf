@@ -18,11 +18,11 @@ public:
 
     using StagingFunctor = ClosureContainer;
 
-    explicit Renderer(Context *context);
+    explicit Renderer(Context &context);
 
     void render();
 
-    CacheReference<descriptors::RenderPass> renderPass() const {
+    [[nodiscard]] CacheReference<descriptors::RenderPass> renderPass() const {
         return _renderPass;
     }
 
@@ -83,25 +83,25 @@ public:
 		});
 	}
 
-	auto framePrerenderCount() const {
+	[[nodiscard]] auto framePrerenderCount() const {
 		return 3u;
 	}
 
-	std::uint32_t currentFrameSync() const {
+	[[nodiscard]] std::uint32_t currentFrameSync() const {
 		return _currentFrameSync;
 	}
-	std::uint32_t previousFrameSync() const {
+	[[nodiscard]] std::uint32_t previousFrameSync() const {
 		return (_currentFrameSync + framePrerenderCount() - 1) %  framePrerenderCount();
 	}
 
-	Context& context() { return *_context; }
-	Context const& context() const { return *_context; }
+	Context& context() { return _context; }
+	[[nodiscard]] Context const& context() const { return _context; }
 
 private:
 
     void reset();
 
-    Context *_context;
+    Context &_context;
     std::unique_ptr<Swapchain> _swapchain;
     struct FrameSync {
         vk::UniqueSemaphore imageAvailableSemaphore;

@@ -33,7 +33,7 @@ public:
 class Cache {
 public:
 
-    explicit Cache(ContextInterface *context, std::size_t lifetime) : _context(context), _lifetime(lifetime) {}
+    explicit Cache(ContextInterface &context, std::size_t lifetime) : _context(context), _lifetime(lifetime) {}
 
     template<typename T>
     CacheReference<descriptors::remove_cv_ref_t<T>> fetch(T &&descriptor);
@@ -48,7 +48,7 @@ public:
         return _lifetime;
     }
 
-	ContextInterface* context() {
+	ContextInterface& context() {
         return _context;
     }
 
@@ -58,7 +58,7 @@ public:
 
 private:
     std::size_t _currentFrame = 0;
-    ContextInterface *_context;
+    ContextInterface &_context;
     std::size_t _lifetime;
 
     std::unordered_map<std::type_index, std::unique_ptr<TypedCacheBase>> _map;

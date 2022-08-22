@@ -35,7 +35,7 @@ struct RenderPass {
                     &T::depthStencilAttachment, &T::preserveAttachments>;
     };
 
-    vk::UniqueRenderPass realize(ContextInterface *context) const;
+    vk::UniqueRenderPass realize(ContextInterface &context) const;
 
     std::vector<vk::AttachmentDescription> attachments;
     std::vector<Subpass> subpasses;

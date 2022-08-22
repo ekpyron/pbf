@@ -93,7 +93,7 @@ void main()
 
 
 	Buffer<uint32_t> buffer{
-		this,
+		*this,
 		4 * 4,
 		vk::BufferUsageFlagBits::eStorageBuffer,
 		MemoryType::DYNAMIC
@@ -461,13 +461,13 @@ TEST_CASE_METHOD(ComputeShaderUnitTest, "Compute Shader Sort Test Old Reference"
 
 	device().waitIdle();
 	Buffer<uint32_t> hostBuffer{
-		this,
+		*this,
 		numKeys,
 		vk::BufferUsageFlagBits::eTransferSrc|vk::BufferUsageFlagBits::eTransferDst,
 		MemoryType::DYNAMIC
 	};
 	Buffer<uint32_t> keys{
-		this,
+		*this,
 		numKeys,
 		vk::BufferUsageFlagBits::eStorageBuffer|vk::BufferUsageFlagBits::eTransferDst|vk::BufferUsageFlagBits::eTransferSrc,
 		MemoryType::STATIC
@@ -481,14 +481,14 @@ TEST_CASE_METHOD(ComputeShaderUnitTest, "Compute Shader Sort Test Old Reference"
 	}
 	device().waitIdle();
 	Buffer<uint32_t> result{
-		this,
+		*this,
 		numKeys,
 		vk::BufferUsageFlagBits::eStorageBuffer|vk::BufferUsageFlagBits::eTransferSrc,
 		MemoryType::STATIC
 	};
 
 	Buffer<uint32_t> prefixSums{
-		this,
+		*this,
 		numKeys,
 		vk::BufferUsageFlagBits::eStorageBuffer,
 		MemoryType::STATIC
@@ -499,13 +499,13 @@ TEST_CASE_METHOD(ComputeShaderUnitTest, "Compute Shader Sort Test Old Reference"
 	std::vector<Buffer<uint32_t>> blockSums;
 	for (ssize_t blockSumSize = 4 * numGroups; blockSumSize > 1; blockSumSize = (blockSumSize + blockSize - 1) / blockSize) {
 		blockSums.emplace_back(
-			this,
+			*this,
 			roundToNextMultiple(blockSumSize, blockSize),
 			vk::BufferUsageFlagBits::eStorageBuffer,
 			MemoryType::STATIC
 		);
 	}
-	blockSums.emplace_back(this, blockSize, vk::BufferUsageFlagBits::eStorageBuffer, MemoryType::STATIC);
+	blockSums.emplace_back(*this, blockSize, vk::BufferUsageFlagBits::eStorageBuffer, MemoryType::STATIC);
 
 	auto& prescanBlockSum = blockSums.front();
 
@@ -1139,13 +1139,13 @@ TEST_CASE_METHOD(ComputeShaderUnitTest, "Compute Shader Sort Test", "[sort] ")
 
 
 	Buffer<uint32_t> keysBuffer{
-		this,
+		*this,
 		numKeys,
 		vk::BufferUsageFlagBits::eStorageBuffer,
 		MemoryType::DYNAMIC
 	};
 	Buffer<uint32_t> resultBuffer{
-		this,
+		*this,
 		numKeys,
 		vk::BufferUsageFlagBits::eStorageBuffer,
 		MemoryType::DYNAMIC

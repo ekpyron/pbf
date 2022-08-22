@@ -21,12 +21,12 @@ Quad::Quad(pbf::Scene *scene) : scene(scene) {
     indexBuffer = {scene->context(), 6, vk::BufferUsageFlagBits::eTransferDst | vk::BufferUsageFlagBits::eIndexBuffer,
                    pbf::MemoryType::STATIC};
 
-    graphicsPipeline = scene->context()->cache().fetch(
+    graphicsPipeline = scene->context().cache().fetch(
 		pbf::descriptors::GraphicsPipeline{
             .shaderStages = {
                     {
                             .stage = vk::ShaderStageFlagBits::eVertex,
-                            .module = scene->context()->cache().fetch(
+                            .module = scene->context().cache().fetch(
 								descriptors::ShaderModule{
                                     .source = descriptors::ShaderModule::File{"shaders/particle.vert.spv"},
                                     PBF_DESC_DEBUG_NAME("shaders/particle.vert.spv Vertex Shader")
@@ -35,7 +35,7 @@ Quad::Quad(pbf::Scene *scene) : scene(scene) {
                     },
                     {
                             .stage = vk::ShaderStageFlagBits::eFragment,
-                            .module = scene->context()->cache().fetch(
+                            .module = scene->context().cache().fetch(
 								descriptors::ShaderModule{
 									.source = descriptors::ShaderModule::File{"shaders/particle.frag.spv"},
                                     PBF_DESC_DEBUG_NAME("shaders/particle.frag.spv Fragment Shader")
@@ -93,14 +93,14 @@ Quad::Quad(pbf::Scene *scene) : scene(scene) {
                     )
             },
             .dynamicStates = {vk::DynamicState::eViewport, vk::DynamicState::eScissor},
-            .pipelineLayout = scene->context()->cache().fetch(
+            .pipelineLayout = scene->context().cache().fetch(
 				pbf::descriptors::PipelineLayout{
                     .setLayouts = {{
-                                           scene->context()->globalDescriptorSetLayout()
+                                           scene->context().globalDescriptorSetLayout()
                                    }},
                     PBF_DESC_DEBUG_NAME("Dummy Pipeline Layout")
             }),
-            .renderPass = scene->context()->renderer().renderPass(),
+            .renderPass = scene->context().renderer().renderPass(),
             PBF_DESC_DEBUG_NAME("Main Renderer Graphics Pipeline")
     });
 
@@ -133,7 +133,7 @@ void Quad::frame(uint32_t instanceCount) {
 				BufferRef<VertexData>{&buffer},
 				BufferRef<VertexData>{
 					.buffer = scene->particleData().as<VertexData>(),
-					.offset = sizeof(Scene::ParticleData) * scene->getNumParticles() * scene->context()->renderer().currentFrameSync()
+					.offset = sizeof(Scene::ParticleData) * scene->getNumParticles() * scene->context().renderer().currentFrameSync()
 				}
 			}
 		);
@@ -165,7 +165,7 @@ void Quad::frame(uint32_t instanceCount) {
 		indices[4] = 2;
 		indices[5] = 3;
         initializeBuffer.flush();
-        scene->context()->renderer().stage([
+        scene->context().renderer().stage([
                                                    this, initializeBuffer = std::move(initializeBuffer)
                                            ] (vk::CommandBuffer& enqueueBuffer) {
             enqueueBuffer.copyBuffer(initializeBuffer.buffer(), buffer.buffer(), {

@@ -20,7 +20,7 @@ namespace pbf::descriptors {
 
 struct PipelineLayout {
 
-    vk::UniquePipelineLayout realize(ContextInterface *context) const;
+    vk::UniquePipelineLayout realize(ContextInterface &context) const;
 
     std::vector<CacheReference<DescriptorSetLayout>> setLayouts;
     std::vector<vk::PushConstantRange> pushConstants;

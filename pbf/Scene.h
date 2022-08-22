@@ -24,13 +24,13 @@ namespace pbf {
 class Scene {
 public:
 
-    Scene(Context* context);
+    Scene(Context& context);
 
     void frame(vk::CommandBuffer &buf);
 
     void enqueueCommands(vk::CommandBuffer &buf);
 
-    Context* context() {
+    Context& context() {
         return _context;
     }
 
@@ -61,7 +61,7 @@ public:
 
 private:
 
-    Context* _context;
+    Context& _context;
 
 	uint32_t _numParticles = 64 * 64 * 64;
 

@@ -20,7 +20,7 @@ namespace pbf::descriptors {
 struct DescriptorSetLayout {
 
     // todo: at some point >=< push constants
-    vk::UniqueDescriptorSetLayout realize(ContextInterface *context) const;
+    vk::UniqueDescriptorSetLayout realize(ContextInterface &context) const;
 
     struct Binding {
         std::uint32_t binding;

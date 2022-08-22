@@ -14,14 +14,14 @@ static constexpr std::uint64_t TIMEOUT = std::numeric_limits<std::uint64_t>::max
 
 namespace pbf {
 
-Renderer::Renderer(Context *context) : _context(context) {
+Renderer::Renderer(Context &context) : _context(context) {
     _frameSync.reserve(framePrerenderCount());
     for (size_t i = 0; i < framePrerenderCount(); i++) {
         _frameSync.emplace_back(FrameSync{
-                context->device().createSemaphoreUnique({}),
-				context->device().createSemaphoreUnique({}),
-                context->device().createSemaphoreUnique({}),
-                context->device().createFenceUnique(vk::FenceCreateInfo {
+                context.device().createSemaphoreUnique({}),
+				context.device().createSemaphoreUnique({}),
+                context.device().createSemaphoreUnique({}),
+                context.device().createFenceUnique(vk::FenceCreateInfo {
 					.flags = vk::FenceCreateFlagBits::eSignaled
 				})
         });
@@ -35,11 +35,11 @@ Renderer::Renderer(Context *context) : _context(context) {
     }
 
     {
-        _renderPass = context->cache().fetch(descriptors::RenderPass{
+        _renderPass = context.cache().fetch(descriptors::RenderPass{
                 .attachments = {
                         vk::AttachmentDescription{
                                 {},
-                                _context->surfaceFormat().format,
+                                _context.surfaceFormat().format,
                                 vk::SampleCountFlagBits::e1,
                                 vk::AttachmentLoadOp::eClear,
                                 vk::AttachmentStoreOp::eStore,
@@ -50,7 +50,7 @@ Renderer::Renderer(Context *context) : _context(context) {
                         },
 					vk::AttachmentDescription{
 						{},
-						context->getDepthFormat(),
+						context.getDepthFormat(),
 						vk::SampleCountFlagBits::e1,
 						vk::AttachmentLoadOp::eClear,
 						vk::AttachmentStoreOp::eDontCare,
@@ -87,7 +87,7 @@ Renderer::Renderer(Context *context) : _context(context) {
 }
 
 void Renderer::render() {
-    const auto &device = _context->device();
+    const auto &device = _context.device();
 
     auto &currentFrameSync = _frameSync[_currentFrameSync];
 
@@ -135,7 +135,7 @@ void Renderer::render() {
 	}
 
     auto buffer = std::move(device.allocateCommandBuffersUnique(vk::CommandBufferAllocateInfo{
-		.commandPool = _context->commandPool(true),
+		.commandPool = _context.commandPool(true),
 		.level = vk::CommandBufferLevel::ePrimary,
 		.commandBufferCount = 1U
     }).front());
@@ -152,9 +152,9 @@ void Renderer::render() {
 		});
 
 
-        _context->scene().frame(*buffer);
+        _context.scene().frame(*buffer);
 
-		_context->scene().simulations().at(_currentFrameSync).run(*buffer);
+		_context.scene().simulations().at(_currentFrameSync).run(*buffer);
 
         for (auto& fn: currentFrameSync.stagingFunctorQueue) {
             (*fn)(*buffer);
@@ -179,7 +179,7 @@ void Renderer::render() {
         /*buffer->bindPipeline(vk::PipelineBindPoint::eGraphics, *_graphicsPipeline);
         buffer->draw(3, 1, 0, 0);*/
 
-		_context->scene().enqueueCommands(*buffer);
+		_context.scene().enqueueCommands(*buffer);
 
         buffer->endRenderPass();
         buffer->end();
@@ -213,7 +213,7 @@ void Renderer::render() {
 		vk::PipelineStageFlags waitStages[] = {
 			vk::PipelineStageFlagBits::eColorAttachmentOutput
 		};
-		_context->graphicsQueue().submit({vk::SubmitInfo{
+		_context.graphicsQueue().submit({vk::SubmitInfo{
 			.waitSemaphoreCount = 1u,
 			.pWaitSemaphores = &*currentFrameSync.imageAvailableSemaphore,
 			.pWaitDstStageMask = waitStages,
@@ -227,7 +227,7 @@ void Renderer::render() {
     currentFrameSync.commandBuffer = std::move(buffer);
 
 	try	{
-		auto result = _context->presentQueue().presentKHR(vk::PresentInfoKHR{
+		auto result = _context.presentQueue().presentKHR(vk::PresentInfoKHR{
 			.waitSemaphoreCount = 1,
 			.pWaitSemaphores = &*currentFrameSync.renderFinishedSemaphore,
 			.swapchainCount = 1,
@@ -245,7 +245,7 @@ void Renderer::render() {
 }
 
 void Renderer::reset() {
-    auto const &device = _context->device();
+    auto const &device = _context.device();
     if (_swapchain)
         device.waitIdle();
     _swapchain = std::make_unique<Swapchain>(_context, *_renderPass, _swapchain ? _swapchain->swapchain() : nullptr);

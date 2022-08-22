@@ -16,7 +16,7 @@ namespace pbf {
 
 class Swapchain {
 public:
-    Swapchain(Context* context, const vk::RenderPass& renderPass, vk::SwapchainKHR oldSwapChain = nullptr);
+    Swapchain(Context& context, const vk::RenderPass& renderPass, vk::SwapchainKHR oldSwapChain = nullptr);
 
     const vk::SwapchainKHR &swapchain() const { return *_swapchain; }
 

@@ -133,20 +133,20 @@ Context::Context() {
 			.ppEnabledExtensionNames = &extensionName,
 			.pEnabledFeatures = &features
 		});
-        PBF_DEBUG_SET_OBJECT_NAME(this, _physicalDevice, "Physical Device");
-        PBF_DEBUG_SET_OBJECT_NAME(this, *_surface, "Main Window");
-        //PBF_DEBUG_SET_OBJECT_NAME(this, *_debugUtilsMessenger, "Debug Utils Messenger");
-        PBF_DEBUG_SET_OBJECT_NAME(this, *_device, "Main Device");
+        PBF_DEBUG_SET_OBJECT_NAME(*this, _physicalDevice, "Physical Device");
+        PBF_DEBUG_SET_OBJECT_NAME(*this, *_surface, "Main Window");
+        //PBF_DEBUG_SET_OBJECT_NAME(*this, *_debugUtilsMessenger, "Debug Utils Messenger");
+        PBF_DEBUG_SET_OBJECT_NAME(*this, *_device, "Main Device");
 
         _graphicsQueue = _device->getQueue(_families.graphics, 0);
         if (_families.graphics != _families.present) {
-            PBF_DEBUG_SET_OBJECT_NAME(this, _graphicsQueue, "Graphics Queue");
+            PBF_DEBUG_SET_OBJECT_NAME(*this, _graphicsQueue, "Graphics Queue");
             _presentQueue = _device->getQueue(_families.present, 0);
-            PBF_DEBUG_SET_OBJECT_NAME(this, _presentQueue, "Present Queue");
+            PBF_DEBUG_SET_OBJECT_NAME(*this, _presentQueue, "Present Queue");
 
         } else {
             _presentQueue = _graphicsQueue;
-            PBF_DEBUG_SET_OBJECT_NAME(this, _presentQueue, "Graphics & Present Queue");
+            PBF_DEBUG_SET_OBJECT_NAME(*this, _presentQueue, "Graphics & Present Queue");
         }
     }
 
@@ -202,21 +202,21 @@ Context::Context() {
 
     }
 
-    _memoryManager = std::make_unique<MemoryManager>(this);
+    _memoryManager = std::make_unique<MemoryManager>(*this);
 
     _commandPool = _device->createCommandPoolUnique(vk::CommandPoolCreateInfo{.queueFamilyIndex = _families.graphics});
     _commandPoolTransient = _device->createCommandPoolUnique(vk::CommandPoolCreateInfo{
 		.flags = vk::CommandPoolCreateFlagBits::eTransient,
         .queueFamilyIndex = _families.graphics
 	});
-    PBF_DEBUG_SET_OBJECT_NAME(this, *_commandPool, "Main Command Pool");
-    _renderer = std::make_unique<Renderer>(this);
-    _scene = std::make_unique<Scene>(this);
+    PBF_DEBUG_SET_OBJECT_NAME(*this, *_commandPool, "Main Command Pool");
+    _renderer = std::make_unique<Renderer>(*this);
+    _scene = std::make_unique<Scene>(*this);
 
 
 
 	{
-		_globalUniformBuffer = std::make_unique<Buffer<GlobalUniformData>>(this, 1, vk::BufferUsageFlagBits::eUniformBuffer, MemoryType::DYNAMIC);
+		_globalUniformBuffer = std::make_unique<Buffer<GlobalUniformData>>(*this, 1, vk::BufferUsageFlagBits::eUniformBuffer, MemoryType::DYNAMIC);
 		vk::DescriptorBufferInfo uniformBufferDescriptorInfo {
 			_globalUniformBuffer->buffer(), 0, sizeof(GlobalUniformData)
 		};

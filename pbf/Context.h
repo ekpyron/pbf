@@ -57,7 +57,7 @@ public:
         setGenericObjectName(VulkanObjectType<T>, reinterpret_cast<uint64_t>(static_cast<void*>(obj)), name);
     }
     void setGenericObjectName(vk::ObjectType type, uint64_t obj, const std::string &name) const override;
-#define PBF_DEBUG_SET_OBJECT_NAME(context, object, name) context->setObjectName(object, name)
+#define PBF_DEBUG_SET_OBJECT_NAME(context, object, name) (context).setObjectName(object, name)
 #else
 #define PBF_DEBUG_SET_OBJECT_NAME(context, object, name) do { } while(0)
 #endif
@@ -178,7 +178,7 @@ private:
     };
     std::unique_ptr<Buffer<GlobalUniformData>> _globalUniformBuffer;
     GlobalUniformData *globalUniformData;
-    Cache _cache { this, 100 };
+    Cache _cache { *this, 100 };
 
     std::unique_ptr<Renderer> _renderer;
 

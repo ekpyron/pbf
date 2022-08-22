@@ -20,22 +20,22 @@
 
 namespace pbf {
 
-Scene::Scene(Context *context)
+Scene::Scene(Context &context)
 : _context(context), _particleData{
 	context,
-	_numParticles * context->renderer().framePrerenderCount(),
+	_numParticles * context.renderer().framePrerenderCount(),
 	// TODO: maybe remove transfer src
 	vk::BufferUsageFlagBits::eTransferSrc | vk::BufferUsageFlagBits::eTransferDst | vk::BufferUsageFlagBits::eStorageBuffer | vk::BufferUsageFlagBits::eVertexBuffer,
 	pbf::MemoryType::STATIC
 } {
 
-	for (size_t i = 0u; i < context->renderer().framePrerenderCount(); ++i) {
+	for (size_t i = 0u; i < context.renderer().framePrerenderCount(); ++i) {
 		_simulations.emplace_back(
 			context,
 			_numParticles,
 			vk::DescriptorBufferInfo{
 				.buffer = _particleData.buffer(),
-				.offset = ((i + context->renderer().framePrerenderCount() - 1) % context->renderer().framePrerenderCount()) * sizeof(ParticleData) * _numParticles,
+				.offset = ((i + context.renderer().framePrerenderCount() - 1) % context.renderer().framePrerenderCount()) * sizeof(ParticleData) * _numParticles,
 				.range = sizeof(ParticleData) * _numParticles
 			},
 			vk::DescriptorBufferInfo{
@@ -73,7 +73,7 @@ void Scene::frame(vk::CommandBuffer &buf) {
 		buf.copyBuffer(initializeBuffer.buffer(), _particleData.buffer(), {
 			vk::BufferCopy {
 				.srcOffset = 0,
-				.dstOffset = sizeof(ParticleData) * _numParticles * (_context->renderer().framePrerenderCount() - 1),
+				.dstOffset = sizeof(ParticleData) * _numParticles * (_context.renderer().framePrerenderCount() - 1),
 				.size = initializeBuffer.deviceSize()
 			}
 		});
@@ -84,13 +84,13 @@ void Scene::frame(vk::CommandBuffer &buf) {
 			.srcQueueFamilyIndex = 0,
 			.dstQueueFamilyIndex = 0,
 			.buffer = _particleData.buffer(),
-			.offset = sizeof(ParticleData) * _numParticles * (_context->renderer().framePrerenderCount() - 1),
+			.offset = sizeof(ParticleData) * _numParticles * (_context.renderer().framePrerenderCount() - 1),
 			.size = initializeBuffer.deviceSize(),
 		}}, {});
 
 
 		// keep alive until next use of frame sync
-		_context->renderer().stage([initializeBuffer = std::move(initializeBuffer)] (auto) {});
+		_context.renderer().stage([initializeBuffer = std::move(initializeBuffer)] (auto) {});
 
 
 		_initialized = true;
@@ -102,12 +102,12 @@ void Scene::frame(vk::CommandBuffer &buf) {
 }
 
 void Scene::enqueueCommands(vk::CommandBuffer &buf) {
-    const auto &device = _context->device();
+    const auto &device = _context.device();
 
     for (auto& [graphicsPipeline, innerMap] : indirectDrawCalls)
     {
         buf.bindPipeline(vk::PipelineBindPoint::eGraphics, *graphicsPipeline);
-        buf.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, *(graphicsPipeline.descriptor().pipelineLayout), 0, { _context->globalDescriptorSet()}, {});
+        buf.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, *(graphicsPipeline.descriptor().pipelineLayout), 0, { _context.globalDescriptorSet()}, {});
 
 		for (auto& [pushConstantData, innerMap] : innerMap)
 		{

@@ -12,9 +12,9 @@
 
 namespace pbf {
 
-MemoryManager::MemoryManager(ContextInterface *context) : _context(context) {
+MemoryManager::MemoryManager(ContextInterface &context) : _context(context) {
 
-    const auto &physicalDevice  = _context->physicalDevice();
+    const auto &physicalDevice  = _context.physicalDevice();
 
     auto properties = physicalDevice.getMemoryProperties();
 
@@ -60,7 +60,7 @@ MemoryManager::chooseAdequateMemoryIndex(MemoryType memoryType, uint32_t memoryT
 }
 
 DeviceMemory MemoryManager::allocateBufferMemory(MemoryType memoryType, vk::Buffer buffer) {
-    const auto &device = _context->device();
+    const auto &device = _context.device();
 
     auto memoryRequirements = device.getBufferMemoryRequirements(buffer);
     auto memoryIndex = chooseAdequateMemoryIndex(memoryType, memoryRequirements.memoryTypeBits);
@@ -74,7 +74,7 @@ DeviceMemory MemoryManager::allocateBufferMemory(MemoryType memoryType, vk::Buff
 }
 
 DeviceMemory MemoryManager::allocateImageMemory(MemoryType memoryType, vk::Image image) {
-	const auto &device = _context->device();
+	const auto &device = _context.device();
 
 	auto memoryRequirements = device.getImageMemoryRequirements(image);
 	auto memoryIndex = chooseAdequateMemoryIndex(memoryType, memoryRequirements.memoryTypeBits);
@@ -88,11 +88,11 @@ DeviceMemory MemoryManager::allocateImageMemory(MemoryType memoryType, vk::Image
 }
 
 
-HeapManager::HeapManager(ContextInterface* context, std::uint32_t memoryTypeIndex)
+HeapManager::HeapManager(ContextInterface &context, std::uint32_t memoryTypeIndex)
         : _memoryTypeIndex(memoryTypeIndex), _context(context) {}
 
 DeviceMemory HeapManager::allocate(std::size_t size, std::size_t alignment, bool hostVisible) {
-    const auto &device = _context->device();
+    const auto &device = _context.device();
     auto memory = device.allocateMemory(vk::MemoryAllocateInfo{
 		.allocationSize = size,
 		.memoryTypeIndex = _memoryTypeIndex
@@ -101,21 +101,21 @@ DeviceMemory HeapManager::allocate(std::size_t size, std::size_t alignment, bool
 }
 
 void HeapManager::free(const DeviceMemory &deviceMemory) {
-    const auto &device = _context->device();
+    const auto &device = _context.device();
     device.free(deviceMemory.vkMemory());
 }
 
 
 DeviceMemory::DeviceMemory(std::size_t size, vk::DeviceMemory memory, std::size_t offset, HeapManager *heapManager, bool hostVisible)
         : _size(size), _memory(memory), _offset(offset), _mgr(heapManager){
-    const auto &device = _mgr->context()->device();
+    const auto &device = _mgr->context().device();
     if (hostVisible) {
         ptr = device.mapMemory(vkMemory(), offset, size, {});
     }
 }
 
 void DeviceMemory::flush() {
-    const auto &device = _mgr->context()->device();
+    const auto &device = _mgr->context().device();
 
     device.flushMappedMemoryRanges({vk::MappedMemoryRange{
 		.memory = _memory,

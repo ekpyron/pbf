@@ -7,7 +7,7 @@ void IndirectCommandsBuffer::clear() {
 	_elementsInLastBuffer = 0;
 }
 
-IndirectCommandsBuffer::IndirectCommandsBuffer(pbf::Context *context) :context(context) {
+IndirectCommandsBuffer::IndirectCommandsBuffer(pbf::Context &context) :context(context) {
 	_buffers.emplace_back(context, bufferSize, vk::BufferUsageFlagBits::eIndirectBuffer, MemoryType::DYNAMIC);
 	_currentBuffer = _buffers.begin();
 	_elementsInLastBuffer = 0;

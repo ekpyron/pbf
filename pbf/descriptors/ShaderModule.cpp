@@ -16,8 +16,8 @@ using namespace pbf::descriptors;
 template<typename... Args> struct LambdaVisitor : Args... { using Args::operator()...; };
 template<typename... Args> LambdaVisitor(Args...) -> LambdaVisitor<Args...>;
 
-vk::UniqueShaderModule ShaderModule::realize(ContextInterface *context) const {
-        const auto &device = context->device();
+vk::UniqueShaderModule ShaderModule::realize(ContextInterface &context) const {
+        const auto &device = context.device();
 
 
 		return std::visit(LambdaVisitor{

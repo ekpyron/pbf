@@ -25,18 +25,18 @@ RadixSort::RadixSort(
 	std::string_view _shaderPrefix
 ):
 context(_context), blockSize(_blockSize), numBlocks(_numBlocks),
-prefixSums(&_context, numKeys, vk::BufferUsageFlagBits::eStorageBuffer, MemoryType::STATIC)
+prefixSums(_context, numKeys, vk::BufferUsageFlagBits::eStorageBuffer, MemoryType::STATIC)
 {
 	for (ssize_t blockSumSize = 4 * numBlocks; blockSumSize > 1; blockSumSize = (blockSumSize + blockSize - 1) / blockSize)
 	{
 		blockSums.emplace_back(
-			&_context,
+			_context,
 			roundToNextMultiple(blockSumSize, blockSize),
 			vk::BufferUsageFlagBits::eStorageBuffer,
 			MemoryType::STATIC
 		);
 	}
-	blockSums.emplace_back(&_context, blockSize, vk::BufferUsageFlagBits::eStorageBuffer, MemoryType::STATIC);
+	blockSums.emplace_back(_context, blockSize, vk::BufferUsageFlagBits::eStorageBuffer, MemoryType::STATIC);
 
 
 	auto& prescanBlockSum = blockSums.front();
