@@ -20,7 +20,7 @@ class IndirectCommandsBuffer;
 
 class Quad {
 public:
-    Quad(Scene* scene);
+    Quad(InitContext& initContext, Scene& scene);
 
     void frame(uint32_t instanceCount);
 
@@ -28,9 +28,8 @@ public:
         float vertices[4];
     };
 private:
-    Scene *scene;
+    Scene& scene;
     bool active = true;
-    bool dirty = true;
     Buffer<VertexData> buffer;
     Buffer<std::uint16_t> indexBuffer;
     IndirectCommandsBuffer* indirectCommandsBuffer {nullptr};

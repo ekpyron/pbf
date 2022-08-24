@@ -15,10 +15,7 @@ namespace pbf {
 
 class Renderer {
 public:
-
-    using StagingFunctor = ClosureContainer;
-
-    explicit Renderer(Context &context);
+    explicit Renderer(InitContext& context);
 
     void render();
 
@@ -26,10 +23,14 @@ public:
         return _renderPass;
     }
 
-    template<typename... Args>
-    void stage(Args&&... f) {
-        _frameSync[_currentFrameSync].stagingFunctorQueue.emplace_back(std::unique_ptr<StagingFunctor>(new TypedClosureContainer(std::forward<Args>(f)...)));
-    }
+	template<typename T, typename... Args>
+	T& createFrameData(Args&&... args) {
+		auto uniqueFrameData = std::make_unique<FrameData<T>>(std::forward<Args>(args)...);
+		T& result = uniqueFrameData->data;
+		_frameSync[_currentFrameSync].frameData.emplace_back(move(uniqueFrameData));
+		return result;
+	}
+
 
 	// TODO: not working! Fix.
 	template<typename Data>
@@ -103,24 +104,24 @@ private:
 
     Context &_context;
     std::unique_ptr<Swapchain> _swapchain;
+	vk::UniqueCommandBuffer initCommandBuffer;
     struct FrameSync {
         vk::UniqueSemaphore imageAvailableSemaphore;
         vk::UniqueSemaphore renderFinishedSemaphore;
 		vk::UniqueSemaphore computeFinishedSemaphore;
         vk::UniqueFence fence;
-        vk::UniqueCommandBuffer commandBuffer {};
-		vk::UniqueCommandBuffer computeCommandBuffer {};
-        std::vector<std::unique_ptr<StagingFunctor>> stagingFunctorQueue;
+        vk::UniqueCommandBuffer commandBuffer{};
+		vk::UniqueCommandBuffer computeCommandBuffer{};
+		std::vector<std::unique_ptr<FrameDataBase>> frameData{};
 
         void reset() {
             commandBuffer.reset();
-            stagingFunctorQueue.clear();
+			frameData.clear();
         }
     };
     std::vector<FrameSync> _frameSync;
     std::size_t _currentFrameSync = 0;
     std::vector<vk::UniqueCommandBuffer> _commandBuffers;
-	bool firstRun = true;
 
 	CacheReference<descriptors::RenderPass> _renderPass;
     //CacheReference<descriptors::GraphicsPipeline> _graphicsPipeline;

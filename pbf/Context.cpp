@@ -210,9 +210,18 @@ Context::Context() {
         .queueFamilyIndex = _families.graphics
 	});
     PBF_DEBUG_SET_OBJECT_NAME(*this, *_commandPool, "Main Command Pool");
-    _renderer = std::make_unique<Renderer>(*this);
-    _scene = std::make_unique<Scene>(*this);
 
+	InitContext initContext(*this);
+
+	initContext.initCommandBuffer->begin(vk::CommandBufferBeginInfo{
+		.flags = vk::CommandBufferUsageFlagBits::eOneTimeSubmit,
+		.pInheritanceInfo = nullptr
+	});
+
+    _renderer = std::make_unique<Renderer>(initContext);
+    _scene = std::make_unique<Scene>(initContext);
+
+	initContext.initCommandBuffer->end();
 
 
 	{
@@ -248,6 +257,18 @@ Context::Context() {
 			context->OnMouseUp (button);
 	});
 
+	_graphicsQueue.submit({
+							  vk::SubmitInfo{
+								  .waitSemaphoreCount = 0,
+								  .pWaitSemaphores = nullptr,
+								  .pWaitDstStageMask = {},
+								  .commandBufferCount = 1,
+								  .pCommandBuffers = &*initContext.initCommandBuffer,
+								  .signalSemaphoreCount = 0, // TODO: replace waitIdle below with a semaphore
+								  .pSignalSemaphores = nullptr
+							  }
+	});
+	_graphicsQueue.waitIdle();
 }
 
 Context::~Context() = default;

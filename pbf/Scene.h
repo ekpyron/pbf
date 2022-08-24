@@ -24,7 +24,7 @@ namespace pbf {
 class Scene {
 public:
 
-    Scene(Context& context);
+    Scene(InitContext& context);
 
     void frame(vk::CommandBuffer &buf);
 
@@ -77,9 +77,7 @@ private:
                         IndirectCommandsBuffer> indirectDrawCalls;
     std::set<IndirectCommandsBuffer*> indirectCommandBuffers;
 
-    std::unique_ptr<Quad> quad;
-
-	bool _initialized = false;
+    Quad quad;
 };
 
 

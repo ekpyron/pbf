@@ -14,11 +14,12 @@
 namespace pbf {
 
 class Context;
+class InitContext;
 
 class Simulation
 {
 public:
-	Simulation(Context& context, size_t numParticles, vk::DescriptorBufferInfo input, vk::DescriptorBufferInfo output);
+	Simulation(InitContext& context, size_t numParticles, vk::DescriptorBufferInfo input, vk::DescriptorBufferInfo output);
 	uint32_t getNumParticles() const {
 		return _numParticles;
 	}
@@ -45,9 +46,6 @@ private:
 	vk::DescriptorSet pongDescriptorSet;
 
 	static constexpr std::uint32_t blockSize = 256;
-
-	bool _initialized = false;
-	void initialize(vk::CommandBuffer buf);
 };
 
 }

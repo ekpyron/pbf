@@ -14,28 +14,28 @@ static constexpr std::uint64_t TIMEOUT = std::numeric_limits<std::uint64_t>::max
 
 namespace pbf {
 
-Renderer::Renderer(Context &context) : _context(context) {
+Renderer::Renderer(InitContext &initContext) : _context(initContext.context) {
     _frameSync.reserve(framePrerenderCount());
     for (size_t i = 0; i < framePrerenderCount(); i++) {
         _frameSync.emplace_back(FrameSync{
-                context.device().createSemaphoreUnique({}),
-				context.device().createSemaphoreUnique({}),
-                context.device().createSemaphoreUnique({}),
-                context.device().createFenceUnique(vk::FenceCreateInfo {
+                _context.device().createSemaphoreUnique({}),
+				_context.device().createSemaphoreUnique({}),
+                _context.device().createSemaphoreUnique({}),
+                _context.device().createFenceUnique(vk::FenceCreateInfo {
 					.flags = vk::FenceCreateFlagBits::eSignaled
 				})
         });
-        PBF_DEBUG_SET_OBJECT_NAME(context, *_frameSync.back().imageAvailableSemaphore,
+        PBF_DEBUG_SET_OBJECT_NAME(_context, *_frameSync.back().imageAvailableSemaphore,
                                   fmt::format("Image Available Semaphore #{}", i));
-        PBF_DEBUG_SET_OBJECT_NAME(context, *_frameSync.back().renderFinishedSemaphore,
+        PBF_DEBUG_SET_OBJECT_NAME(_context, *_frameSync.back().renderFinishedSemaphore,
                                   fmt::format("Render Finished Semaphore #{}", i));
-		PBF_DEBUG_SET_OBJECT_NAME(context, *_frameSync.back().computeFinishedSemaphore,
+		PBF_DEBUG_SET_OBJECT_NAME(_context, *_frameSync.back().computeFinishedSemaphore,
 								  fmt::format("Compute Finished Semaphore #{}", i));
-        PBF_DEBUG_SET_OBJECT_NAME(context, *_frameSync.back().fence, fmt::format("Frame Fence #{}", i));
+        PBF_DEBUG_SET_OBJECT_NAME(_context, *_frameSync.back().fence, fmt::format("Frame Fence #{}", i));
     }
 
     {
-        _renderPass = context.cache().fetch(descriptors::RenderPass{
+        _renderPass = _context.cache().fetch(descriptors::RenderPass{
                 .attachments = {
                         vk::AttachmentDescription{
                                 {},
@@ -50,7 +50,7 @@ Renderer::Renderer(Context &context) : _context(context) {
                         },
 					vk::AttachmentDescription{
 						{},
-						context.getDepthFormat(),
+						_context.getDepthFormat(),
 						vk::SampleCountFlagBits::e1,
 						vk::AttachmentLoadOp::eClear,
 						vk::AttachmentStoreOp::eDontCare,
@@ -155,10 +155,6 @@ void Renderer::render() {
         _context.scene().frame(*buffer);
 
 		_context.scene().simulations().at(_currentFrameSync).run(*buffer);
-
-        for (auto& fn: currentFrameSync.stagingFunctorQueue) {
-            (*fn)(*buffer);
-        }
 
 		std::array<vk::ClearValue, 2> clearValues;
         clearValues[0].setColor({std::array<float, 4>{0.1f, 0.1f, 0.1f, 1.0f}});

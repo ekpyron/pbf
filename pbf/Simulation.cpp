@@ -34,11 +34,11 @@ constexpr auto radixSortDescriptorSetLayout() {
 
 }
 
-Simulation::Simulation(Context &context, size_t numParticles, vk::DescriptorBufferInfo input, vk::DescriptorBufferInfo output):
-_context(context),
+Simulation::Simulation(InitContext &initContext, size_t numParticles, vk::DescriptorBufferInfo input, vk::DescriptorBufferInfo output):
+_context(initContext.context),
 _numParticles(numParticles),
 _radixSort(_context, blockSize, getNumParticles() / blockSize, radixSortDescriptorSetLayout(), "shaders/particlesort"),
-gridDataBuffer(context, 1, vk::BufferUsageFlagBits::eUniformBuffer|vk::BufferUsageFlagBits::eTransferDst, MemoryType::STATIC),
+gridDataBuffer(_context, 1, vk::BufferUsageFlagBits::eUniformBuffer|vk::BufferUsageFlagBits::eTransferDst, MemoryType::STATIC),
 _input(input),
 _output(output)
 {
@@ -52,7 +52,7 @@ _output(output)
 		static std::array<vk::DescriptorPoolSize, 1> sizes {{
 			{ vk::DescriptorType::eStorageBuffer, 1024 }
 		}};
-		_descriptorPool = context.device().createDescriptorPoolUnique(vk::DescriptorPoolCreateInfo{
+		_descriptorPool = _context.device().createDescriptorPoolUnique(vk::DescriptorPoolCreateInfo{
 			.maxSets = numDescriptorSets,
 			.poolSizeCount = static_cast<std::uint32_t>(sizes.size()),
 			.pPoolSizes = sizes.data()
@@ -61,8 +61,8 @@ _output(output)
 
 
 	{
-		std::vector pingPongLayouts(2, *context.cache().fetch(radixSortDescriptorSetLayout()));
-		auto descriptorSets = context.device().allocateDescriptorSets(vk::DescriptorSetAllocateInfo{
+		std::vector pingPongLayouts(2, *_context.cache().fetch(radixSortDescriptorSetLayout()));
+		auto descriptorSets = _context.device().allocateDescriptorSets(vk::DescriptorSetAllocateInfo{
 			.descriptorPool = *_descriptorPool,
 			.descriptorSetCount = size32(pingPongLayouts),
 			.pSetLayouts = pingPongLayouts.data()
@@ -86,7 +86,7 @@ _output(output)
 				output,
 				input
 			};
-			context.device().updateDescriptorSets({vk::WriteDescriptorSet{
+			_context.device().updateDescriptorSets({vk::WriteDescriptorSet{
 				.dstSet = pingDescriptorSet,
 				.dstBinding = 0,
 				.dstArrayElement = 0,
@@ -125,64 +125,57 @@ _output(output)
 			}}, {});
 		}
 	}
+	{
+		auto& gridDataInitBuffer = initContext.createInitData<Buffer<GridData>>(
+			_context,
+			1,
+			vk::BufferUsageFlagBits::eTransferSrc,
+			MemoryType::TRANSIENT
+		);
+		*gridDataInitBuffer.data() = {};
+		gridDataInitBuffer.flush();
+
+		auto& initCmdBuf = *initContext.initCommandBuffer;
+
+		initCmdBuf.pipelineBarrier(
+			vk::PipelineStageFlagBits::eHost,
+			vk::PipelineStageFlagBits::eTransfer,
+			{},
+			{
+				vk::MemoryBarrier{
+					.srcAccessMask = vk::AccessFlagBits::eHostWrite,
+					.dstAccessMask = vk::AccessFlagBits::eTransferRead
+				}
+			},
+			{}, {}
+		);
+
+		initCmdBuf.copyBuffer(gridDataInitBuffer.buffer(), gridDataBuffer.buffer(), {
+			vk::BufferCopy {
+				.srcOffset = 0,
+				.dstOffset = 0,
+				.size = sizeof(GridData)
+			}
+		});
+
+		initCmdBuf.pipelineBarrier(
+			vk::PipelineStageFlagBits::eTransfer,
+			vk::PipelineStageFlagBits::eComputeShader,
+			{},
+			{
+				vk::MemoryBarrier{
+					.srcAccessMask = vk::AccessFlagBits::eTransferWrite,
+					.dstAccessMask = vk::AccessFlagBits::eUniformRead
+				}
+			},
+			{}, {}
+		);
+	}
 }
 
 void Simulation::run(vk::CommandBuffer buf)
 {
-	if (!_initialized)
-		initialize(buf);
-
 	_radixSort.stage(buf, 30, pingDescriptorSet, pongDescriptorSet);
-}
-
-void Simulation::initialize(vk::CommandBuffer buf)
-{
-	Buffer<GridData> gridDataInitBuffer{
-		_context,
-		1,
-		vk::BufferUsageFlagBits::eTransferSrc,
-		MemoryType::TRANSIENT
-	};
-	*gridDataInitBuffer.data() = {};
-	gridDataInitBuffer.flush();
-
-	buf.pipelineBarrier(
-		vk::PipelineStageFlagBits::eHost,
-		vk::PipelineStageFlagBits::eTransfer,
-		{},
-		{
-			vk::MemoryBarrier{
-				.srcAccessMask = vk::AccessFlagBits::eHostWrite,
-				.dstAccessMask = vk::AccessFlagBits::eTransferRead
-			}
-		},
-		{}, {}
-	);
-
-	buf.copyBuffer(gridDataInitBuffer.buffer(), gridDataBuffer.buffer(), {
-		vk::BufferCopy {
-			.srcOffset = 0,
-			.dstOffset = 0,
-			.size = sizeof(GridData)
-		}
-	});
-
-	buf.pipelineBarrier(
-		vk::PipelineStageFlagBits::eTransfer,
-		vk::PipelineStageFlagBits::eComputeShader,
-		{},
-		{
-			vk::MemoryBarrier{
-				.srcAccessMask = vk::AccessFlagBits::eTransferWrite,
-				.dstAccessMask = vk::AccessFlagBits::eUniformRead
-			}
-		},
-		{}, {}
-	);
-
-	_context.renderer().stage([gridDataInitBuffer = std::move(gridDataInitBuffer)](vk::CommandBuffer) {});
-
-	_initialized = true;
 }
 
 }

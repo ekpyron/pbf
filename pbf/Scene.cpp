@@ -20,22 +20,22 @@
 
 namespace pbf {
 
-Scene::Scene(Context &context)
-: _context(context), _particleData{
-	context,
-	_numParticles * context.renderer().framePrerenderCount(),
+Scene::Scene(InitContext &initContext)
+: _context(initContext.context), _particleData{
+	_context,
+	_numParticles * _context.renderer().framePrerenderCount(),
 	// TODO: maybe remove transfer src
 	vk::BufferUsageFlagBits::eTransferSrc | vk::BufferUsageFlagBits::eTransferDst | vk::BufferUsageFlagBits::eStorageBuffer | vk::BufferUsageFlagBits::eVertexBuffer,
 	pbf::MemoryType::STATIC
-} {
+}, quad(initContext, *this) {
 
-	for (size_t i = 0u; i < context.renderer().framePrerenderCount(); ++i) {
+	for (size_t i = 0u; i < _context.renderer().framePrerenderCount(); ++i) {
 		_simulations.emplace_back(
-			context,
+			initContext,
 			_numParticles,
 			vk::DescriptorBufferInfo{
 				.buffer = _particleData.buffer(),
-				.offset = ((i + context.renderer().framePrerenderCount() - 1) % context.renderer().framePrerenderCount()) * sizeof(ParticleData) * _numParticles,
+				.offset = ((i + _context.renderer().framePrerenderCount() - 1) % _context.renderer().framePrerenderCount()) * sizeof(ParticleData) * _numParticles,
 				.range = sizeof(ParticleData) * _numParticles
 			},
 			vk::DescriptorBufferInfo{
@@ -46,59 +46,52 @@ Scene::Scene(Context &context)
 		);
 	}
 
-	quad = std::make_unique<Quad>(this);
+
+
+	auto& initBuffer = initContext.createInitData<Buffer<ParticleData>>(
+		_context, _numParticles, vk::BufferUsageFlagBits::eTransferSrc, pbf::MemoryType::TRANSIENT
+	);
+
+	ParticleData* data = initBuffer.data();
+
+	for (int32_t x = 0; x < 64; ++x)
+		for (int32_t y = 0; y < 64; ++y)
+			for (int32_t z = 0; z < 64; ++z)
+			{
+				auto id = (64 * 64 * y + 64 * z + x);
+				data[id].position = glm::vec3(x - 32, y - 32, z - 32);
+			}
+	std::random_device rd;  //Will be used to obtain a seed for the random number engine
+	std::mt19937 gen(rd()); //Standard mersenne_twister_engine seeded with rd()
+	std::shuffle(data, data + 64*64*64, gen);
+	initBuffer.flush();
+
+	auto& initCmdBuf = *initContext.initCommandBuffer;
+	initCmdBuf.copyBuffer(initBuffer.buffer(), _particleData.buffer(), {
+		vk::BufferCopy {
+			.srcOffset = 0,
+			.dstOffset = sizeof(ParticleData) * _numParticles * (_context.renderer().framePrerenderCount() - 1),
+			.size = initBuffer.deviceSize()
+		}
+	});
+
+	initCmdBuf.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eComputeShader, {}, {}, {vk::BufferMemoryBarrier{
+		.srcAccessMask = vk::AccessFlagBits::eTransferWrite,
+		.dstAccessMask = vk::AccessFlagBits::eShaderRead,
+		.srcQueueFamilyIndex = 0,
+		.dstQueueFamilyIndex = 0,
+		.buffer = _particleData.buffer(),
+		.offset = sizeof(ParticleData) * _numParticles * (_context.renderer().framePrerenderCount() - 1),
+		.size = initBuffer.deviceSize(),
+	}}, {});
+
 }
 
 
 void Scene::frame(vk::CommandBuffer &buf) {
-
-	if (!_initialized) {
-
-		Buffer<ParticleData> initializeBuffer {_context, _numParticles, vk::BufferUsageFlagBits::eTransferSrc, pbf::MemoryType::TRANSIENT};
-
-		ParticleData* data = initializeBuffer.data();
-
-		for (int32_t x = 0; x < 64; ++x)
-			for (int32_t y = 0; y < 64; ++y)
-				for (int32_t z = 0; z < 64; ++z)
-				{
-					auto id = (64 * 64 * y + 64 * z + x);
-					data[id].position = glm::vec3(x - 32, y - 32, z - 32);
-				}
-		std::random_device rd;  //Will be used to obtain a seed for the random number engine
-		std::mt19937 gen(rd()); //Standard mersenne_twister_engine seeded with rd()
-		std::shuffle(data, data + 64*64*64, gen);
-		initializeBuffer.flush();
-
-		buf.copyBuffer(initializeBuffer.buffer(), _particleData.buffer(), {
-			vk::BufferCopy {
-				.srcOffset = 0,
-				.dstOffset = sizeof(ParticleData) * _numParticles * (_context.renderer().framePrerenderCount() - 1),
-				.size = initializeBuffer.deviceSize()
-			}
-		});
-
-		buf.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eComputeShader, {}, {}, {vk::BufferMemoryBarrier{
-			.srcAccessMask = vk::AccessFlagBits::eTransferWrite,
-			.dstAccessMask = vk::AccessFlagBits::eShaderRead,
-			.srcQueueFamilyIndex = 0,
-			.dstQueueFamilyIndex = 0,
-			.buffer = _particleData.buffer(),
-			.offset = sizeof(ParticleData) * _numParticles * (_context.renderer().framePrerenderCount() - 1),
-			.size = initializeBuffer.deviceSize(),
-		}}, {});
-
-
-		// keep alive until next use of frame sync
-		_context.renderer().stage([initializeBuffer = std::move(initializeBuffer)] (auto) {});
-
-
-		_initialized = true;
-	}
-
     for(auto* ptr: indirectCommandBuffers) ptr->clear();
 
-    quad->frame(_numParticles);
+    quad.frame(_numParticles);
 }
 
 void Scene::enqueueCommands(vk::CommandBuffer &buf) {

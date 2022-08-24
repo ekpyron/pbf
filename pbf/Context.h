@@ -189,4 +189,27 @@ private:
 	Camera _camera;
 };
 
+struct InitContext {
+	InitContext(Context& context): context(context) {
+		initCommandBuffer = std::move(context.device().allocateCommandBuffersUnique(vk::CommandBufferAllocateInfo{
+			.commandPool = context.commandPool(true),
+			.level = vk::CommandBufferLevel::ePrimary,
+			.commandBufferCount = 1U
+		}).front());
+	}
+
+	template<typename T, typename... Args>
+	T& createInitData(Args&&... args) {
+		auto uniqueFrameData = std::make_unique<FrameData<T>>(std::forward<Args>(args)...);
+		T& result = uniqueFrameData->data;
+		initData.emplace_back(move(uniqueFrameData));
+		return result;
+	}
+
+	Context& context;
+	vk::UniqueCommandBuffer initCommandBuffer;
+	std::vector<std::unique_ptr<FrameDataBase>> initData{};
+
+};
+
 }
