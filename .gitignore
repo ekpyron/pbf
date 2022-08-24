@@ -161,3 +161,5 @@ dkms.conf
 
 .idea
 build/
+
+*swp

@@ -1203,14 +1203,14 @@ TEST_CASE_METHOD(ComputeShaderUnitTest, "Compute Shader Sort Test", "[sort] ")
 		}}, {});
 	}
 
-	bool swapped;
+	RadixSort::Result result;
 	run([&](vk::CommandBuffer buf) {
-		swapped = radixSort.stage(buf, sortBitCount, pingDescriptorSet, pongDescriptorSet);
+		result = radixSort.stage(buf, sortBitCount, pingDescriptorSet, pingDescriptorSet, pongDescriptorSet);
 	});
 
 	{
 
-		auto ptr = swapped ? resultBuffer.data() : keysBuffer.data();
+		auto ptr = result == RadixSort::Result::InPongBuffer ? resultBuffer.data() : keysBuffer.data();
 
 		std::sort(initialKeys.begin(), initialKeys.end());
 		for (auto i = 0; i < numKeys; ++i)

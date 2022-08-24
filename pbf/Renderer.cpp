@@ -154,7 +154,7 @@ void Renderer::render() {
 
         _context.scene().frame(*buffer);
 
-		_context.scene().simulations().at(_currentFrameSync).run(*buffer);
+		_context.scene().simulation().run(*buffer);
 
 		std::array<vk::ClearValue, 2> clearValues;
         clearValues[0].setColor({std::array<float, 4>{0.1f, 0.1f, 0.1f, 1.0f}});

@@ -19,6 +19,10 @@ class ContextInterface;
 class RadixSort
 {
 public:
+	enum class Result {
+		InPingBuffer,
+		InPongBuffer
+	};
 	RadixSort(
 		ContextInterface& _context,
 		uint32_t _blockSize,
@@ -31,9 +35,10 @@ public:
 	~RadixSort() = default;
 	RadixSort& operator=(const RadixSort&) = delete;
 
-	bool stage(
+	Result stage(
 		vk::CommandBuffer buf,
 		uint32_t _sortBits,
+		vk::DescriptorSet _initDescriptorSet,
 		vk::DescriptorSet _pingDescriptorSet,
 		vk::DescriptorSet _pongDescriptorSet
 	) const;

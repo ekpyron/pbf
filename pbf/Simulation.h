@@ -15,19 +15,20 @@ namespace pbf {
 
 class Context;
 class InitContext;
+class ParticleData;
 
 class Simulation
 {
 public:
-	Simulation(InitContext& context, size_t numParticles, vk::DescriptorBufferInfo input, vk::DescriptorBufferInfo output);
+	Simulation(InitContext& context, RingBuffer<ParticleData>& particleData);
 	uint32_t getNumParticles() const {
-		return _numParticles;
+		return _particleData.size();
 	}
 	void run(vk::CommandBuffer buf);
 
 private:
 	Context& _context;
-	size_t _numParticles = 0;
+	RingBuffer<ParticleData>& _particleData;
 	RadixSort _radixSort;
 
 	struct GridData {
@@ -35,15 +36,16 @@ private:
 		glm::ivec4 min = glm::ivec4(-32, -32, -32, 0);
 		glm::ivec4 hashweights = glm::ivec4(1, (max.x - min.x + 1), (max.x - min.x + 1) * (max.y - min.y + 1), 0);
 	};
-	Buffer<GridData> gridDataBuffer;
-
-	vk::DescriptorBufferInfo _input;
-	vk::DescriptorBufferInfo _output;
+	Buffer<GridData> _gridDataBuffer;
 
 	vk::UniqueDescriptorPool _descriptorPool;
 
+	std::vector<vk::DescriptorSet> initDescriptorSets;
 	vk::DescriptorSet pingDescriptorSet;
 	vk::DescriptorSet pongDescriptorSet;
+
+	RingBuffer<ParticleData> _tempBuffer;
+
 
 	static constexpr std::uint32_t blockSize = 256;
 };

@@ -21,33 +21,18 @@
 namespace pbf {
 
 Scene::Scene(InitContext &initContext)
-: _context(initContext.context), _particleData{
+: _context(initContext.context),
+_particleData{
 	_context,
-	_numParticles * _context.renderer().framePrerenderCount(),
+	_numParticles,
+	_context.renderer().framePrerenderCount(),
 	// TODO: maybe remove transfer src
 	vk::BufferUsageFlagBits::eTransferSrc | vk::BufferUsageFlagBits::eTransferDst | vk::BufferUsageFlagBits::eStorageBuffer | vk::BufferUsageFlagBits::eVertexBuffer,
 	pbf::MemoryType::STATIC
-}, quad(initContext, *this) {
-
-	for (size_t i = 0u; i < _context.renderer().framePrerenderCount(); ++i) {
-		_simulations.emplace_back(
-			initContext,
-			_numParticles,
-			vk::DescriptorBufferInfo{
-				.buffer = _particleData.buffer(),
-				.offset = ((i + _context.renderer().framePrerenderCount() - 1) % _context.renderer().framePrerenderCount()) * sizeof(ParticleData) * _numParticles,
-				.range = sizeof(ParticleData) * _numParticles
-			},
-			vk::DescriptorBufferInfo{
-				.buffer = _particleData.buffer(),
-				.offset = i * sizeof(ParticleData) * _numParticles,
-				.range = sizeof(ParticleData) * _numParticles
-			}
-		);
-	}
-
-
-
+},
+quad(initContext, *this),
+_simulation(initContext, _particleData)
+{
 	auto& initBuffer = initContext.createInitData<Buffer<ParticleData>>(
 		_context, _numParticles, vk::BufferUsageFlagBits::eTransferSrc, pbf::MemoryType::TRANSIENT
 	);

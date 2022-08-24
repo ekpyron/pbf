@@ -233,9 +233,10 @@ prefixSums(_context, numKeys, vk::BufferUsageFlagBits::eStorageBuffer, MemoryTyp
 	}
 }
 
-bool RadixSort::stage(
+RadixSort::Result RadixSort::stage(
 	vk::CommandBuffer buf,
 	uint32_t _sortBits,
+	vk::DescriptorSet _initDescriptorSet,
 	vk::DescriptorSet _pingDescriptorSet,
 	vk::DescriptorSet _pongDescriptorSet
 ) const
@@ -252,8 +253,10 @@ bool RadixSort::stage(
 	for (uint32_t bit = 0; bit < _sortBits; bit += 2) {
 		pushConstants.bit = bit;
 
+		vk::DescriptorSet source = (bit == 0) ? _initDescriptorSet : _pingDescriptorSet;
+
 		buf.bindPipeline(vk::PipelineBindPoint::eCompute, *prescanPipeline);
-		buf.bindDescriptorSets(vk::PipelineBindPoint::eCompute, *(prescanPipeline.descriptor().pipelineLayout), 0, {prescanParams, _pingDescriptorSet}, {});
+		buf.bindDescriptorSets(vk::PipelineBindPoint::eCompute, *(prescanPipeline.descriptor().pipelineLayout), 0, {prescanParams, source}, {});
 		buf.pushConstants(*(prescanPipeline.descriptor().pipelineLayout), vk::ShaderStageFlagBits::eCompute, 0, sizeof(pushConstants), &pushConstants);
 		// reads keys; writes prefix sums and block sums
 		buf.dispatch(((numKeys + blockSize - 1) / blockSize), 1, 1);
@@ -300,7 +303,7 @@ bool RadixSort::stage(
 		}
 
 		buf.bindPipeline(vk::PipelineBindPoint::eCompute, *globalSortPipeline);
-		buf.bindDescriptorSets(vk::PipelineBindPoint::eCompute, *(globalSortPipeline.descriptor().pipelineLayout), 0, {globalSortParams, _pingDescriptorSet}, {});
+		buf.bindDescriptorSets(vk::PipelineBindPoint::eCompute, *(globalSortPipeline.descriptor().pipelineLayout), 0, {globalSortParams, source}, {});
 		buf.pushConstants(*(globalSortPipeline.descriptor().pipelineLayout), vk::ShaderStageFlagBits::eCompute, 0, sizeof(pushConstants), &pushConstants);
 		// reads keys, prefix sums and block sums; writes result
 		buf.dispatch(((numKeys + blockSize - 1) / blockSize), 1, 1);
@@ -315,7 +318,8 @@ bool RadixSort::stage(
 		std::swap(_pingDescriptorSet, _pongDescriptorSet);
 		isSwapped = !isSwapped;
 	} // END OF BIT LOOP
-	return isSwapped;
+
+	return isSwapped ? Result::InPongBuffer : Result::InPingBuffer;
 }
 
 }

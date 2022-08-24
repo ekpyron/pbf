@@ -100,4 +100,36 @@ struct BufferRef {
 	}
 };
 
+template<typename T>
+struct RingBuffer: Buffer<T> {
+	RingBuffer(ContextInterface& context, std::size_t segmentSize, std::size_t segmentCount, vk::BufferUsageFlags usageFlags, MemoryType memoryType,
+	const std::vector<std::uint32_t> &queueFamilyIndices = {}): Buffer<T>(context, segmentSize * segmentCount, usageFlags, memoryType) {
+		for (size_t i = 0; i < segmentCount; ++i) {
+			_segments.emplace_back(vk::DescriptorBufferInfo{
+				.buffer = this->buffer(),
+				.offset = ((i + segmentCount - 1) % segmentCount) * Buffer<T>::itemSize() * segmentSize,
+				.range = Buffer<T>::itemSize() * segmentSize
+			});
+		}
+	}
+
+	size_t segments() const {
+		return _segments.size();
+	}
+
+	size_t size() const {
+		return Buffer<T>::size() / _segments.size();
+	}
+
+	size_t segmentDeviceSize() const {
+		return size() * Buffer<T>::itemSize();
+	}
+
+	vk::DescriptorBufferInfo const& segment(size_t i) const {
+		return _segments[i % _segments.size()];
+	}
+private:
+	std::vector<vk::DescriptorBufferInfo> _segments;
+};
+
 }

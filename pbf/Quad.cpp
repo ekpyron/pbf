@@ -51,7 +51,7 @@ Quad::Quad(InitContext& initContext, pbf::Scene& scene) : scene(scene) {
 					},
 					vk::VertexInputBindingDescription{
 						.binding = 1,
-						.stride = sizeof(Scene::ParticleData),
+						.stride = sizeof(ParticleData),
 						.inputRate = vk::VertexInputRate::eInstance
 					}
 			},
@@ -66,13 +66,13 @@ Quad::Quad(InitContext& initContext, pbf::Scene& scene) : scene(scene) {
 						.location = 1,
 						.binding = 1,
 						.format = vk::Format::eR32G32B32Sfloat,
-						.offset = offsetof(Scene::ParticleData, position)
+						.offset = offsetof(ParticleData, position)
 					},
 					vk::VertexInputAttributeDescription{
 						.location = 2,
 						.binding = 1,
 						.format = vk::Format::eR32Sfloat,
-						.offset = offsetof(Scene::ParticleData, aux)
+						.offset = offsetof(ParticleData, aux)
 					}
 			},
             .primitiveTopology = vk::PrimitiveTopology::eTriangleList,
@@ -173,7 +173,7 @@ void Quad::frame(uint32_t instanceCount) {
 				BufferRef<VertexData>{&buffer},
 				BufferRef<VertexData>{
 					.buffer = scene.particleData().as<VertexData>(),
-					.offset = sizeof(Scene::ParticleData) * scene.getNumParticles() * scene.context().renderer().currentFrameSync()
+					.offset = sizeof(ParticleData) * scene.getNumParticles() * scene.context().renderer().currentFrameSync()
 				}
 			}
 		);

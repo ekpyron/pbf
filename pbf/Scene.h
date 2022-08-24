@@ -21,6 +21,11 @@
 
 namespace pbf {
 
+struct ParticleData {
+	glm::vec3 position;
+	float aux = 0.0f;
+};
+
 class Scene {
 public:
 
@@ -45,16 +50,11 @@ public:
         return result;
     }
 
-	auto& simulations() { return _simulations; }
-	[[nodiscard]] const auto& simulations() const { return _simulations; }
+	[[nodiscard]] auto& simulation() { return _simulation; }
+	[[nodiscard]] const auto& simulation() const { return _simulation; }
 	[[nodiscard]] uint32_t getNumParticles() const {
 		return _numParticles;
 	}
-
-    struct ParticleData {
-        glm::vec3 position;
-        float aux = 0.0f;
-    };
 
 	Buffer<ParticleData>& particleData() { return _particleData; }
 	[[nodiscard]] const Buffer<ParticleData>& particleData() const { return _particleData; }
@@ -65,9 +65,7 @@ private:
 
 	uint32_t _numParticles = 64 * 64 * 64;
 
-	Buffer<ParticleData> _particleData;
-
-	std::vector<Simulation> _simulations;
+	RingBuffer<ParticleData> _particleData;
 
 	crampl::MultiKeyMap<std::map,
                         CacheReference<descriptors::GraphicsPipeline>,
@@ -78,6 +76,7 @@ private:
     std::set<IndirectCommandsBuffer*> indirectCommandBuffers;
 
     Quad quad;
+	Simulation _simulation;
 };
 
 
