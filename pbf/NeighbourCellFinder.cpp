@@ -62,6 +62,25 @@ _gridBoundaryBuffer(context, numGridCells, vk::BufferUsageFlagBits::eStorageBuff
 	);
 
 
+	_testPipeline = cache.fetch(
+		descriptors::ComputePipeline{
+			.flags = {},
+			.shaderStage = descriptors::ShaderStage {
+				.stage = vk::ShaderStageFlagBits::eCompute,
+				.module = cache.fetch(
+					descriptors::ShaderModule{
+						.source = descriptors::ShaderModule::File{"shaders/neighbour/test.comp.spv"},
+						PBF_DESC_DEBUG_NAME("NeighbourCellFinder: Test Compute Shader")
+					}),
+				.entryPoint = "main",
+				.specialization = {
+					Specialization<uint32_t>{.constantID = 0, .value = blockSize}
+				}
+			},
+			.pipelineLayout = neighbourCellPipelineLayout,
+			PBF_DESC_DEBUG_NAME("NeighbourCellFinder: test pipeline")
+		}
+	);
 	_gridData = context.device().allocateDescriptorSets(vk::DescriptorSetAllocateInfo{
 		.descriptorPool = context.descriptorPool(),
 		.descriptorSetCount = 1,
@@ -87,6 +106,18 @@ _gridBoundaryBuffer(context, numGridCells, vk::BufferUsageFlagBits::eStorageBuff
 void NeighbourCellFinder::operator()(vk::CommandBuffer buf, uint32_t numParticles, vk::DescriptorSet input) const
 {
 	buf.bindPipeline(vk::PipelineBindPoint::eCompute, *_findCellsPipeline);
+	buf.bindDescriptorSets(vk::PipelineBindPoint::eCompute, *(_findCellsPipeline.descriptor().pipelineLayout), 0, {input, _gridData}, {});
+	// reads keys; writes prefix sums and block sums
+	buf.dispatch(((numParticles + blockSize - 1) / blockSize), 1, 1);
+
+	buf.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {}, {
+		vk::MemoryBarrier{
+			.srcAccessMask = vk::AccessFlagBits::eShaderWrite,
+			.dstAccessMask = vk::AccessFlagBits::eShaderRead
+		}
+	}, {}, {});
+
+	buf.bindPipeline(vk::PipelineBindPoint::eCompute, *_testPipeline);
 	buf.bindDescriptorSets(vk::PipelineBindPoint::eCompute, *(_findCellsPipeline.descriptor().pipelineLayout), 0, {input, _gridData}, {});
 	// reads keys; writes prefix sums and block sums
 	buf.dispatch(((numParticles + blockSize - 1) / blockSize), 1, 1);

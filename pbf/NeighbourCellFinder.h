@@ -46,6 +46,7 @@ private:
 	Buffer<GridBoundaries> _gridBoundaryBuffer;
 
 	CacheReference<descriptors::ComputePipeline> _findCellsPipeline;
+	CacheReference<descriptors::ComputePipeline> _testPipeline;
 	vk::DescriptorSet _gridData;
 
 

@@ -26,6 +26,7 @@ add_shader(particle.vert.spv particle.vert)
 add_shader(particle.frag.spv particle.frag)
 
 add_shader(neighbour/findcells.comp.spv neighbour/findcells.comp)
+add_shader(neighbour/test.comp.spv neighbour/test.comp)
 
 add_shader(radixsort/scan.comp.spv radixsort/scan.comp)
 add_shader(radixsort/addblocksum.comp.spv radixsort/addblocksum.comp)

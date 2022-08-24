@@ -9,7 +9,7 @@ struct ParticleData {
     float aux;
 };
 
-layout(std430, binding = 0, set = 0) readonly buffer Particles
+layout(std430, binding = 0, set = 0) buffer Particles
 {
     ParticleData particles[];
 };
@@ -25,7 +25,7 @@ layout(std140, binding = 1, set = 0) uniform GridData {
     ivec3 GRID_HASHWEIGHTS;
 };
 
-layout(std430, binding = 0, set = 1) writeonly buffer GridBoundaryBuffer
+layout(std430, binding = 0, set = 1) readonly buffer GridBoundaryBuffer
 {
     GridBoundaries grid[]; // .x: start; .y: end
 };
@@ -41,20 +41,15 @@ void main (void)
     uint gid;
     gid = gl_GlobalInvocationID.x;
 
-    if (gid == 0)
-    {
-        grid[GetGridIndex(particles[0].position)].startIndex = 0;
-        //uint maxID = gl_NumWorkGroups.x * gl_WorkGroupSize.x;
-        //grid[GetGridIndex(GRID_MAX)].endIndex = maxID;
-        return;
-    }
+    uint myGridIndex = GetGridIndex(particles[gid].position);
 
-    uint currentGridIndex = GetGridIndex(particles[gid].position);
-    uint previousGridIndex = GetGridIndex(particles[gid - 1].position);
+    uint newGridIndex = GetGridIndex(particles[grid[myGridIndex].startIndex].position);
+    if (myGridIndex == newGridIndex)
+        particles[gid].aux = 1.0; // float(/*GetGridIndex(particles[grid[myGridIndex].startIndex].position)*/myGridIndex) / (16*64.0*64.0);
+    /*
 
-    if (currentGridIndex != previousGridIndex)
-    {
-        grid[currentGridIndex].startIndex = gid;
-        grid[previousGridIndex].endIndex = gid;
-    }
+    uint gridIndex = GetGridIndex();
+    if (gid >= grid[gridIndex].startIndex && gid < grid[gridIndex].endIndex)
+        particles[gid].aux = 1.0;
+        */
 }
