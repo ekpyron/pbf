@@ -6,7 +6,7 @@ namespace pbf {
 
 
 NeighbourCellFinder::NeighbourCellFinder(ContextInterface& context, size_t numGridCells):
-_gridBoundaryBuffer(context, numGridCells, vk::BufferUsageFlagBits::eStorageBuffer, MemoryType::STATIC)
+_gridBoundaryBuffer(context, numGridCells, vk::BufferUsageFlagBits::eStorageBuffer|vk::BufferUsageFlagBits::eTransferDst, MemoryType::STATIC)
 {
 	auto& cache = context.cache();
 
@@ -105,6 +105,8 @@ _gridBoundaryBuffer(context, numGridCells, vk::BufferUsageFlagBits::eStorageBuff
 
 void NeighbourCellFinder::operator()(vk::CommandBuffer buf, uint32_t numParticles, vk::DescriptorSet input) const
 {
+	buf.fillBuffer(_gridBoundaryBuffer.buffer(), 0, _gridBoundaryBuffer.deviceSize(), 0);
+
 	buf.bindPipeline(vk::PipelineBindPoint::eCompute, *_findCellsPipeline);
 	buf.bindDescriptorSets(vk::PipelineBindPoint::eCompute, *(_findCellsPipeline.descriptor().pipelineLayout), 0, {input, _gridData}, {});
 	// reads keys; writes prefix sums and block sums
