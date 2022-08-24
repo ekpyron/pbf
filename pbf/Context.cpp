@@ -14,6 +14,7 @@
 #include "Context.h"
 #include "Renderer.h"
 #include "Scene.h"
+#include "Selection.h"
 
 #include <glm/ext/matrix_clip_space.hpp>
 #include <glm/ext/matrix_projection.hpp>
@@ -220,6 +221,7 @@ Context::Context() {
 
     _renderer = std::make_unique<Renderer>(initContext);
     _scene = std::make_unique<Scene>(initContext);
+	_selection = std::make_unique<Selection>(initContext);
 
 	initContext.initCommandBuffer->end();
 
@@ -384,53 +386,20 @@ void Context::OnMouseUp (int button)
 void Context::OnMouseDown (int button)
 {
 	auto window = _window->window();
-	/*
+
 	if (glfwGetKey (window, GLFW_KEY_H))
 	{
 		double xpos, ypos;
 		glfwGetCursorPos (window, &xpos, &ypos);
-		GLint id = selection.GetParticle (sph.GetPositionBuffer (), GetNumberOfParticles (), xpos, ypos);
-		if (id >= 0)
-		{
-			// create a temporary buffer
-			GLuint tmpbuffer;
-			glGenBuffers (1, &tmpbuffer);
-			glBindBuffer (GL_COPY_WRITE_BUFFER, tmpbuffer);
-			glBufferData (GL_COPY_WRITE_BUFFER, sizeof (GLuint), NULL, GL_DYNAMIC_READ);
+		spdlog::get("console")->debug("Clicked on coord {} {}", xpos, ypos);
 
-			// copy the particle highlighting information to the temporary buffer
-			// a temporary buffer is used, so that drivers (in particular the NVIDIA driver)
-			// are not tempted to move the whole buffer from GPU to host/DMA memory
-			glBindBuffer (GL_COPY_READ_BUFFER, sph.GetHighlightBuffer ());
-			glCopyBufferSubData (GL_COPY_READ_BUFFER, GL_COPY_WRITE_BUFFER,
-								 id * sizeof (GLuint), 0, sizeof (GLuint));
-
-			// map the temporary buffer to CPU address space
-			GLuint *info = reinterpret_cast<GLuint*> (glMapBuffer (GL_COPY_WRITE_BUFFER, GL_READ_WRITE));
-			if (info == NULL)
-				throw std::runtime_error ("A GPU buffer could not be mapped to CPU address space.");
-
-			// modify the particle information i order to highlight/unhighlight the particle
-			if (*info > 0)
-				*info = 0;
-			else
-				*info = 1;
-
-			// unmap the temporary buffer
-			glUnmapBuffer (GL_COPY_WRITE_BUFFER);
-
-			// copy back to the highlighting buffer
-			glCopyBufferSubData (GL_COPY_WRITE_BUFFER, GL_COPY_READ_BUFFER,
-								 0, id * sizeof (GLuint), sizeof (GLuint));
-
-			// delete the temporary buffer
-			glDeleteBuffers (1, &tmpbuffer);
-		}
-	}*/
+		auto index = (*_selection)(scene().particleData(), xpos, ypos);
+		spdlog::get("console")->debug("Clicked on particle {}", index);
+	}
 }
 
 
-vk::Format Context::getDepthFormat() const
+vk::Format Context::depthFormat() const
 {
 	// TODO
 	return vk::Format::eD32Sfloat;

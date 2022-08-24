@@ -56,8 +56,8 @@ public:
 		return _numParticles;
 	}
 
-	Buffer<ParticleData>& particleData() { return _particleData; }
-	[[nodiscard]] const Buffer<ParticleData>& particleData() const { return _particleData; }
+	RingBuffer<ParticleData>& particleData() { return _particleData; }
+	[[nodiscard]] const RingBuffer<ParticleData>& particleData() const { return _particleData; }
 
 private:
 

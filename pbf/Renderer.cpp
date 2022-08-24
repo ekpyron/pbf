@@ -50,7 +50,7 @@ Renderer::Renderer(InitContext &initContext) : _context(initContext.context) {
                         },
 					vk::AttachmentDescription{
 						{},
-						_context.getDepthFormat(),
+						_context.depthFormat(),
 						vk::SampleCountFlagBits::e1,
 						vk::AttachmentLoadOp::eClear,
 						vk::AttachmentStoreOp::eDontCare,
