@@ -168,8 +168,8 @@ Context::Context() {
         if(it != std::end(modes)) _presentMode = *it;
     }
 
-    _globalDescriptorPool = _device->createDescriptorPoolUnique(vk::DescriptorPoolCreateInfo{
-		.maxSets = numGlobalDescriptorSets,
+	_descriptorPool = _device->createDescriptorPoolUnique(vk::DescriptorPoolCreateInfo{
+		.maxSets = maxGlobalDescriptorSets,
 		.poolSizeCount = static_cast<std::uint32_t>(globalDescriptorPoolSizes().size()),
 		.pPoolSizes = globalDescriptorPoolSizes().data()
 	});
@@ -195,9 +195,9 @@ Context::Context() {
         std::transform(_globalDescriptorSetLayouts.begin(), _globalDescriptorSetLayouts.end(),
                 globalDescriptorSetLayouts.begin(), [](const auto& f) {return *f;});*/
         _globalDescriptorSet = _device->allocateDescriptorSets(vk::DescriptorSetAllocateInfo{
-			.descriptorPool = *_globalDescriptorPool,
+			.descriptorPool = *_descriptorPool,
 			.descriptorSetCount = numGlobalDescriptorSets,
-			.pSetLayouts = &*_globalDescriptorSetLayout
+			.pSetLayouts = &*_globalDescriptorSetLayout,
 		}).front();
 
     }

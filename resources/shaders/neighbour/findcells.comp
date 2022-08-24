@@ -9,26 +9,25 @@ struct ParticleData {
     float aux;
 };
 
-layout(std430, binding = 0, set = 1) readonly buffer Particles
+layout(std430, binding = 0, set = 0) readonly buffer Particles
 {
     ParticleData particles[];
 };
 
-struct GridExtents {
-    int startIndex;
-    int endIndex;
+struct GridBoundaries {
+    uint startIndex;
+    uint endIndex;
 };
 
-layout(std430, binding = 0, set = 0) readonly buffer GridData
-{
-    GridExtents grid[]; // .x: start; .y: end
-};
-
-
-layout(std140, binding = 2, set = 1) uniform GridData {
+layout(std140, binding = 1, set = 0) uniform GridData {
     ivec3 GRID_MAX;
     ivec3 GRID_MIN;
     ivec3 GRID_HASHWEIGHTS;
+};
+
+layout(std430, binding = 0, set = 1) writeonly buffer GridBoundaryBuffer
+{
+    GridBoundaries grid[]; // .x: start; .y: end
 };
 
 uint GetGridIndex(vec3 position) {
@@ -50,8 +49,8 @@ void main (void)
         return;
     }
 
-    uint currentGridIndex = GetGridIndex(particled[gid].position);
-    uint previousGridIndex = GetGridIndex(particled[gid - 1].position);
+    uint currentGridIndex = GetGridIndex(particles[gid].position);
+    uint previousGridIndex = GetGridIndex(particles[gid - 1].position);
 
     if (currentGridIndex != previousGridIndex)
     {

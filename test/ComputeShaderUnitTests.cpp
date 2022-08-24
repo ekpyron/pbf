@@ -74,19 +74,9 @@ void main()
 			PBF_DESC_DEBUG_NAME("prescan pipeline")
 		}
 	);
-	vk::UniqueDescriptorPool descriptorPool;
-	{
-		std::uint32_t numDescriptorSets = 1;
-		static std::array<vk::DescriptorPoolSize, 1> sizes {{{ vk::DescriptorType::eStorageBuffer, 1 }}};
-		descriptorPool = device().createDescriptorPoolUnique(vk::DescriptorPoolCreateInfo{
-			.maxSets = numDescriptorSets,
-			.poolSizeCount = static_cast<std::uint32_t>(sizes.size()),
-			.pPoolSizes = sizes.data()
-		});
-	}
 
 	auto stubParams = device().allocateDescriptorSets(vk::DescriptorSetAllocateInfo{
-		.descriptorPool = *descriptorPool,
+		.descriptorPool = descriptorPool(),
 		.descriptorSetCount = 1,
 		.pSetLayouts = &*stubLayout
 	}).front();
@@ -852,19 +842,9 @@ void main()
 			PBF_DESC_DEBUG_NAME("global sort pipeline")
 		}
 	);
-	vk::UniqueDescriptorPool descriptorPool;
-	{
-		std::uint32_t numDescriptorSets = 1024;
-		static std::array<vk::DescriptorPoolSize, 1> sizes {{{ vk::DescriptorType::eStorageBuffer, 1024 }}};
-		descriptorPool = device().createDescriptorPoolUnique(vk::DescriptorPoolCreateInfo{
-			.maxSets = numDescriptorSets,
-			.poolSizeCount = static_cast<std::uint32_t>(sizes.size()),
-			.pPoolSizes = sizes.data()
-		});
-	}
 
 	auto prescanParams = device().allocateDescriptorSets(vk::DescriptorSetAllocateInfo{
-		.descriptorPool = *descriptorPool,
+		.descriptorPool = descriptorPool(),
 		.descriptorSetCount = 1,
 		.pSetLayouts = &*sortLayout
 	}).front();
@@ -888,7 +868,7 @@ void main()
 
 	std::vector sortLayouts(blockSums.size() - 1, *sortLayout);
 	auto scanParams = device().allocateDescriptorSets(vk::DescriptorSetAllocateInfo{
-		.descriptorPool = *descriptorPool,
+		.descriptorPool = descriptorPool(),
 		.descriptorSetCount = static_cast<uint32_t>(sortLayouts.size()),
 		.pSetLayouts = sortLayouts.data()
 	});
@@ -911,7 +891,7 @@ void main()
 	}
 
 	auto globalSortParams = device().allocateDescriptorSets(vk::DescriptorSetAllocateInfo{
-		.descriptorPool = *descriptorPool,
+		.descriptorPool = descriptorPool(),
 		.descriptorSetCount = 1,
 		.pSetLayouts = &*sortLayout
 	}).front();
@@ -1126,17 +1106,6 @@ TEST_CASE_METHOD(ComputeShaderUnitTest, "Compute Shader Sort Test", "[sort] ")
 		"shaders/unittestsort"
 	};
 
-	vk::UniqueDescriptorPool descriptorPool;
-	{
-		std::uint32_t numDescriptorSets = 64;
-		static std::array<vk::DescriptorPoolSize, 1> sizes {{{ vk::DescriptorType::eStorageBuffer, 64 }}};
-		descriptorPool = device().createDescriptorPoolUnique(vk::DescriptorPoolCreateInfo{
-			.maxSets = numDescriptorSets,
-			.poolSizeCount = static_cast<std::uint32_t>(sizes.size()),
-			.pPoolSizes = sizes.data()
-		});
-	}
-
 
 	Buffer<uint32_t> keysBuffer{
 		*this,
@@ -1162,7 +1131,7 @@ TEST_CASE_METHOD(ComputeShaderUnitTest, "Compute Shader Sort Test", "[sort] ")
 	{
 		std::vector pingPongLayouts(2, *cache().fetch(keyAndGlobalSortDescriptorSet));
 		auto descriptorSets = device().allocateDescriptorSets(vk::DescriptorSetAllocateInfo{
-			.descriptorPool = *descriptorPool,
+			.descriptorPool = descriptorPool(),
 			.descriptorSetCount = size32(pingPongLayouts),
 			.pSetLayouts = pingPongLayouts.data()
 		});

@@ -57,8 +57,6 @@ private:
 	CacheReference<descriptors::ComputePipeline> addBlockSumPipeline;
 	CacheReference<descriptors::ComputePipeline> globalSortPipeline;
 
-	vk::UniqueDescriptorPool descriptorPool;
-
 	vk::DescriptorSet prescanParams;
 	std::vector<vk::DescriptorSet> scanParams;
 	vk::DescriptorSet globalSortParams;

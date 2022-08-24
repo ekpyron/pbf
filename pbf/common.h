@@ -25,6 +25,7 @@
 namespace pbf {
 class ContextInterface;
 class Context;
+class InitContext;
 class Renderer;
 class MemoryManager;
 class Scene;

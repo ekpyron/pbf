@@ -146,6 +146,13 @@ ComputeShaderUnitTestContext::ComputeShaderUnitTestContext() {
 		.level = vk::CommandBufferLevel::ePrimary,
 		.commandBufferCount = 1
 	}).front();
+
+	_descriptorPool = _device->createDescriptorPoolUnique(vk::DescriptorPoolCreateInfo{
+		.maxSets = maxGlobalDescriptorSets,
+		.poolSizeCount = static_cast<std::uint32_t>(globalDescriptorPoolSizes().size()),
+		.pPoolSizes = globalDescriptorPoolSizes().data()
+	});
+
 }
 
 std::tuple<vk::PhysicalDevice, std::uint32_t> ComputeShaderUnitTestContext::getPhysicalDevice() {

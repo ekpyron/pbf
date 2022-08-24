@@ -35,6 +35,10 @@ public:
 		return _cache;
 	}
 
+	vk::DescriptorPool descriptorPool() const override {
+		return *_descriptorPool;
+	}
+
 	template<typename Callable>
 	void run(Callable _callable) {
 		_commandBuffer.reset();
@@ -69,6 +73,17 @@ private:
 	vk::Queue _queue;
 	Cache _cache { *this, 100 };
 
+	static const auto &globalDescriptorPoolSizes() {
+		static std::array<vk::DescriptorPoolSize, 2> sizes {{{
+			vk::DescriptorType::eUniformBuffer, 512
+		}, {
+			vk::DescriptorType::eStorageBuffer, 512
+		}}};
+		return sizes;
+	}
+	static constexpr std::uint32_t maxGlobalDescriptorSets = 1024;
+
+	vk::UniqueDescriptorPool _descriptorPool;
 	vk::UniqueCommandPool _commandPool;
 	vk::CommandBuffer _commandBuffer;
 	std::unique_ptr<MemoryManager> _memoryManager;

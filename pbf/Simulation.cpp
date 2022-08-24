@@ -32,14 +32,14 @@ constexpr auto radixSortDescriptorSetLayout() {
 		PBF_DESC_DEBUG_NAME("Simulation particle sort descriptor set layout")
 	};
 }
-
 }
 
 Simulation::Simulation(InitContext &initContext, RingBuffer<ParticleData>& particleData):
 _context(initContext.context),
 _particleData(particleData),
-_radixSort(_context, blockSize, getNumParticles() / blockSize, radixSortDescriptorSetLayout(), "shaders/particlesort"),
 _gridDataBuffer(_context, 1, vk::BufferUsageFlagBits::eUniformBuffer|vk::BufferUsageFlagBits::eTransferDst, MemoryType::STATIC),
+_radixSort(_context, blockSize, getNumParticles() / blockSize, radixSortDescriptorSetLayout(), "shaders/particlesort"),
+_neighbourCellFinder(_context, GridData{}.numCells()),
 _tempBuffer(_context, particleData.size(), 2, vk::BufferUsageFlagBits::eStorageBuffer|vk::BufferUsageFlagBits::eTransferSrc, MemoryType::STATIC)
 {
 	if (getNumParticles() % blockSize)
@@ -48,28 +48,23 @@ _tempBuffer(_context, particleData.size(), 2, vk::BufferUsageFlagBits::eStorageB
 		throw std::runtime_error("Need at least block size particles.");
 
 	{
-		std::uint32_t numDescriptorSets = 512;
-		static std::array<vk::DescriptorPoolSize, 1> sizes {{
-			{ vk::DescriptorType::eStorageBuffer, 1024 }
-		}};
-		_descriptorPool = _context.device().createDescriptorPoolUnique(vk::DescriptorPoolCreateInfo{
-			.maxSets = numDescriptorSets,
-			.poolSizeCount = static_cast<std::uint32_t>(sizes.size()),
-			.pPoolSizes = sizes.data()
-		});
-	}
-
-
-	{
 		std::vector pingPongLayouts(2 + particleData.segments(), *_context.cache().fetch(radixSortDescriptorSetLayout()));
 		initDescriptorSets = _context.device().allocateDescriptorSets(vk::DescriptorSetAllocateInfo{
-			.descriptorPool = *_descriptorPool,
+			.descriptorPool = _context.descriptorPool(),
 			.descriptorSetCount = size32(pingPongLayouts),
 			.pSetLayouts = pingPongLayouts.data()
 		});
 		pingDescriptorSet = initDescriptorSets[initDescriptorSets.size() - 2];
 		pongDescriptorSet = initDescriptorSets[initDescriptorSets.size() - 1];
 		initDescriptorSets.resize(initDescriptorSets.size() - 2);
+	}
+	{
+		auto layout = *_context.cache().fetch(NeighbourCellFinder::inputDescriptorSetLayout());
+		neighbourCellFinderInputDescriptorSet = _context.device().allocateDescriptorSets(vk::DescriptorSetAllocateInfo{
+			.descriptorPool = _context.descriptorPool(),
+			.descriptorSetCount = 1,
+			.pSetLayouts = &layout
+		}).front();
 	}
 
 	vk::DescriptorBufferInfo gridDataBufferInfo{
@@ -159,7 +154,7 @@ _tempBuffer(_context, particleData.size(), 2, vk::BufferUsageFlagBits::eStorageB
 			vk::BufferUsageFlagBits::eTransferSrc,
 			MemoryType::TRANSIENT
 		);
-		*gridDataInitBuffer.data() = {};
+		std::construct_at<GridData>(gridDataInitBuffer.data());
 		gridDataInitBuffer.flush();
 
 		auto& initCmdBuf = *initContext.initCommandBuffer;
@@ -198,11 +193,38 @@ _tempBuffer(_context, particleData.size(), 2, vk::BufferUsageFlagBits::eStorageB
 			{}, {}
 		);
 	}
+	{
+		auto neighbourCellFinderInputInfos = {
+			_tempBuffer.segment(1) // TODO may also be zero! Depending on sort bits.
+		};
+		_context.device().updateDescriptorSets({vk::WriteDescriptorSet{
+			.dstSet = neighbourCellFinderInputDescriptorSet,
+			.dstBinding = 0,
+			.dstArrayElement = 0,
+			.descriptorCount = 1,
+			.descriptorType = vk::DescriptorType::eStorageBuffer,
+			.pImageInfo = nullptr,
+			.pBufferInfo = &*neighbourCellFinderInputInfos.begin(),
+			.pTexelBufferView = nullptr
+		},vk::WriteDescriptorSet{
+			.dstSet = neighbourCellFinderInputDescriptorSet,
+			.dstBinding = 1,
+			.dstArrayElement = 0,
+			.descriptorCount = 1,
+			.descriptorType = vk::DescriptorType::eUniformBuffer,
+			.pImageInfo = nullptr,
+			.pBufferInfo = &gridDataBufferInfo,
+			.pTexelBufferView = nullptr
+		}}, {});
+	}
 }
 
 void Simulation::run(vk::CommandBuffer buf)
 {
+	// TODO: adjust neighbourCellFinderInputInfos according to expected sortResult
 	auto sortResult = _radixSort.stage(buf, 30, initDescriptorSets[_context.renderer().currentFrameSync()], pingDescriptorSet, pongDescriptorSet);
+
+	_neighbourCellFinder(buf, _particleData.size(), neighbourCellFinderInputDescriptorSet);
 
 	buf.pipelineBarrier(
 		vk::PipelineStageFlagBits::eComputeShader,

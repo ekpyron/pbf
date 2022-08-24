@@ -51,6 +51,8 @@ public:
     };
     const vk::DescriptorSet &globalDescriptorSet() const { return _globalDescriptorSet; }
 
+	vk::DescriptorPool descriptorPool() const override { return *_descriptorPool; };
+
 #ifndef NDEBUG
     template<typename T>
     void setObjectName(const T &obj, const std::string &name) {
@@ -158,12 +160,18 @@ private:
     vk::SurfaceFormatKHR _surfaceFormat {vk::Format::eB8G8R8A8Unorm, vk::ColorSpaceKHR::eSrgbNonlinear};
     vk::PresentModeKHR _presentMode {vk::PresentModeKHR::eFifo};
 
+	static constexpr std::uint32_t maxGlobalDescriptorSets = 1024;
     static const auto &globalDescriptorPoolSizes() {
-        static std::array<vk::DescriptorPoolSize, 2> sizes {{{ vk::DescriptorType::eUniformBuffer, 1 }, { vk::DescriptorType::eStorageBuffer, 1 }}};
+        static std::array<vk::DescriptorPoolSize, 2> sizes {{{
+			vk::DescriptorType::eUniformBuffer, 512
+		}, {
+			vk::DescriptorType::eStorageBuffer, 512
+		}}};
         return sizes;
     }
+
     static constexpr std::uint32_t numGlobalDescriptorSets = 1;
-    vk::UniqueDescriptorPool _globalDescriptorPool;
+    vk::UniqueDescriptorPool _descriptorPool;
 
     CacheReference<descriptors::DescriptorSetLayout> _globalDescriptorSetLayout;
     vk::DescriptorSet _globalDescriptorSet;

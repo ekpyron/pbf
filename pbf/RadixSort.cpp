@@ -154,18 +154,9 @@ prefixSums(_context, numKeys, vk::BufferUsageFlagBits::eStorageBuffer, MemoryTyp
 			PBF_DESC_DEBUG_NAME("global sort pipeline")
 		}
 	);
-	{
-		std::uint32_t numDescriptorSets = 1024;
-		static std::array<vk::DescriptorPoolSize, 1> sizes {{{ vk::DescriptorType::eStorageBuffer, 1024 }}};
-		descriptorPool = context.device().createDescriptorPoolUnique(vk::DescriptorPoolCreateInfo{
-			.maxSets = numDescriptorSets,
-			.poolSizeCount = static_cast<std::uint32_t>(sizes.size()),
-			.pPoolSizes = sizes.data()
-		});
-	}
 
 	prescanParams = context.device().allocateDescriptorSets(vk::DescriptorSetAllocateInfo{
-		.descriptorPool = *descriptorPool,
+		.descriptorPool = context.descriptorPool(),
 		.descriptorSetCount = 1,
 		.pSetLayouts = &*sortLayout
 	}).front();
@@ -188,7 +179,7 @@ prefixSums(_context, numKeys, vk::BufferUsageFlagBits::eStorageBuffer, MemoryTyp
 
 	std::vector sortLayouts(blockSums.size() - 1, *sortLayout);
 	scanParams = context.device().allocateDescriptorSets(vk::DescriptorSetAllocateInfo{
-		.descriptorPool = *descriptorPool,
+		.descriptorPool = context.descriptorPool(),
 		.descriptorSetCount = static_cast<uint32_t>(sortLayouts.size()),
 		.pSetLayouts = sortLayouts.data()
 	});
@@ -211,7 +202,7 @@ prefixSums(_context, numKeys, vk::BufferUsageFlagBits::eStorageBuffer, MemoryTyp
 	}
 
 	globalSortParams = context.device().allocateDescriptorSets(vk::DescriptorSetAllocateInfo{
-		.descriptorPool = *descriptorPool,
+		.descriptorPool = context.descriptorPool(),
 		.descriptorSetCount = 1,
 		.pSetLayouts = &*sortLayout
 	}).front();

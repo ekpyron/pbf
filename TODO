@@ -5,9 +5,6 @@ TODO:
 
 	Move remove_cv_ref_t to different namespace
 
-	Better global descriptor set pool management.
-
-x
 
 
 - Initialization
@@ -15,3 +12,39 @@ x
 
 
 - Deferred Deletion
+
+
+Simulation <- particleData
+
+	1. Sort
+			inputBuffer -> tmpBuffer
+	
+	2. PBF step
+		tmpBuffer -> inputBuffer[i+1]
+
+
+
+inputBuffer (Ring const)
+
+tmpBuffer (only one)
+outputBuffer (Ring)
+		
+		
+		
+1					2					3
+
+Simulation
+
+FancyRendering
+
+-> present
+
+					Simulation
+					
+					FancyRendering
+					
+					-> present
+
+										Simulation
+										
+										-> present

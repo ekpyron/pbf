@@ -24,6 +24,6 @@ uint GetPermutation(uint id);
 void main()
 {
     ParticleData data = particles[gl_GlobalInvocationID.x];
-    data.aux = float(gl_GlobalInvocationID.x) / (64.0*64.0*64.0);
+    data.aux = 0.0;
     particlesSorted[GetPermutation(gl_GlobalInvocationID.x)] = data;
 }
