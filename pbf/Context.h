@@ -40,7 +40,7 @@ public:
     Renderer &renderer() { return *_renderer; }
     Scene &scene() { return *_scene; }
     MemoryManager &memoryManager() override { return *_memoryManager; }
-	vk::Format getDepthFormat() const;
+	vk::Format depthFormat() const;
 
 	uint32_t graphicsQueueFamily() const {
 		return _families.graphics;
@@ -191,6 +191,8 @@ private:
     std::unique_ptr<Renderer> _renderer;
 
     std::unique_ptr<Scene> _scene;
+
+	std::unique_ptr<Selection> _selection;
 
 	glm::vec2 cursor;
 

@@ -31,6 +31,9 @@ add_shader(neighbour/test.comp.spv neighbour/test.comp)
 add_shader(radixsort/scan.comp.spv radixsort/scan.comp)
 add_shader(radixsort/addblocksum.comp.spv radixsort/addblocksum.comp)
 
+add_shader(selection/particle.vert.spv selection/particle.vert)
+add_shader(selection/particle.frag.spv selection/particle.frag)
+
 add_radix_sort(particlesort particlesort/hash.comp particlesort/globalsort.comp)
 add_radix_sort(unittestsort unittestsort/hash.comp unittestsort/globalsort.comp)
 

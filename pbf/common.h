@@ -29,6 +29,7 @@ class InitContext;
 class Renderer;
 class MemoryManager;
 class Scene;
+class Selection;
 
 template<typename Container>
 std::uint32_t size32(Container const& _container) {

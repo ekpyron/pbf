@@ -73,7 +73,7 @@ Swapchain::Swapchain(Context &context, const vk::RenderPass& renderPass, vk::Swa
 				.layerCount = 1
 			}
 		}));
-		_depthBuffers.emplace_back(context, context.getDepthFormat(), vk::ImageUsageFlagBits::eDepthStencilAttachment, vk::Extent3D{
+		_depthBuffers.emplace_back(context, context.depthFormat(), vk::ImageUsageFlagBits::eDepthStencilAttachment, vk::Extent3D{
 			.width = _extent.width,
 			.height = _extent.height,
 			.depth = 1
@@ -81,7 +81,7 @@ Swapchain::Swapchain(Context &context, const vk::RenderPass& renderPass, vk::Swa
 		_depthBufferViews.emplace_back(device.createImageViewUnique(vk::ImageViewCreateInfo{
 			.image = _depthBuffers.back().image(),
 			.viewType = vk::ImageViewType::e2D,
-			.format = context.getDepthFormat(),
+			.format = context.depthFormat(),
 			.subresourceRange = vk::ImageSubresourceRange{
 				.aspectMask = vk::ImageAspectFlagBits::eDepth,
 				.baseMipLevel = 0,

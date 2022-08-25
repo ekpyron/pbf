@@ -62,6 +62,7 @@ public:
 	std::uint32_t queueFamilyIndex() const {
 		return _queueFamilyIndex;
 	}
+
 private:
 	vk::DispatchLoaderStatic _dls;
 	vk::UniqueInstance _instance;
