@@ -11,8 +11,8 @@ void main() {
     if (length(fCoords) > 1.0) {
         discard;
     }
-    // outColor = vec4(fCoords * 0.5 + 0.5, 0, 1);
-
+    outColor = vec4((1.0 - 0.25*length(fCoords)) * vec3(0.1,0.25,1), 1);
+#if 0
     outColor = vec4(fGrid, 1.0);
 /*
     if (fAux == -1u)
@@ -39,4 +39,5 @@ void main() {
     //outColor = vec4(color, 1.0);
 
     //outColor = vec4(float(fAux) / (64.0*64.0*64.0), 0, 0, 1);
+#endif
 }

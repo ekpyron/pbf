@@ -344,6 +344,13 @@ _tempBuffer(_context, particleData.size(), 2, vk::BufferUsageFlagBits::eStorageB
 		auto unconstrainedSystemUpdatePipelineLayout = cache.fetch(
 			descriptors::PipelineLayout{
 				.setLayouts = {singleStorageBufferDescriptorSetLayout, singleStorageBufferDescriptorSetLayout},
+				.pushConstants = {
+					vk::PushConstantRange{
+						vk::ShaderStageFlagBits::eCompute,
+						0,
+						sizeof(glm::vec3)
+					}
+				},
 				PBF_DESC_DEBUG_NAME("Unconstrained update pipeline Layout")
 			});
 		_unconstrainedSystemUpdatePipeline = cache.fetch(
@@ -560,6 +567,11 @@ _tempBuffer(_context, particleData.size(), 2, vk::BufferUsageFlagBits::eStorageB
 void Simulation::run(vk::CommandBuffer buf)
 {
 	buf.bindPipeline(vk::PipelineBindPoint::eCompute, *_unconstrainedSystemUpdatePipeline);
+	glm::vec3 externalForces(0.0f, -9.81f, 0.0f);
+	externalForces += glm::vec3(_context.window().getKey(GLFW_KEY_LEFT) ? 20.0f : 0.0f, 0, _context.window().getKey(GLFW_KEY_UP) ? 20.0f : 0.0f);
+	externalForces += glm::vec3(_context.window().getKey(GLFW_KEY_RIGHT) ? -20.0f : 0.0f, 0, _context.window().getKey(GLFW_KEY_DOWN) ? -20.0f : 0.0f);
+	buf.pushConstants(*(_unconstrainedSystemUpdatePipeline.descriptor().pipelineLayout), vk::ShaderStageFlagBits::eCompute, 0, sizeof(glm::vec3), &externalForces);
+
 	buf.bindDescriptorSets(vk::PipelineBindPoint::eCompute, *(_unconstrainedSystemUpdatePipeline.descriptor().pipelineLayout), 0, {
 		particleKeyDescriptorSets[_context.renderer().currentFrameSync()],
 		particleDataDescriptorSets[_context.renderer().previousFrameSync()]
