@@ -385,16 +385,45 @@ void Context::OnMouseUp (int button)
 
 void Context::OnMouseDown (int button)
 {
-	auto window = _window->window();
-
-	if (glfwGetKey (window, GLFW_KEY_H))
+	if (_window->getKey(GLFW_KEY_H))
 	{
-		double xpos, ypos;
-		glfwGetCursorPos (window, &xpos, &ypos);
-		spdlog::get("console")->debug("Clicked on coord {} {}", xpos, ypos);
+		auto [xpos, ypos] = _window->getCursorPos();
+		if (auto index = (*_selection)(scene().particleData(), xpos, ypos))
+		{
+			spdlog::get("console")->debug("Clicked on particle {}", *index);
 
-		auto index = (*_selection)(scene().particleData(), xpos, ypos);
-		spdlog::get("console")->debug("Clicked on particle {}", index);
+			auto cmdBuffer = std::move(device().allocateCommandBuffersUnique(vk::CommandBufferAllocateInfo{
+				.commandPool = commandPool(true),
+				.level = vk::CommandBufferLevel::ePrimary,
+				.commandBufferCount = 1U
+			}).front());
+
+			auto segment = scene().particleData().segment(renderer().currentFrameSync());
+			float value = 1.0f;
+			cmdBuffer->begin(vk::CommandBufferBeginInfo{});
+			cmdBuffer->fillBuffer(
+				segment.buffer,
+				segment.offset + sizeof(ParticleData) * *index + offsetof(ParticleData, aux),
+				sizeof(ParticleData::aux),
+				*reinterpret_cast<uint32_t*>(&value)
+			);
+			cmdBuffer->end();
+
+			_graphicsQueue.waitIdle();
+			_graphicsQueue.submit({
+									  vk::SubmitInfo{
+										  .waitSemaphoreCount = 0,
+										  .pWaitSemaphores = nullptr,
+										  .pWaitDstStageMask = {},
+										  .commandBufferCount = 1,
+										  .pCommandBuffers = &*cmdBuffer,
+										  .signalSemaphoreCount = 0,
+										  .pSignalSemaphores = nullptr
+									  }
+								  });
+			_graphicsQueue.waitIdle();
+
+		}
 	}
 }
 

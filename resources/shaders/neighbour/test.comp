@@ -43,9 +43,11 @@ void main (void)
 
     uint myGridIndex = GetGridIndex(particles[gid].position);
 
+    #if 0
     uint newGridIndex = GetGridIndex(particles[grid[myGridIndex].startIndex].position);
     if (myGridIndex == newGridIndex)
         particles[gid].aux = 1.0; // float(/*GetGridIndex(particles[grid[myGridIndex].startIndex].position)*/myGridIndex) / (16*64.0*64.0);
+    #endif
     /*
 
     uint gridIndex = GetGridIndex();

@@ -31,59 +31,6 @@ public:
 		return result;
 	}
 
-
-	// TODO: not working! Fix.
-	template<typename Data>
-	void initUniformBuffer(vk::Buffer _dstBuffer, Data _data) {
-		Buffer<Data> srcBuffer{
-			_context,
-			1,
-			vk::BufferUsageFlagBits::eTransferSrc,
-			MemoryType::TRANSIENT
-		};
-		*srcBuffer.data() = _data;
-		srcBuffer.flush();
-		stage([
-			this,
-			_dstBuffer,
-		    gridDataInitBuffer = std::move(srcBuffer)
-		](vk::CommandBuffer buf) {
-			buf.pipelineBarrier(
-				vk::PipelineStageFlagBits::eHost,
-				vk::PipelineStageFlagBits::eTransfer,
-				{},
-				{
-					vk::MemoryBarrier{
-						.srcAccessMask = vk::AccessFlagBits::eHostWrite,
-						.dstAccessMask = vk::AccessFlagBits::eTransferRead
-					}
-				},
-				{}, {}
-			);
-
-			buf.copyBuffer(gridDataInitBuffer.buffer(), _dstBuffer, {
-				vk::BufferCopy {
-					.srcOffset = 0,
-					.dstOffset = 0,
-					.size = sizeof(Data)
-				}
-			});
-
-			buf.pipelineBarrier(
-				vk::PipelineStageFlagBits::eTransfer,
-				vk::PipelineStageFlagBits::eComputeShader,
-				{},
-				{
-					vk::MemoryBarrier{
-						.srcAccessMask = vk::AccessFlagBits::eTransferWrite,
-						.dstAccessMask = vk::AccessFlagBits::eUniformRead
-					}
-				},
-				{}, {}
-			);
-		});
-	}
-
 	[[nodiscard]] auto framePrerenderCount() const {
 		return 3u;
 	}

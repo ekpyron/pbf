@@ -13,7 +13,7 @@ class Selection
 public:
 	Selection(InitContext& initContext);
 
-	uint32_t operator()(RingBuffer<ParticleData>& particleData, uint32_t x, uint32_t y);
+	std::optional<uint32_t> operator()(RingBuffer<ParticleData>& particleData, uint32_t x, uint32_t y);
 
 private:
 	Context& _context;

@@ -220,7 +220,7 @@ _indexBuffer(initContext.context, 6, vk::BufferUsageFlagBits::eTransferDst | vk:
 
 }
 
-uint32_t Selection::operator()(RingBuffer<ParticleData>& particleData, uint32_t x, uint32_t y) {
+std::optional<uint32_t> Selection::operator()(RingBuffer<ParticleData>& particleData, uint32_t x, uint32_t y) {
 	vk::UniqueCommandBuffer cmdBuf = std::move(_context.device().allocateCommandBuffersUnique(vk::CommandBufferAllocateInfo{
 		.commandPool = _context.commandPool(true),
 		.level = vk::CommandBufferLevel::ePrimary,
@@ -332,7 +332,14 @@ uint32_t Selection::operator()(RingBuffer<ParticleData>& particleData, uint32_t 
 	});
 	_context.graphicsQueue().waitIdle();
 
-	return *_selectionBuffer.data();
+
+	if (
+		uint32_t data = *_selectionBuffer.data();
+		data != std::numeric_limits<uint32_t>::max()
+	)
+		return data;
+	else
+		return std::nullopt;
 }
 
 }

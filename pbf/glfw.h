@@ -92,6 +92,15 @@ public:
 		return _window;
 	}
 
+	std::tuple<double, double> getCursorPos() const {
+		std::tuple<double, double> result;
+		glfwGetCursorPos(_window, &std::get<0>(result), &std::get<1>(result));
+		return result;
+	}
+	bool getKey(int key) const {
+		return glfwGetKey(_window, key);
+	}
+
 private:
     GLFWwindow *_window;
 
