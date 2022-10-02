@@ -35,6 +35,22 @@ uint GetGridIndex(vec3 position) {
     return uint (dot (grid - GRID_MIN, GRID_HASHWEIGHTS));
 }
 
+
+#define FOR_EACH_NEIGHBOUR(gid, idx) \
+for (int _x = -1; _x <= 1; ++_x) { \
+for (int _y = -1; _y <= 1; ++_y) { \
+for (int _z = -1; _z <= 1; ++_z) { \
+vec3 _position = particles[gid].position + vec3(_x,_y,_z); \
+if (!(any(lessThan(_position, vec3(GRID_MIN)))) && all(lessThan(_position, vec3(GRID_MAX)))) { \
+GridBoundaries _gridCell = grid[GetGridIndex(particles[gid].position + vec3(_x,_y,_z))]; \
+for (uint idx = _gridCell.startIndex; idx < _gridCell.endIndex; ++idx) { \
+if (idx != gid) { \
+if (distance(particles[idx].position, particles[gid].position) < 1.0) {
+
+#define END_FOR_EACH_NEIGHBOUR() }}}}}}}
+
+
+
 void main (void)
 {
     uint gid;
@@ -42,28 +58,11 @@ void main (void)
 
     uint myGridIndex = GetGridIndex(particles[gid].position);
 
-    #if 0
     if (particles[gid].aux == -1u) {
-
-    for (int x = -1; x <= 1; ++x) {
-        for (int y = -1; y <= 1; ++y) {
-            for (int z = -1; z <= 1; ++z) {
-                GridBoundaries gridCell = grid[GetGridIndex(particles[gid].position + vec3(x,y,z))];
-                for (uint idx = gridCell.startIndex; idx < gridCell.endIndex; ++idx)
-                {
-                    if (idx != gid) {
-                        if (distance(particles[idx].position, particles[gid].position) < 1.0) {
-                            particles[idx].aux = 1;
-                        } else {
-                            particles[idx].aux = 2;
-                        }
-                    }
-                }
-            }
-        }
+        FOR_EACH_NEIGHBOUR(gid, idx)
+            particles[idx].aux = 1;
+        END_FOR_EACH_NEIGHBOUR()
     }
-    }
-    #endif
 
 #if 0
     //particles[grid[myGridIndex].startIndex].aux = grid[myGridIndex].startIndex;
@@ -87,7 +86,7 @@ void main (void)
         */
     }
 #endif
-
+#if 0
     if (grid[myGridIndex].startIndex <= gid && gid < grid[myGridIndex].endIndex) {
         particles[gid].aux = -1u;
     }
@@ -98,7 +97,7 @@ void main (void)
         }
 
            particles[gid].aux = pass ? -1u : 0u;
-
+#endif
 #if 0
     uint newGridIndex = GetGridIndex(particles[grid[myGridIndex].startIndex].position);
     if (myGridIndex == newGridIndex)
