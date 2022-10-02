@@ -40,6 +40,14 @@ public:
 		uint endIndex = 0;
 	};
 
+	vk::DescriptorSet gridData() const {
+		return _gridData;
+	}
+
+	const Buffer<GridBoundaries>& gridBoundaryBuffer() const {
+		return _gridBoundaryBuffer;
+	}
+
 private:
 	static constexpr uint32_t blockSize = 256;
 

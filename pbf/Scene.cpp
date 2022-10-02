@@ -39,16 +39,19 @@ _particleData([&](){
 
 	ParticleData* data = initBuffer.data();
 
+	std::random_device rd;  //Will be used to obtain a seed for the random number engine
+	std::mt19937 gen(rd()); //Standard mersenne_twister_engine seeded with rd()
+	std::uniform_real_distribution<float> dist(0.0f, 0.1f);
 	for (int32_t x = 0; x < 64; ++x)
 		for (int32_t y = 0; y < 64; ++y)
 			for (int32_t z = 0; z < 64; ++z)
 			{
 				auto id = (64 * 64 * y + 64 * z + x);
-				data[id].position = 0.33f * glm::vec3(x - 32, y - 32, z - 32);
-				//data[id].position = glm::vec3(x - 32, y - 32, z - 32);
+				//data[id].position = 0.33f * glm::vec3(x - 32, y - 32, z - 32);
+				data[id].position = glm::vec3(x - 32, y - 32, z - 32);
+				data[id].position += glm::vec3(dist(gen), dist(gen), dist(gen));
+
 			}
-	std::random_device rd;  //Will be used to obtain a seed for the random number engine
-	std::mt19937 gen(rd()); //Standard mersenne_twister_engine seeded with rd()
 	std::shuffle(data, data + 64*64*64, gen);
 	initBuffer.flush();
 

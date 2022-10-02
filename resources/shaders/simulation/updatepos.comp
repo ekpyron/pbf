@@ -1,0 +1,131 @@
+#version 460
+#extension GL_ARB_separate_shader_objects : enable
+#extension GL_KHR_shader_subgroup_basic : enable
+
+layout (local_size_x_id = 0, local_size_y = 1, local_size_z = 1) in;
+
+struct ParticleKey {
+    vec3 position;
+    uint index;
+};
+
+layout(std430, binding = 0, set = 0) readonly buffer ParticleKeys
+{
+    ParticleKey particleKeys[];
+};
+
+
+
+struct GridBoundaries {
+    uint startIndex;
+    uint endIndex;
+};
+
+layout(std140, binding = 1, set = 0) uniform GridData {
+    ivec3 GRID_MAX;
+    ivec3 GRID_MIN;
+    ivec3 GRID_HASHWEIGHTS;
+};
+
+layout(std430, binding = 0, set = 1) readonly buffer GridBoundaryBuffer
+{
+    GridBoundaries grid[]; // .x: start; .y: end
+};
+
+uint GetGridIndex(vec3 position) {
+    highp ivec3 grid = ivec3 (clamp (position, GRID_MIN, GRID_MAX));
+    return uint (dot (grid - GRID_MIN, GRID_HASHWEIGHTS));
+}
+
+
+    #define FOR_EACH_NEIGHBOUR(gid, idx) \
+for (int _x = -1; _x <= 1; ++_x) { \
+for (int _y = -1; _y <= 1; ++_y) { \
+for (int _z = -1; _z <= 1; ++_z) { \
+vec3 _position = particleKeys[gid].position + vec3(_x,_y,_z); \
+if (!(any(lessThan(_position, vec3(GRID_MIN)))) && all(lessThan(_position, vec3(GRID_MAX)))) { \
+GridBoundaries _gridCell = grid[GetGridIndex(particleKeys[gid].position + vec3(_x,_y,_z))]; \
+for (uint idx = _gridCell.startIndex; idx < _gridCell.endIndex; ++idx) { \
+if (idx != gid) { \
+if (distance(particleKeys[idx].position, particleKeys[gid].position) < 1.0) {
+
+    #define END_FOR_EACH_NEIGHBOUR() }}}}}}}
+
+layout(std430, binding = 0, set = 2) readonly buffer LambdaBuffer
+{
+    float lambdas[];
+};
+
+
+layout(std430, binding = 0, set = 3) writeonly buffer OutputParticleKeys
+{
+    ParticleKey outputParticleKeys[];
+};
+
+const float h = 2.0;
+
+float Wpoly6(float r)
+{
+    if (r > h)
+    return 0;
+    float tmp = h * h - r * r;
+    return 1.56668147106 * tmp * tmp * tmp / (h*h*h*h*h*h*h*h*h);
+}
+
+const float one_over_rho_0 = 1.0;
+const float epsilon = 5.0;
+const float gravity = 10;
+const float timestep = 0.016;
+const float tensile_instability_k = 0.1;
+//const float tensile_instability_scale = 1.0f / Wpoly6 (0.2f);
+const float xsph_viscosity_c = 0.01;
+const float vorticity_epsilon = 5;
+
+float Wspiky(float r)
+{
+    if (r > h)
+    return 0;
+    float tmp = h - r;
+    return 4.774648292756860 * tmp * tmp * tmp / (h*h*h*h*h*h);
+}
+
+vec3 gradWspiky(vec3 r)
+{
+    float l = length (r);
+    if (l > h || l == 0)
+    return vec3 (0, 0, 0);
+    float tmp = h - l;
+    return (-3 * 4.774648292756860 * tmp * tmp) * r / (l * h*h*h*h*h*h);
+}
+
+void main(void)
+{
+    uint gid = gl_GlobalInvocationID.x;
+    vec3 position = particleKeys[gid].position;
+
+    vec3 deltap = vec3 (0, 0, 0);
+
+    float lambda = lambdas[gid];
+
+    FOR_EACH_NEIGHBOUR(gid, j)
+    {
+        vec3 position_j = particleKeys[j].position;
+
+        float scorr = 0.0f;
+        /*tensile_instability_scale * Wpoly6 (distance (position, position_j));
+        scorr *= scorr;
+        scorr *= scorr;
+        scorr = -tensile_instability_k * scorr;*/
+
+        // accumulate position corrections (part of equation 12)
+        deltap += (lambda + lambdas[j] + scorr) * gradWspiky (position - position_j);
+    }
+    END_FOR_EACH_NEIGHBOUR()
+
+    position += one_over_rho_0 * deltap;
+
+    position = clamp (position, GRID_MIN, GRID_MAX);
+
+    outputParticleKeys[gid].position = position;
+    outputParticleKeys[gid].index = particleKeys[gid].index;
+}

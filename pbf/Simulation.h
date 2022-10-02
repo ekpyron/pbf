@@ -39,6 +39,7 @@ private:
 	};
 	Buffer<GridData> _gridDataBuffer;
 
+	Buffer<float> _lambdaBuffer;
 
 	RadixSort _radixSort;
 	NeighbourCellFinder _neighbourCellFinder;
@@ -49,11 +50,15 @@ private:
 	vk::DescriptorSet pingDescriptorSet;
 	vk::DescriptorSet pongDescriptorSet;
 	vk::DescriptorSet neighbourCellFinderInputDescriptorSet;
+	vk::DescriptorSet lambdaDescriptorSet;
+
 
 	RingBuffer<ParticleData> _tempBuffer;
 
 	CacheReference<descriptors::ComputePipeline> _unconstrainedSystemUpdatePipeline;
 	CacheReference<descriptors::ComputePipeline> _particleDataUpdatePipeline;
+	CacheReference<descriptors::ComputePipeline> _calcLambdaPipeline;
+	CacheReference<descriptors::ComputePipeline> _updatePosPipeline;
 
 	static constexpr std::uint32_t blockSize = 256;
 };

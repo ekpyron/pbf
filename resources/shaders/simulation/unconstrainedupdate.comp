@@ -35,6 +35,6 @@ void main (void)
     ParticleKey key = particleKeys[gid];
 
     vec3 velocity = vec3(key.position - particles[key.idx].position) / lastTimestep;
-    velocity += 0.1 * gravity * timestep;
+    velocity += 0.25 * gravity * timestep;
     particleKeys[gid].position += timestep * velocity;
 }

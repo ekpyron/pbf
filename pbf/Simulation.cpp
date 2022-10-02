@@ -45,6 +45,7 @@ _context(initContext.context),
 _particleData(particleData),
 _particleKeys(initContext.context, particleData.size(), particleData.segments(), vk::BufferUsageFlagBits::eStorageBuffer|vk::BufferUsageFlagBits::eTransferDst, MemoryType::STATIC),
 _gridDataBuffer(_context, 1, vk::BufferUsageFlagBits::eUniformBuffer|vk::BufferUsageFlagBits::eTransferDst, MemoryType::STATIC),
+_lambdaBuffer(initContext.context, particleData.size(), vk::BufferUsageFlagBits::eStorageBuffer, MemoryType::STATIC),
 _radixSort(_context, blockSize, getNumParticles() / blockSize, radixSortDescriptorSetLayout(), "shaders/particlesort"),
 _neighbourCellFinder(_context, GridData{}.numCells()),
 _tempBuffer(_context, particleData.size(), 2, vk::BufferUsageFlagBits::eStorageBuffer|vk::BufferUsageFlagBits::eTransferSrc, MemoryType::STATIC)
@@ -422,6 +423,113 @@ _tempBuffer(_context, particleData.size(), 2, vk::BufferUsageFlagBits::eStorageB
 
 	}
 
+
+
+	{
+
+		auto& cache = _context.cache();
+
+		auto inputDescriptorSetLayout = cache.fetch(descriptors::DescriptorSetLayout{
+			.createFlags = {},
+			.bindings = {{
+							 .binding = 0,
+							 .descriptorType = vk::DescriptorType::eStorageBuffer,
+							 .descriptorCount = 1,
+							 .stageFlags = vk::ShaderStageFlagBits::eCompute
+						 },{
+							 .binding = 1,
+							 .descriptorType = vk::DescriptorType::eUniformBuffer,
+							 .descriptorCount = 1,
+							 .stageFlags = vk::ShaderStageFlagBits::eCompute
+						 }},
+			PBF_DESC_DEBUG_NAME("One storage buffer one uniform buffer descriptor set layout")
+		});
+		auto gridDataDescriptorSetLayout = cache.fetch(descriptors::DescriptorSetLayout{
+			.createFlags = {},
+			.bindings = {{
+				.binding = 0,
+				.descriptorType = vk::DescriptorType::eStorageBuffer,
+				.descriptorCount = 1,
+				.stageFlags = vk::ShaderStageFlagBits::eCompute
+			}},
+			PBF_DESC_DEBUG_NAME("Grid Data Layout")
+		});
+		auto calcLambdaPipelineLayout = cache.fetch(
+			descriptors::PipelineLayout{
+				.setLayouts = {inputDescriptorSetLayout, gridDataDescriptorSetLayout, singleStorageBufferDescriptorSetLayout /* lambda */},
+				PBF_DESC_DEBUG_NAME("Calc lambda pipeline Layout")
+			});
+
+		_calcLambdaPipeline = cache.fetch(
+			descriptors::ComputePipeline{
+				.flags = {},
+				.shaderStage = descriptors::ShaderStage {
+					.stage = vk::ShaderStageFlagBits::eCompute,
+					.module = cache.fetch(
+						descriptors::ShaderModule{
+							.source = descriptors::ShaderModule::File{"shaders/simulation/calclambda.comp.spv"},
+							PBF_DESC_DEBUG_NAME("Simulation: Calc Lambda Shader")
+						}),
+					.entryPoint = "main",
+					.specialization = {
+						Specialization<uint32_t>{.constantID = 0, .value = blockSize}
+					}
+				},
+				.pipelineLayout = calcLambdaPipelineLayout,
+				PBF_DESC_DEBUG_NAME("Simulation: calc lambda pipeline")
+			}
+		);
+
+		auto updatePosPipelineLayout = cache.fetch(
+			descriptors::PipelineLayout{
+				.setLayouts = {inputDescriptorSetLayout, gridDataDescriptorSetLayout, singleStorageBufferDescriptorSetLayout /* lambda */, singleStorageBufferDescriptorSetLayout /* key output */},
+				PBF_DESC_DEBUG_NAME("Calc lambda pipeline Layout")
+			});
+
+		_updatePosPipeline = cache.fetch(
+			descriptors::ComputePipeline{
+				.flags = {},
+				.shaderStage = descriptors::ShaderStage {
+					.stage = vk::ShaderStageFlagBits::eCompute,
+					.module = cache.fetch(
+						descriptors::ShaderModule{
+							.source = descriptors::ShaderModule::File{"shaders/simulation/updatepos.comp.spv"},
+							PBF_DESC_DEBUG_NAME("Simulation: Update Pos Shader")
+						}),
+					.entryPoint = "main",
+					.specialization = {
+						Specialization<uint32_t>{.constantID = 0, .value = blockSize}
+					}
+				},
+				.pipelineLayout = updatePosPipelineLayout,
+				PBF_DESC_DEBUG_NAME("Simulation: update pos pipeline")
+			}
+		);
+	}
+
+	{
+		lambdaDescriptorSet = _context.device().allocateDescriptorSets(vk::DescriptorSetAllocateInfo{
+			.descriptorPool = _context.descriptorPool(),
+			.descriptorSetCount = uint32_t(1),
+			.pSetLayouts = &*singleStorageBufferDescriptorSetLayout
+		}).front();
+
+		vk::DescriptorBufferInfo bufferInfo{
+			.buffer = _lambdaBuffer.buffer(),
+			.offset = 0,
+			.range = _lambdaBuffer.deviceSize()
+		};
+		_context.device().updateDescriptorSets({vk::WriteDescriptorSet{
+			.dstSet = lambdaDescriptorSet,
+			.dstBinding = 0,
+			.dstArrayElement = 0,
+			.descriptorCount = 1,
+			.descriptorType = vk::DescriptorType::eStorageBuffer,
+			.pImageInfo = nullptr,
+			.pBufferInfo = &bufferInfo,
+			.pTexelBufferView = nullptr
+		}}, {});
+	}
 }
 
 // currentFrameSync (readonly) -> nextFrameSync (writeonly)
@@ -447,39 +555,32 @@ void Simulation::run(vk::CommandBuffer buf)
 
 	_neighbourCellFinder(buf, _particleData.size(), neighbourCellFinderInputDescriptorSet);
 
-	buf.pipelineBarrier(
-		vk::PipelineStageFlagBits::eComputeShader,
-		vk::PipelineStageFlagBits::eTransfer,
-		{},
-		{
-			vk::MemoryBarrier{
-				.srcAccessMask = vk::AccessFlagBits::eShaderWrite,
-				.dstAccessMask = vk::AccessFlagBits::eTransferRead
-			}
-		},
-		{},
-		{}
-	);
-	buf.copyBuffer(_tempBuffer.buffer(), _particleKeys.buffer(), {
-		vk::BufferCopy {
-			.srcOffset = _tempBuffer.segment(sortResult == RadixSort::Result::InPingBuffer ? 0 : 1).offset,
-			.dstOffset = _particleKeys.segment(_context.renderer().currentFrameSync() + 1).offset,
-			.size = _particleKeys.segmentDeviceSize()
+	buf.bindPipeline(vk::PipelineBindPoint::eCompute, *_calcLambdaPipeline);
+	buf.bindDescriptorSets(vk::PipelineBindPoint::eCompute, *(_calcLambdaPipeline.descriptor().pipelineLayout), 0, {
+		neighbourCellFinderInputDescriptorSet, _neighbourCellFinder.gridData(), lambdaDescriptorSet
+	}, {});
+	buf.dispatch(((getNumParticles() + blockSize - 1) / blockSize), 1, 1);
+
+	buf.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {}, {
+		vk::MemoryBarrier{
+			.srcAccessMask = vk::AccessFlagBits::eShaderWrite,
+			.dstAccessMask = vk::AccessFlagBits::eShaderRead
 		}
-	});
-	buf.pipelineBarrier(
-		vk::PipelineStageFlagBits::eTransfer,
-		vk::PipelineStageFlagBits::eVertexInput,
-		{},
-		{
-			vk::MemoryBarrier{
-				.srcAccessMask = vk::AccessFlagBits::eTransferWrite,
-				.dstAccessMask = vk::AccessFlagBits::eVertexAttributeRead
-			}
-		},
-		{},
-		{}
-	);
+	}, {}, {});
+
+
+	buf.bindPipeline(vk::PipelineBindPoint::eCompute, *_updatePosPipeline);
+	buf.bindDescriptorSets(vk::PipelineBindPoint::eCompute, *(_updatePosPipeline.descriptor().pipelineLayout), 0, {
+		neighbourCellFinderInputDescriptorSet, _neighbourCellFinder.gridData(), lambdaDescriptorSet, particleKeyDescriptorSets[_context.renderer().nextFrameSync()]
+	}, {});
+	buf.dispatch(((getNumParticles() + blockSize - 1) / blockSize), 1, 1);
+
+	buf.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {}, {
+		vk::MemoryBarrier{
+			.srcAccessMask = vk::AccessFlagBits::eShaderWrite,
+			.dstAccessMask = vk::AccessFlagBits::eShaderRead
+		}
+	}, {}, {});
 
 	buf.bindPipeline(vk::PipelineBindPoint::eCompute, *_particleDataUpdatePipeline);
 	buf.bindDescriptorSets(vk::PipelineBindPoint::eCompute, *(_particleDataUpdatePipeline.descriptor().pipelineLayout), 0, {
@@ -494,6 +595,8 @@ void Simulation::run(vk::CommandBuffer buf)
 			.dstAccessMask = vk::AccessFlagBits::eShaderRead
 		}
 	}, {}, {});
+
+
 
 }
 
