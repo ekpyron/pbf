@@ -217,10 +217,67 @@ _tempBuffer(_context, particleData.size(), 2, vk::BufferUsageFlagBits::eStorageB
 			.pTexelBufferView = nullptr
 		}}, {});
 	}
+
+	{
+		auto& cache = _context.cache();
+
+		// TODO: create smaller layout
+		auto inputDescriptorSetLayout = cache.fetch(radixSortDescriptorSetLayout());/*
+			descriptors::DescriptorSetLayout{
+			.createFlags = {},
+			.bindings = {{
+							 .binding = 0,
+							 .descriptorType = vk::DescriptorType::eStorageBuffer,
+							 .descriptorCount = 1,
+							 .stageFlags = vk::ShaderStageFlagBits::eCompute
+						 }},
+			PBF_DESC_DEBUG_NAME("Unconstrained Update Input Descriptor Layout")
+		});*/
+		auto unconstrainedSystemUpdatePipelineLayout = cache.fetch(
+			descriptors::PipelineLayout{
+				.setLayouts = {inputDescriptorSetLayout, inputDescriptorSetLayout},
+				PBF_DESC_DEBUG_NAME("Unconstrained update pipeline Layout")
+			});
+		_unconstrainedSystemUpdatePipeline = cache.fetch(
+			descriptors::ComputePipeline{
+				.flags = {},
+				.shaderStage = descriptors::ShaderStage {
+					.stage = vk::ShaderStageFlagBits::eCompute,
+					.module = cache.fetch(
+						descriptors::ShaderModule{
+							.source = descriptors::ShaderModule::File{"shaders/simulation/unconstrainedupdate.comp.spv"},
+							PBF_DESC_DEBUG_NAME("Simulation: unconstrained system update shader (Update positions based on velocity and external forces without considering constraint violations.)")
+						}),
+					.entryPoint = "main",
+					.specialization = {
+						Specialization<uint32_t>{.constantID = 0, .value = blockSize}
+					}
+				},
+				.pipelineLayout = unconstrainedSystemUpdatePipelineLayout,
+				PBF_DESC_DEBUG_NAME("Simulation: unconstrained system update pipeline (Update positions based on velocity and external forces without considering constraint violations.)")
+			}
+		);
+	}
+
 }
 
 void Simulation::run(vk::CommandBuffer buf)
 {
+	buf.bindPipeline(vk::PipelineBindPoint::eCompute, *_unconstrainedSystemUpdatePipeline);
+	buf.bindDescriptorSets(vk::PipelineBindPoint::eCompute, *(_unconstrainedSystemUpdatePipeline.descriptor().pipelineLayout), 0, {
+		initDescriptorSets[_context.renderer().currentFrameSync()],
+		initDescriptorSets[_context.renderer().previousFrameSync()]
+	}, {});
+	buf.dispatch(((getNumParticles() + blockSize - 1) / blockSize), 1, 1);
+
+	buf.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {}, {
+		vk::MemoryBarrier{
+			.srcAccessMask = vk::AccessFlagBits::eShaderWrite,
+			.dstAccessMask = vk::AccessFlagBits::eShaderRead
+		}
+	}, {}, {});
+
+
 	// TODO: adjust neighbourCellFinderInputInfos according to expected sortResult
 	auto sortResult = _radixSort.stage(buf, 30, initDescriptorSets[_context.renderer().currentFrameSync()], pingDescriptorSet, pongDescriptorSet);
 

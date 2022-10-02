@@ -48,6 +48,7 @@ private:
 
 	RingBuffer<ParticleData> _tempBuffer;
 
+	CacheReference<descriptors::ComputePipeline> _unconstrainedSystemUpdatePipeline;
 
 	static constexpr std::uint32_t blockSize = 256;
 };

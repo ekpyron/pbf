@@ -26,6 +26,7 @@ struct ParticleData {
 	uint32_t aux = 0;
 };
 
+
 class Scene {
 public:
 

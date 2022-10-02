@@ -53,13 +53,14 @@ _simulation(initContext, _particleData)
 	initBuffer.flush();
 
 	auto& initCmdBuf = *initContext.initCommandBuffer;
-	initCmdBuf.copyBuffer(initBuffer.buffer(), _particleData.buffer(), {
-		vk::BufferCopy {
-			.srcOffset = 0,
-			.dstOffset = sizeof(ParticleData) * _numParticles * (_context.renderer().framePrerenderCount() - 1),
-			.size = initBuffer.deviceSize()
-		}
-	});
+	for (size_t i = 0; i < _context.renderer().framePrerenderCount(); ++i)
+		initCmdBuf.copyBuffer(initBuffer.buffer(), _particleData.buffer(), {
+			vk::BufferCopy {
+				.srcOffset = 0,
+				.dstOffset = sizeof(ParticleData) * _numParticles * i,
+				.size = initBuffer.deviceSize()
+			}
+		});
 
 	initCmdBuf.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eComputeShader, {}, {}, {vk::BufferMemoryBarrier{
 		.srcAccessMask = vk::AccessFlagBits::eTransferWrite,
