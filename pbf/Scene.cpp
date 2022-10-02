@@ -22,19 +22,19 @@ namespace pbf {
 
 Scene::Scene(InitContext &initContext)
 : _context(initContext.context),
-_particleData{
-	_context,
-	_numParticles,
-	_context.renderer().framePrerenderCount(),
-	// TODO: maybe remove transfer src
-	vk::BufferUsageFlagBits::eTransferSrc | vk::BufferUsageFlagBits::eTransferDst | vk::BufferUsageFlagBits::eStorageBuffer | vk::BufferUsageFlagBits::eVertexBuffer,
-	pbf::MemoryType::STATIC
-},
-quad(initContext, *this),
-_simulation(initContext, _particleData)
-{
+_particleData([&](){
+	auto& context = initContext.context;
+	RingBuffer<ParticleData> particleData{
+		context,
+		_numParticles,
+		context.renderer().framePrerenderCount(),
+		// TODO: maybe remove transfer src
+		vk::BufferUsageFlagBits::eTransferSrc | vk::BufferUsageFlagBits::eTransferDst | vk::BufferUsageFlagBits::eStorageBuffer | vk::BufferUsageFlagBits::eVertexBuffer,
+		pbf::MemoryType::STATIC
+	};
+
 	auto& initBuffer = initContext.createInitData<Buffer<ParticleData>>(
-		_context, _numParticles, vk::BufferUsageFlagBits::eTransferSrc, pbf::MemoryType::TRANSIENT
+		context, _numParticles, vk::BufferUsageFlagBits::eTransferSrc, pbf::MemoryType::TRANSIENT
 	);
 
 	ParticleData* data = initBuffer.data();
@@ -53,8 +53,8 @@ _simulation(initContext, _particleData)
 	initBuffer.flush();
 
 	auto& initCmdBuf = *initContext.initCommandBuffer;
-	for (size_t i = 0; i < _context.renderer().framePrerenderCount(); ++i)
-		initCmdBuf.copyBuffer(initBuffer.buffer(), _particleData.buffer(), {
+	for (size_t i = 0; i < context.renderer().framePrerenderCount(); ++i)
+		initCmdBuf.copyBuffer(initBuffer.buffer(), particleData.buffer(), {
 			vk::BufferCopy {
 				.srcOffset = 0,
 				.dstOffset = sizeof(ParticleData) * _numParticles * i,
@@ -67,11 +67,15 @@ _simulation(initContext, _particleData)
 		.dstAccessMask = vk::AccessFlagBits::eShaderRead,
 		.srcQueueFamilyIndex = 0,
 		.dstQueueFamilyIndex = 0,
-		.buffer = _particleData.buffer(),
-		.offset = sizeof(ParticleData) * _numParticles * (_context.renderer().framePrerenderCount() - 1),
+		.buffer = particleData.buffer(),
+		.offset = sizeof(ParticleData) * _numParticles * (context.renderer().framePrerenderCount() - 1),
 		.size = initBuffer.deviceSize(),
 	}}, {});
-
+	return particleData;
+}()),
+quad(initContext, *this),
+_simulation(initContext, _particleData)
+{
 }
 
 

@@ -12,6 +12,7 @@ namespace pbf {
 class Context;
 class InitContext;
 class ParticleData;
+class ParticleKey;
 
 class Simulation
 {
@@ -25,6 +26,7 @@ public:
 private:
 	Context& _context;
 	RingBuffer<ParticleData>& _particleData;
+	RingBuffer<ParticleKey> _particleKeys;
 
 	struct GridData {
 		glm::ivec4 max = glm::ivec4(31, 31, 31, 0);
@@ -42,6 +44,8 @@ private:
 	NeighbourCellFinder _neighbourCellFinder;
 
 	std::vector<vk::DescriptorSet> initDescriptorSets;
+	std::vector<vk::DescriptorSet> particleDataDescriptorSets;
+	std::vector<vk::DescriptorSet> particleKeyDescriptorSets;
 	vk::DescriptorSet pingDescriptorSet;
 	vk::DescriptorSet pongDescriptorSet;
 	vk::DescriptorSet neighbourCellFinderInputDescriptorSet;
@@ -49,6 +53,7 @@ private:
 	RingBuffer<ParticleData> _tempBuffer;
 
 	CacheReference<descriptors::ComputePipeline> _unconstrainedSystemUpdatePipeline;
+	CacheReference<descriptors::ComputePipeline> _particleDataUpdatePipeline;
 
 	static constexpr std::uint32_t blockSize = 256;
 };

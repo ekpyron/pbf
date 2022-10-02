@@ -26,6 +26,10 @@ struct ParticleData {
 	uint32_t aux = 0;
 };
 
+struct ParticleKey {
+	glm::vec3 position;
+	uint32_t idx = 0;
+};
 
 class Scene {
 public:

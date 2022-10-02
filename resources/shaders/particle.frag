@@ -37,4 +37,6 @@ void main() {
         }
 
     //outColor = vec4(color, 1.0);
+
+    //outColor = vec4(float(fAux) / (64.0*64.0*64.0), 0, 0, 1);
 }

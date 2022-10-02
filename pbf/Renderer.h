@@ -39,7 +39,10 @@ public:
 		return _currentFrameSync;
 	}
 	[[nodiscard]] std::uint32_t previousFrameSync() const {
-		return (_currentFrameSync + framePrerenderCount() - 1) %  framePrerenderCount();
+		return (_currentFrameSync + framePrerenderCount() - 1) % framePrerenderCount();
+	}
+	[[nodiscard]] std::uint32_t nextFrameSync() const {
+		return (_currentFrameSync + framePrerenderCount() + 1) % framePrerenderCount();
 	}
 
 	Context& context() { return _context; }

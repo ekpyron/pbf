@@ -35,6 +35,8 @@ add_shader(selection/particle.vert.spv selection/particle.vert)
 add_shader(selection/particle.frag.spv selection/particle.frag)
 
 add_shader(simulation/unconstrainedupdate.comp.spv simulation/unconstrainedupdate.comp)
+add_shader(simulation/keyinit.comp.spv simulation/keyinit.comp)
+add_shader(simulation/particledataupdate.comp.spv simulation/particledataupdate.comp)
 
 add_radix_sort(particlesort particlesort/hash.comp particlesort/globalsort.comp)
 add_radix_sort(unittestsort unittestsort/hash.comp unittestsort/globalsort.comp)

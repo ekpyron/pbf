@@ -4,14 +4,14 @@
 
 layout (local_size_x_id = 0, local_size_y = 1, local_size_z = 1) in;
 
-struct ParticleData {
+struct ParticleKey {
     vec3 position;
-    uint aux;
+    uint index;
 };
 
-layout(std430, binding = 0, set = 1) readonly buffer Particles
+layout(std430, binding = 0, set = 1) readonly buffer ParticleKeys
 {
-    ParticleData particles[];
+    ParticleKey particleKeys[];
 };
 
 layout(std140, binding = 2, set = 1) uniform GridData {
@@ -21,6 +21,6 @@ layout(std140, binding = 2, set = 1) uniform GridData {
 };
 
 uint GetHash(uint id) {
-    highp ivec3 grid = ivec3 (clamp (particles[id].position, GRID_MIN, GRID_MAX));
+    highp ivec3 grid = ivec3 (clamp (particleKeys[id].position, GRID_MIN, GRID_MAX));
     return uint (dot (grid - GRID_MIN, GRID_HASHWEIGHTS));
 }
