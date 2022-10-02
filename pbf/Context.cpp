@@ -399,13 +399,12 @@ void Context::OnMouseDown (int button)
 			}).front());
 
 			auto segment = scene().particleData().segment(renderer().currentFrameSync());
-			float value = 1.0f;
 			cmdBuffer->begin(vk::CommandBufferBeginInfo{});
 			cmdBuffer->fillBuffer(
 				segment.buffer,
 				segment.offset + sizeof(ParticleData) * *index + offsetof(ParticleData, aux),
 				sizeof(ParticleData::aux),
-				*reinterpret_cast<uint32_t*>(&value)
+				-1u
 			);
 			cmdBuffer->end();
 

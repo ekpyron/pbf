@@ -44,7 +44,8 @@ _simulation(initContext, _particleData)
 			for (int32_t z = 0; z < 64; ++z)
 			{
 				auto id = (64 * 64 * y + 64 * z + x);
-				data[id].position = glm::vec3(x - 32, y - 32, z - 32);
+				data[id].position = 0.33f * glm::vec3(x - 32, y - 32, z - 32);
+				//data[id].position = glm::vec3(x - 32, y - 32, z - 32);
 			}
 	std::random_device rd;  //Will be used to obtain a seed for the random number engine
 	std::mt19937 gen(rd()); //Standard mersenne_twister_engine seeded with rd()

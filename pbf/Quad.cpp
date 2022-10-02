@@ -71,7 +71,7 @@ Quad::Quad(InitContext& initContext, pbf::Scene& scene) : scene(scene) {
 					vk::VertexInputAttributeDescription{
 						.location = 2,
 						.binding = 1,
-						.format = vk::Format::eR32Sfloat,
+						.format = vk::Format::eR32Uint,
 						.offset = offsetof(ParticleData, aux)
 					}
 			},

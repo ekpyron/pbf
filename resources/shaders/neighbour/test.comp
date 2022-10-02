@@ -6,7 +6,7 @@ layout (local_size_x_id = 0, local_size_y = 1, local_size_z = 1) in;
 
 struct ParticleData {
     vec3 position;
-    float aux;
+    uint aux;
 };
 
 layout(std430, binding = 0, set = 0) buffer Particles
@@ -35,7 +35,6 @@ uint GetGridIndex(vec3 position) {
     return uint (dot (grid - GRID_MIN, GRID_HASHWEIGHTS));
 }
 
-
 void main (void)
 {
     uint gid;
@@ -44,10 +43,72 @@ void main (void)
     uint myGridIndex = GetGridIndex(particles[gid].position);
 
     #if 0
+    if (particles[gid].aux == -1u) {
+
+    for (int x = -1; x <= 1; ++x) {
+        for (int y = -1; y <= 1; ++y) {
+            for (int z = -1; z <= 1; ++z) {
+                GridBoundaries gridCell = grid[GetGridIndex(particles[gid].position + vec3(x,y,z))];
+                for (uint idx = gridCell.startIndex; idx < gridCell.endIndex; ++idx)
+                {
+                    if (idx != gid) {
+                        if (distance(particles[idx].position, particles[gid].position) < 1.0) {
+                            particles[idx].aux = 1;
+                        } else {
+                            particles[idx].aux = 2;
+                        }
+                    }
+                }
+            }
+        }
+    }
+    }
+    #endif
+
+#if 0
+    //particles[grid[myGridIndex].startIndex].aux = grid[myGridIndex].startIndex;
+    if (particles[gid].aux == -1) {
+        for (uint idx = grid[myGridIndex].startIndex; idx < grid[myGridIndex].endIndex; ++idx) {
+            particles[idx].aux = 1;
+        }
+        particles[grid[myGridIndex].startIndex].aux = 2;
+        particles[grid[myGridIndex].endIndex - 1].aux = 3;
+    }
+#endif
+
+#if 0
+    if (particles[gid].aux > 1) {
+        particles[grid[myGridIndex].startIndex].aux = 1;
+        /*
+        for(uint idx = grid[myGridIndex].startIndex; idx < grid[myGridIndex].endIndex; ++idx) {
+            if (particles[idx].aux != 1.0)
+                particles[idx].aux = 0.5;
+        }
+        */
+    }
+#endif
+
+    if (grid[myGridIndex].startIndex <= gid && gid < grid[myGridIndex].endIndex) {
+        particles[gid].aux = -1u;
+    }
+
+        bool pass = true;
+        for(uint idx = grid[myGridIndex].startIndex; idx < grid[myGridIndex].endIndex; ++idx) {
+            pass = pass && GetGridIndex(particles[idx].position) == myGridIndex;
+        }
+
+           particles[gid].aux = pass ? -1u : 0u;
+
+#if 0
     uint newGridIndex = GetGridIndex(particles[grid[myGridIndex].startIndex].position);
     if (myGridIndex == newGridIndex)
-        particles[gid].aux = 1.0; // float(/*GetGridIndex(particles[grid[myGridIndex].startIndex].position)*/myGridIndex) / (16*64.0*64.0);
-    #endif
+        particles[gid].aux = -1u; // float(/*GetGridIndex(particles[grid[myGridIndex].startIndex].position)*/myGridIndex) / (16*64.0*64.0);
+#endif
+#if 0
+    uint newGridIndex = GetGridIndex(particles[grid[myGridIndex].endIndex - 1].position);
+    if (myGridIndex == newGridIndex)
+        particles[gid].aux = -1u;// float(/*GetGridIndex(particles[grid[myGridIndex].startIndex].position)*/myGridIndex) / (16*64.0*64.0);
+#endif
     /*
 
     uint gridIndex = GetGridIndex();

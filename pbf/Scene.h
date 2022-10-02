@@ -23,7 +23,7 @@ namespace pbf {
 
 struct ParticleData {
 	glm::vec3 position;
-	float aux = 0.0f;
+	uint32_t aux = 0;
 };
 
 class Scene {
