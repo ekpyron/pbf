@@ -77,7 +77,6 @@ const float epsilon = 5.0;
 const float gravity = 10;
 const float timestep = 0.016;
 const float tensile_instability_k = 0.1;
-//const float tensile_instability_scale = 1.0f / Wpoly6 (0.2f);
 const float xsph_viscosity_c = 0.01;
 const float vorticity_epsilon = 5;
 
@@ -107,15 +106,16 @@ void main(void)
 
     float lambda = lambdas[gid];
 
+    float tensile_instability_scale = 1.0f / Wpoly6 (0.2f);
+
     FOR_EACH_NEIGHBOUR(gid, j)
     {
         vec3 position_j = particleKeys[j].position;
 
-        float scorr = 0.0f;
-        /*tensile_instability_scale * Wpoly6 (distance (position, position_j));
+        float scorr = tensile_instability_scale * Wpoly6 (distance (position, position_j));
         scorr *= scorr;
         scorr *= scorr;
-        scorr = -tensile_instability_k * scorr;*/
+        scorr = -tensile_instability_k * scorr;
 
         // accumulate position corrections (part of equation 12)
         deltap += (lambda + lambdas[j] + scorr) * gradWspiky (position - position_j);
@@ -124,7 +124,7 @@ void main(void)
 
     position += one_over_rho_0 * deltap;
 
-    position = clamp (position, GRID_MIN, GRID_MAX);
+    position = clamp (position, vec3(-64,-64,-64), vec3(64,64,64));
 
     outputParticleKeys[gid].position = position;
     outputParticleKeys[gid].index = particleKeys[gid].index;

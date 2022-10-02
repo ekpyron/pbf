@@ -7,7 +7,7 @@ layout(location = 0) in flat uint fParticleID;
 layout(location = 1) in vec2 fCoords;
 
 void main() {
-    if (length(fCoords) > 0.6) {
+    if (length(fCoords) > 1.0) {
         discard;
     }
     outParticleID = fParticleID;

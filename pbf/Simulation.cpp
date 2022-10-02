@@ -129,12 +129,14 @@ _tempBuffer(_context, particleData.size(), 2, vk::BufferUsageFlagBits::eStorageB
 		initDescriptorSets.resize(initDescriptorSets.size() - 2);
 	}
 	{
-		auto layout = *_context.cache().fetch(NeighbourCellFinder::inputDescriptorSetLayout());
-		neighbourCellFinderInputDescriptorSet = _context.device().allocateDescriptorSets(vk::DescriptorSetAllocateInfo{
+		std::vector layouts(2, *_context.cache().fetch(NeighbourCellFinder::inputDescriptorSetLayout()));
+		auto sets = _context.device().allocateDescriptorSets(vk::DescriptorSetAllocateInfo{
 			.descriptorPool = _context.descriptorPool(),
-			.descriptorSetCount = 1,
-			.pSetLayouts = &layout
-		}).front();
+			.descriptorSetCount = size32(layouts),
+			.pSetLayouts = layouts.data()
+		});
+		neighbourCellFinderInputDescriptorSets[0] = sets[0];
+		neighbourCellFinderInputDescriptorSets[1] = sets[1];
 	}
 
 	vk::DescriptorBufferInfo gridDataBufferInfo{
@@ -263,12 +265,25 @@ _tempBuffer(_context, particleData.size(), 2, vk::BufferUsageFlagBits::eStorageB
 			{}, {}
 		);
 	}
+
+	{
+		std::vector layouts(2, *singleStorageBufferDescriptorSetLayout);
+		auto sets = _context.device().allocateDescriptorSets(vk::DescriptorSetAllocateInfo{
+			.descriptorPool = _context.descriptorPool(),
+			.descriptorSetCount = size32(layouts),
+			.pSetLayouts = layouts.data()
+		});
+		_tempBufferDescriptorSets[0] = sets[0];
+		_tempBufferDescriptorSets[1] = sets[1];
+	}
+
+	for(size_t i = 0; i < 2; ++i)
 	{
 		auto neighbourCellFinderInputInfos = {
-			_tempBuffer.segment(1) // TODO may also be zero! Depending on sort bits.
+			_tempBuffer.segment(i) // TODO may also be zero! Depending on sort bits.
 		};
 		_context.device().updateDescriptorSets({vk::WriteDescriptorSet{
-			.dstSet = neighbourCellFinderInputDescriptorSet,
+			.dstSet = neighbourCellFinderInputDescriptorSets[i],
 			.dstBinding = 0,
 			.dstArrayElement = 0,
 			.descriptorCount = 1,
@@ -277,7 +292,16 @@ _tempBuffer(_context, particleData.size(), 2, vk::BufferUsageFlagBits::eStorageB
 			.pBufferInfo = &*neighbourCellFinderInputInfos.begin(),
 			.pTexelBufferView = nullptr
 		},vk::WriteDescriptorSet{
-			.dstSet = neighbourCellFinderInputDescriptorSet,
+			.dstSet = _tempBufferDescriptorSets[i],
+			.dstBinding = 0,
+			.dstArrayElement = 0,
+			.descriptorCount = 1,
+			.descriptorType = vk::DescriptorType::eStorageBuffer,
+			.pImageInfo = nullptr,
+			.pBufferInfo = &*neighbourCellFinderInputInfos.begin(),
+			.pTexelBufferView = nullptr
+		},vk::WriteDescriptorSet{
+			.dstSet = neighbourCellFinderInputDescriptorSets[i],
 			.dstBinding = 1,
 			.dstArrayElement = 0,
 			.descriptorCount = 1,
@@ -553,34 +577,44 @@ void Simulation::run(vk::CommandBuffer buf)
 	// TODO: adjust neighbourCellFinderInputInfos according to expected sortResult
 	auto sortResult = _radixSort.stage(buf, 30, initDescriptorSets[_context.renderer().currentFrameSync()], pingDescriptorSet, pongDescriptorSet);
 
-	_neighbourCellFinder(buf, _particleData.size(), neighbourCellFinderInputDescriptorSet);
+	size_t pingBufferSegment = sortResult == RadixSort::Result::InPingBuffer ? 0 : 1;
+	size_t pongBufferSegment = sortResult == RadixSort::Result::InPingBuffer ? 1 : 0;
 
-	buf.bindPipeline(vk::PipelineBindPoint::eCompute, *_calcLambdaPipeline);
-	buf.bindDescriptorSets(vk::PipelineBindPoint::eCompute, *(_calcLambdaPipeline.descriptor().pipelineLayout), 0, {
-		neighbourCellFinderInputDescriptorSet, _neighbourCellFinder.gridData(), lambdaDescriptorSet
-	}, {});
-	buf.dispatch(((getNumParticles() + blockSize - 1) / blockSize), 1, 1);
+	_neighbourCellFinder(buf, _particleData.size(), neighbourCellFinderInputDescriptorSets[pingBufferSegment]);
 
-	buf.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {}, {
-		vk::MemoryBarrier{
-			.srcAccessMask = vk::AccessFlagBits::eShaderWrite,
-			.dstAccessMask = vk::AccessFlagBits::eShaderRead
-		}
-	}, {}, {});
+	static constexpr size_t numSteps = 5;
+	for (size_t step = 0; step < numSteps; ++step) {
+		bool isLast = step == (numSteps - 1);
+		buf.bindPipeline(vk::PipelineBindPoint::eCompute, *_calcLambdaPipeline);
+		buf.bindDescriptorSets(vk::PipelineBindPoint::eCompute, *(_calcLambdaPipeline.descriptor().pipelineLayout), 0, {
+			neighbourCellFinderInputDescriptorSets[pingBufferSegment], _neighbourCellFinder.gridData(), lambdaDescriptorSet
+		}, {});
+		buf.dispatch(((getNumParticles() + blockSize - 1) / blockSize), 1, 1);
+
+		buf.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {}, {
+			vk::MemoryBarrier{
+				.srcAccessMask = vk::AccessFlagBits::eShaderWrite,
+				.dstAccessMask = vk::AccessFlagBits::eShaderRead
+			}
+		}, {}, {});
 
 
-	buf.bindPipeline(vk::PipelineBindPoint::eCompute, *_updatePosPipeline);
-	buf.bindDescriptorSets(vk::PipelineBindPoint::eCompute, *(_updatePosPipeline.descriptor().pipelineLayout), 0, {
-		neighbourCellFinderInputDescriptorSet, _neighbourCellFinder.gridData(), lambdaDescriptorSet, particleKeyDescriptorSets[_context.renderer().nextFrameSync()]
-	}, {});
-	buf.dispatch(((getNumParticles() + blockSize - 1) / blockSize), 1, 1);
+		buf.bindPipeline(vk::PipelineBindPoint::eCompute, *_updatePosPipeline);
+		buf.bindDescriptorSets(vk::PipelineBindPoint::eCompute, *(_updatePosPipeline.descriptor().pipelineLayout), 0, {
+			neighbourCellFinderInputDescriptorSets[pingBufferSegment], _neighbourCellFinder.gridData(), lambdaDescriptorSet,
+			isLast ? particleKeyDescriptorSets[_context.renderer().nextFrameSync()] : _tempBufferDescriptorSets[pongBufferSegment]
+		}, {});
+		buf.dispatch(((getNumParticles() + blockSize - 1) / blockSize), 1, 1);
 
-	buf.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {}, {
-		vk::MemoryBarrier{
-			.srcAccessMask = vk::AccessFlagBits::eShaderWrite,
-			.dstAccessMask = vk::AccessFlagBits::eShaderRead
-		}
-	}, {}, {});
+		buf.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {}, {
+			vk::MemoryBarrier{
+				.srcAccessMask = vk::AccessFlagBits::eShaderWrite,
+				.dstAccessMask = vk::AccessFlagBits::eShaderRead
+			}
+		}, {}, {});
+
+		std::swap(pingBufferSegment, pongBufferSegment);
+	}
 
 	buf.bindPipeline(vk::PipelineBindPoint::eCompute, *_particleDataUpdatePipeline);
 	buf.bindDescriptorSets(vk::PipelineBindPoint::eCompute, *(_particleDataUpdatePipeline.descriptor().pipelineLayout), 0, {

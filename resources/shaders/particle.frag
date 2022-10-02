@@ -8,7 +8,7 @@ layout(location = 1) flat in uint fAux;
 layout(location = 2) in vec3 fGrid;
 
 void main() {
-    if (length(fCoords) > 0.6) {
+    if (length(fCoords) > 1.0) {
         discard;
     }
     // outColor = vec4(fCoords * 0.5 + 0.5, 0, 1);

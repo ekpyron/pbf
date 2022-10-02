@@ -29,8 +29,8 @@ private:
 	RingBuffer<ParticleKey> _particleKeys;
 
 	struct GridData {
-		glm::ivec4 max = glm::ivec4(31, 31, 31, 0);
-		glm::ivec4 min = glm::ivec4(-32, -32, -32, 0);
+		glm::ivec4 max = glm::ivec4(127, 127, 127, 0);
+		glm::ivec4 min = glm::ivec4(-128, -128, -128, 0);
 		glm::ivec4 hashweights = glm::ivec4(1, (max.x - min.x + 1), (max.x - min.x + 1) * (max.y - min.y + 1), 0);
 		[[nodiscard]] inline size_t numCells() const {
 			glm::ivec3 gridExtents = glm::ivec3(max) - glm::ivec3(min);
@@ -49,11 +49,12 @@ private:
 	std::vector<vk::DescriptorSet> particleKeyDescriptorSets;
 	vk::DescriptorSet pingDescriptorSet;
 	vk::DescriptorSet pongDescriptorSet;
-	vk::DescriptorSet neighbourCellFinderInputDescriptorSet;
+	std::array<vk::DescriptorSet, 2> neighbourCellFinderInputDescriptorSets;
 	vk::DescriptorSet lambdaDescriptorSet;
 
 
 	RingBuffer<ParticleData> _tempBuffer;
+	std::array<vk::DescriptorSet, 2> _tempBufferDescriptorSets;
 
 	CacheReference<descriptors::ComputePipeline> _unconstrainedSystemUpdatePipeline;
 	CacheReference<descriptors::ComputePipeline> _particleDataUpdatePipeline;

@@ -41,7 +41,7 @@ _particleData([&](){
 
 	std::random_device rd;  //Will be used to obtain a seed for the random number engine
 	std::mt19937 gen(rd()); //Standard mersenne_twister_engine seeded with rd()
-	std::uniform_real_distribution<float> dist(0.0f, 0.1f);
+	std::uniform_real_distribution<float> dist(-0.25f, 0.25f);
 	for (int32_t x = 0; x < 64; ++x)
 		for (int32_t y = 0; y < 64; ++y)
 			for (int32_t z = 0; z < 64; ++z)
