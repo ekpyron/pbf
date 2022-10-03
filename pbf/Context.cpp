@@ -398,14 +398,17 @@ void Context::OnMouseDown (int button)
 				.commandBufferCount = 1U
 			}).front());
 
-			auto segment = scene().particleData().segment(renderer().currentFrameSync());
 			cmdBuffer->begin(vk::CommandBufferBeginInfo{});
-			cmdBuffer->fillBuffer(
-				segment.buffer,
-				segment.offset + sizeof(ParticleData) * *index + offsetof(ParticleData, aux),
-				sizeof(ParticleData::aux),
-				-1u
-			);
+			for (size_t i = 0; i <= renderer().framePrerenderCount(); ++i)
+			{
+				auto segment = scene().particleData().segment(i);
+				cmdBuffer->fillBuffer(
+					segment.buffer,
+					segment.offset + sizeof(ParticleData) * *index + offsetof(ParticleData, aux),
+					sizeof(ParticleData::aux),
+					-1u
+				);
+			}
 			cmdBuffer->end();
 
 			_graphicsQueue.waitIdle();

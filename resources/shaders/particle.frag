@@ -12,6 +12,10 @@ void main() {
         discard;
     }
     outColor = vec4((1.0 - 0.25*length(fCoords)) * vec3(0.1,0.25,1), 1);
+    if (fAux == -1u)
+        outColor = vec4(1.0, 0.0, 0.0, 1.0);
+    else if (fAux != 0)
+    outColor = vec4(1.0, 1.0, 0.0, 1.0);
 #if 0
     outColor = vec4(fGrid, 1.0);
 /*
