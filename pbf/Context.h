@@ -11,6 +11,8 @@
 
 namespace pbf {
 
+class GUI;
+
 class Context : public ContextInterface {
 public:
     Context();
@@ -21,10 +23,7 @@ public:
 
     void run();
 
-	void OnMouseMove(double xpos, double ypos);
-	void OnMouseDown(int button);
-	void OnMouseUp(int button);
-
+	vk::Instance instance() const { return *_instance; }
     const vk::Device &device() const override { return *_device; }
     const vk::PhysicalDevice &physicalDevice() const override { return _physicalDevice; }
     const vk::SurfaceKHR &surface() const { return *_surface; }
@@ -41,6 +40,9 @@ public:
     Scene &scene() { return *_scene; }
     MemoryManager &memoryManager() override { return *_memoryManager; }
 	vk::Format depthFormat() const;
+
+	GUI& gui() { return *_gui; }
+	Camera& camera() { return _camera; }
 
 	uint32_t graphicsQueueFamily() const {
 		return _families.graphics;
@@ -190,11 +192,9 @@ private:
 
     std::unique_ptr<Renderer> _renderer;
 
+	std::unique_ptr<GUI> _gui;
+
     std::unique_ptr<Scene> _scene;
-
-	std::unique_ptr<Selection> _selection;
-
-	glm::vec2 cursor;
 
 	Camera _camera;
 };

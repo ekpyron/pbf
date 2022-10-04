@@ -9,6 +9,7 @@
 #include <pbf/descriptors/GraphicsPipeline.h>
 #include "Renderer.h"
 #include "Scene.h"
+#include <pbf/GUI.h>
 
 static constexpr std::uint64_t TIMEOUT = std::numeric_limits<std::uint64_t>::max();
 
@@ -97,16 +98,6 @@ void Renderer::render() {
 	}
     currentFrameSync.reset();
 
-	static auto lastTime = std::chrono::steady_clock::now();
-    static size_t frameCount = 0;
-
-    frameCount++;
-    if (std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - lastTime).count() >= 1000) {
-        lastTime = std::chrono::steady_clock::now();
-        spdlog::get("console")->debug("FPS {}", frameCount);
-        frameCount = 0;
-    }
-
 //    _renderPass.keepAlive(); --> is kept alive by graphics pipeline (probably)
 //    _graphicsPipeline.keepAlive();
 
@@ -154,7 +145,8 @@ void Renderer::render() {
 
         _context.scene().frame(*buffer);
 
-		_context.scene().simulation().run(*buffer);
+		if (_context.gui().runSPH())
+			_context.scene().simulation().run(*buffer);
 
 		std::array<vk::ClearValue, 2> clearValues;
         clearValues[0].setColor({std::array<float, 4>{0.1f, 0.1f, 0.1f, 1.0f}});
@@ -176,6 +168,8 @@ void Renderer::render() {
         buffer->draw(3, 1, 0, 0);*/
 
 		_context.scene().enqueueCommands(*buffer);
+
+		_context.gui().render(*buffer);
 
         buffer->endRenderPass();
         buffer->end();

@@ -14,8 +14,8 @@ target_link_libraries(pbf_common PUBLIC fmt Vulkan::Vulkan spdlog_header_only gl
 
 set(SOURCES main.cpp glfw.h Context.cpp Context.h ContextInterface.h common.h Swapchain.cpp Swapchain.h Renderer.cpp Renderer.h
         Scene.cpp Scene.h Camera.cpp Camera.h IndirectCommandsBuffer.h IndirectCommandsBuffer.cpp Quad.cpp Quad.h
-        Simulation.cpp Simulation.h Image.cpp Image.h)
+        Simulation.cpp Simulation.h Image.cpp Image.h GUI.cpp GUI.h)
 
 add_executable(${PROJECT_NAME} ${SOURCES})
-target_link_libraries(${PROJECT_NAME} PUBLIC glfw pbf_common)
+target_link_libraries(${PROJECT_NAME} PUBLIC glfw pbf_common imgui)
 add_dependencies(${PROJECT_NAME} shaders-target)

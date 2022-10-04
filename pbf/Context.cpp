@@ -15,6 +15,7 @@
 #include "Renderer.h"
 #include "Scene.h"
 #include "Selection.h"
+#include "GUI.h"
 
 #include <glm/ext/matrix_clip_space.hpp>
 #include <glm/ext/matrix_projection.hpp>
@@ -221,7 +222,7 @@ Context::Context() {
 
     _renderer = std::make_unique<Renderer>(initContext);
     _scene = std::make_unique<Scene>(initContext);
-	_selection = std::make_unique<Selection>(initContext);
+	_gui = std::make_unique<GUI>(initContext);
 
 	initContext.initCommandBuffer->end();
 
@@ -244,21 +245,6 @@ Context::Context() {
 		}}, {});
 	}
 
-
-	glfwSetWindowUserPointer (_window->window(), this);
-	//typedef void (* GLFWcursorposfun)(GLFWwindow* window, double xpos, double ypos);
-	glfwSetCursorPosCallback (_window->window(), [](GLFWwindow* window, double xpos, double ypos) {
-		reinterpret_cast<Context*>(glfwGetWindowUserPointer(window))->OnMouseMove(xpos, ypos);
-	});
-	// typedef void (* GLFWmousebuttonfun)(GLFWwindow* window, int button, int action, int mods);
-	glfwSetMouseButtonCallback (_window->window(), [](GLFWwindow* window, int button, int action, int mods){
-		auto context = reinterpret_cast<Context*>(glfwGetWindowUserPointer(window));
-		if (action == GLFW_PRESS)
-			context->OnMouseDown (button);
-		else if (action == GLFW_RELEASE)
-			context->OnMouseUp (button);
-	});
-
 	_graphicsQueue.submit({
 							  vk::SubmitInfo{
 								  .waitSemaphoreCount = 0,
@@ -271,9 +257,13 @@ Context::Context() {
 							  }
 	});
 	_graphicsQueue.waitIdle();
+
+	_gui->postInitCleanup();
 }
 
-Context::~Context() = default;
+Context::~Context()
+{
+}
 
 #ifndef NDEBUG
 VkBool32
@@ -348,87 +338,6 @@ void Context::run() {
     _device->waitIdle();
     spdlog::get("console")->debug("Returning from main loop.");
 }
-
-void Context::OnMouseMove(double x, double y)
-{
-	auto window = _window->window();
-	auto [width, height] = _window->framebufferSize();
-	auto oldCursor = cursor;
-	auto deltaX = (x - cursor.x) / width;
-	auto deltaY = (y - cursor.y) / height;
-	cursor = {x,y};
-	// handle mouse events and pass them to the camera class
-	if (glfwGetMouseButton (window, GLFW_MOUSE_BUTTON_LEFT))
-	{
-		// ignore mouse movement, when in highlighting mode
-		if (glfwGetKey (window, GLFW_KEY_H)) return;
-
-		if (glfwGetKey (window, GLFW_KEY_LEFT_CONTROL))
-		{
-			_camera.Zoom (deltaX + deltaY);
-		}
-		else if (glfwGetKey (window, GLFW_KEY_LEFT_SHIFT))
-		{
-			_camera.MoveX (deltaX);
-			_camera.MoveY (deltaY);
-		}
-		else
-		{
-			_camera.Rotate (deltaY, -deltaX);
-		}
-	}
-}
-
-void Context::OnMouseUp (int button)
-{
-}
-
-void Context::OnMouseDown (int button)
-{
-	if (_window->getKey(GLFW_KEY_H))
-	{
-		auto [xpos, ypos] = _window->getCursorPos();
-		if (auto index = (*_selection)(scene().particleData(), xpos, ypos))
-		{
-			spdlog::get("console")->debug("Clicked on particle {}", *index);
-
-			auto cmdBuffer = std::move(device().allocateCommandBuffersUnique(vk::CommandBufferAllocateInfo{
-				.commandPool = commandPool(true),
-				.level = vk::CommandBufferLevel::ePrimary,
-				.commandBufferCount = 1U
-			}).front());
-
-			cmdBuffer->begin(vk::CommandBufferBeginInfo{});
-			for (size_t i = 0; i <= renderer().framePrerenderCount(); ++i)
-			{
-				auto segment = scene().particleData().segment(i);
-				cmdBuffer->fillBuffer(
-					segment.buffer,
-					segment.offset + sizeof(ParticleData) * *index + offsetof(ParticleData, aux),
-					sizeof(ParticleData::aux),
-					-1u
-				);
-			}
-			cmdBuffer->end();
-
-			_graphicsQueue.waitIdle();
-			_graphicsQueue.submit({
-									  vk::SubmitInfo{
-										  .waitSemaphoreCount = 0,
-										  .pWaitSemaphores = nullptr,
-										  .pWaitDstStageMask = {},
-										  .commandBufferCount = 1,
-										  .pCommandBuffers = &*cmdBuffer,
-										  .signalSemaphoreCount = 0,
-										  .pSignalSemaphores = nullptr
-									  }
-								  });
-			_graphicsQueue.waitIdle();
-
-		}
-	}
-}
-
 
 vk::Format Context::depthFormat() const
 {

@@ -88,7 +88,7 @@ public:
         return std::make_tuple(static_cast<std::uint32_t>(width), static_cast<std::uint32_t>(height));
     }
 
-	GLFWwindow* window() {
+	GLFWwindow* window() const {
 		return _window;
 	}
 

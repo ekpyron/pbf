@@ -21,8 +21,15 @@ add_subdirectory(contrib/spdlog)
 add_subdirectory(contrib/glm)
 add_subdirectory(contrib/crampl)
 
+add_library(imgui STATIC contrib/imgui/backends/imgui_impl_vulkan.cpp contrib/imgui/backends/imgui_impl_glfw.cpp
+        contrib/imgui/imgui.cpp contrib/imgui/imgui_widgets.cpp contrib/imgui/imgui_draw.cpp contrib/imgui/imgui_tables.cpp)
+target_include_directories(imgui PUBLIC contrib/imgui contrib/imgui/backends)
+target_link_libraries(imgui Vulkan::Vulkan glfw)
+target_compile_definitions(imgui PUBLIC -DImTextureID=ImU64)
+
 add_subdirectory(resources/shaders)
 add_subdirectory(pbf)
+
 
 add_subdirectory(contrib/Catch2)
 add_subdirectory(test)

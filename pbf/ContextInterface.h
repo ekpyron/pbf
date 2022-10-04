@@ -6,6 +6,7 @@ namespace pbf {
 
 class MemoryManager;
 class Cache;
+class GUI;
 
 class ContextInterface {
 public:
