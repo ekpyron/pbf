@@ -330,6 +330,8 @@ void Context::run() {
 		rot += 1.0f * timePassed;
 		globalUniformData->mvpmatrix = clip * projmat * mvmat;
 		globalUniformData->viewrot = _camera.GetViewRot();
+		globalUniformData->invviewmat = glm::inverse(mvmat);
+		globalUniformData->viewmat = mvmat;
         _globalDescriptorSetLayout.keepAlive();
         _renderer->render();
         _cache.frame();

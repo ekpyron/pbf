@@ -374,90 +374,10 @@ _tempBuffer(_context, particleData.size(), 2, vk::BufferUsageFlagBits::eStorageB
 		);
 	}
 
-	{
-		auto keyInitSetLayout = cache.fetch(descriptors::DescriptorSetLayout{
-			.createFlags = {},
-			.bindings = {
-				{
-					.binding = 0,
-					.descriptorType = vk::DescriptorType::eStorageBuffer,
-					.descriptorCount = 1,
-					.stageFlags = vk::ShaderStageFlagBits::eCompute
-				},
-				{
-					.binding = 1,
-					.descriptorType = vk::DescriptorType::eStorageBuffer,
-					.descriptorCount = 1,
-					.stageFlags = vk::ShaderStageFlagBits::eCompute
-				}
-			},
-			PBF_DESC_DEBUG_NAME("Simulation key init descriptor set layout")
-		});
-		auto keyInitPipelineLayout = cache.fetch(
-			descriptors::PipelineLayout{
-				.setLayouts = {keyInitSetLayout},
-				PBF_DESC_DEBUG_NAME("Key init pipeline layout.")
-			});
-		initContext.initCommandBuffer->bindPipeline(
-			vk::PipelineBindPoint::eCompute,
-			*cache.fetch(
-				descriptors::ComputePipeline{
-					.flags = {},
-					.shaderStage = descriptors::ShaderStage {
-						.stage = vk::ShaderStageFlagBits::eCompute,
-						.module = cache.fetch(
-							descriptors::ShaderModule{
-								.source = descriptors::ShaderModule::File{"shaders/simulation/keyinit.comp.spv"},
-								PBF_DESC_DEBUG_NAME("Simulation: key init shader module")
-							}),
-						.entryPoint = "main",
-						.specialization = {
-							Specialization<uint32_t>{.constantID = 0, .value = blockSize}
-						}
-					},
-					.pipelineLayout = keyInitPipelineLayout,
-					PBF_DESC_DEBUG_NAME("Simulation: key init shader pipeline")
-				}
-			)
-		);
-		for (size_t i = 0; i < _context.renderer().framePrerenderCount(); ++i) {
-			auto keyInitDescriptorSet = _context.device().allocateDescriptorSets(vk::DescriptorSetAllocateInfo{
-				.descriptorPool = _context.descriptorPool(),
-				.descriptorSetCount = 1,
-				.pSetLayouts = &*keyInitSetLayout
-			}).front();
-			auto keyInitInfos = {
-				_particleData.segment(i),
-				_particleKeys.segment(i)
-			};
-			_context.device().updateDescriptorSets({vk::WriteDescriptorSet{
-				.dstSet = keyInitDescriptorSet,
-				.dstBinding = 0,
-				.dstArrayElement = 0,
-				.descriptorCount = 2,
-				.descriptorType = vk::DescriptorType::eStorageBuffer,
-				.pImageInfo = nullptr,
-				.pBufferInfo = &*keyInitInfos.begin(),
-				.pTexelBufferView = nullptr
-			}}, {});
-			initContext.initCommandBuffer->bindDescriptorSets(vk::PipelineBindPoint::eCompute, *keyInitPipelineLayout, 0, {keyInitDescriptorSet}, {});
-			initContext.initCommandBuffer->dispatch(((getNumParticles() + blockSize - 1) / blockSize), 1, 1);
-		}
-
-		initContext.initCommandBuffer->pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {}, {
-			vk::MemoryBarrier{
-				.srcAccessMask = vk::AccessFlagBits::eShaderWrite,
-				.dstAccessMask = vk::AccessFlagBits::eShaderRead
-			}
-		}, {}, {});
-
-
-	}
-
+	initKeys(initContext.context, *initContext.initCommandBuffer);
 
 
 	{
-
 		auto& cache = _context.cache();
 
 		auto inputDescriptorSetLayout = cache.fetch(descriptors::DescriptorSetLayout{
@@ -563,9 +483,96 @@ _tempBuffer(_context, particleData.size(), 2, vk::BufferUsageFlagBits::eStorageB
 	}
 }
 
+void Simulation::initKeys(Context& context, vk::CommandBuffer buf)
+{
+	Cache& cache = context.cache();
+	{
+		auto keyInitSetLayout = cache.fetch(descriptors::DescriptorSetLayout{
+			.createFlags = {},
+			.bindings = {
+				{
+					.binding = 0,
+					.descriptorType = vk::DescriptorType::eStorageBuffer,
+					.descriptorCount = 1,
+					.stageFlags = vk::ShaderStageFlagBits::eCompute
+				},
+				{
+					.binding = 1,
+					.descriptorType = vk::DescriptorType::eStorageBuffer,
+					.descriptorCount = 1,
+					.stageFlags = vk::ShaderStageFlagBits::eCompute
+				}
+			},
+			PBF_DESC_DEBUG_NAME("Simulation key init descriptor set layout")
+		});
+		auto keyInitPipelineLayout = cache.fetch(
+			descriptors::PipelineLayout{
+				.setLayouts = {keyInitSetLayout},
+				PBF_DESC_DEBUG_NAME("Key init pipeline layout.")
+			});
+		buf.bindPipeline(
+			vk::PipelineBindPoint::eCompute,
+			*cache.fetch(
+				descriptors::ComputePipeline{
+					.flags = {},
+					.shaderStage = descriptors::ShaderStage {
+						.stage = vk::ShaderStageFlagBits::eCompute,
+						.module = cache.fetch(
+							descriptors::ShaderModule{
+								.source = descriptors::ShaderModule::File{"shaders/simulation/keyinit.comp.spv"},
+								PBF_DESC_DEBUG_NAME("Simulation: key init shader module")
+							}),
+						.entryPoint = "main",
+						.specialization = {
+							Specialization<uint32_t>{.constantID = 0, .value = blockSize}
+						}
+					},
+					.pipelineLayout = keyInitPipelineLayout,
+					PBF_DESC_DEBUG_NAME("Simulation: key init shader pipeline")
+				}
+			)
+		);
+		for (size_t i = 0; i < _context.renderer().framePrerenderCount(); ++i) {
+			auto keyInitDescriptorSet = _context.device().allocateDescriptorSets(vk::DescriptorSetAllocateInfo{
+				.descriptorPool = _context.descriptorPool(),
+				.descriptorSetCount = 1,
+				.pSetLayouts = &*keyInitSetLayout
+			}).front();
+			auto keyInitInfos = {
+				_particleData.segment(i),
+				_particleKeys.segment(i)
+			};
+			_context.device().updateDescriptorSets({vk::WriteDescriptorSet{
+				.dstSet = keyInitDescriptorSet,
+				.dstBinding = 0,
+				.dstArrayElement = 0,
+				.descriptorCount = 2,
+				.descriptorType = vk::DescriptorType::eStorageBuffer,
+				.pImageInfo = nullptr,
+				.pBufferInfo = &*keyInitInfos.begin(),
+				.pTexelBufferView = nullptr
+			}}, {});
+			buf.bindDescriptorSets(vk::PipelineBindPoint::eCompute, *keyInitPipelineLayout, 0, {keyInitDescriptorSet}, {});
+			buf.dispatch(((getNumParticles() + blockSize - 1) / blockSize), 1, 1);
+		}
+
+		buf.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {}, {
+			vk::MemoryBarrier{
+				.srcAccessMask = vk::AccessFlagBits::eShaderWrite,
+				.dstAccessMask = vk::AccessFlagBits::eShaderRead
+			}
+		}, {}, {});
+	}
+}
+
 // currentFrameSync (readonly) -> nextFrameSync (writeonly)
 void Simulation::run(vk::CommandBuffer buf)
 {
+	if (_resetKeys)
+	{
+		initKeys(_context, buf);
+		_resetKeys = false;
+	}
 	buf.bindPipeline(vk::PipelineBindPoint::eCompute, *_unconstrainedSystemUpdatePipeline);
 	glm::vec3 externalForces(0.0f, -9.81f, 0.0f);
 	externalForces += glm::vec3(_context.window().getKey(GLFW_KEY_LEFT) ? 20.0f : 0.0f, 0, _context.window().getKey(GLFW_KEY_UP) ? 20.0f : 0.0f);

@@ -31,10 +31,9 @@ layout(std430, binding = 0, set = 1) writeonly buffer GridBoundaryBuffer
 };
 
 uint GetGridIndex(vec3 position) {
-    highp ivec3 grid = ivec3 (clamp (position, GRID_MIN, GRID_MAX));
-    return uint (dot (grid - GRID_MIN, GRID_HASHWEIGHTS));
+    ivec3 gridPositive = ivec3(floor(position)) - GRID_MIN.xyz;
+    return uint(gridPositive.x * GRID_HASHWEIGHTS.x + gridPositive.y * GRID_HASHWEIGHTS.y + gridPositive.z * GRID_HASHWEIGHTS.z);
 }
-
 
 void main (void)
 {
@@ -46,7 +45,7 @@ void main (void)
         grid[GetGridIndex(particles[0].position)].startIndex = 0;
         //uint maxID = gl_NumWorkGroups.x * gl_WorkGroupSize.x;
         //grid[GetGridIndex(GRID_MAX)].endIndex = maxID;
-        grid[GetGridIndex(particles[64*64*64 - 1].position)].endIndex = 64*64*64;
+        grid[GetGridIndex(particles[32*32*32 - 1].position)].endIndex = 32*32*32;
         return;
     }
 

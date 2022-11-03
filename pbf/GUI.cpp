@@ -121,13 +121,18 @@ void GUI::render(vk::CommandBuffer buf)
 		_context.camera().Rotate (dragDelta.y, -dragDelta.x);
 	}
 
-
 	{
 		ImGui::Begin("PBF", nullptr, ImGuiWindowFlags_AlwaysAutoResize);
 		if (ImGui::Button(_runSPH ? "Stop" : "Run"))
 			_runSPH = !_runSPH;
 		ImGui::SameLine();
 		ImGui::Text(_runSPH ? "SPH is running" : "SPH is not running");
+
+		if (ImGui::Button("Reset"))
+		{
+			_runSPH = false;
+			_context.scene().resetParticles();
+		}
 
 
 		static auto lastTime = std::chrono::steady_clock::now();
