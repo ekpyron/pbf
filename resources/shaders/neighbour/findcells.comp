@@ -55,6 +55,7 @@ void main (void)
 
     if (currentGridIndex != previousGridIndex)
     {
+        // TODO: race conditions?
         grid[currentGridIndex].startIndex = gid;
         grid[previousGridIndex].endIndex = gid;
     }
