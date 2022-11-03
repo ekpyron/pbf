@@ -14,8 +14,6 @@ layout(std430, binding = 0, set = 0) readonly buffer ParticleKeys
     ParticleKey particleKeys[];
 };
 
-
-
 struct GridBoundaries {
     uint startIndex;
     uint endIndex;
@@ -31,10 +29,9 @@ layout(std430, binding = 0, set = 1) readonly buffer GridBoundaryBuffer
 {
     GridBoundaries grid[]; // .x: start; .y: end
 };
-
 uint GetGridIndex(vec3 position) {
-    highp ivec3 grid = ivec3 (clamp (position, GRID_MIN, GRID_MAX));
-    return uint (dot (grid - GRID_MIN, GRID_HASHWEIGHTS));
+    ivec3 gridPositive = ivec3(floor(position)) - GRID_MIN;
+    return uint(gridPositive.x * GRID_HASHWEIGHTS.x + gridPositive.y * GRID_HASHWEIGHTS.y + gridPositive.z * GRID_HASHWEIGHTS.z);
 }
 
 
@@ -56,7 +53,7 @@ layout(std430, binding = 0, set = 2) writeonly buffer LambdaBuffer
     float lambdas[];
 };
 
-const float h = 2.0;
+const float h = 2.5;
 
 float Wpoly6(float r)
 {
@@ -68,12 +65,6 @@ float Wpoly6(float r)
 
 const float one_over_rho_0 = 1.0;
 const float epsilon = 5.0;
-const float gravity = 10;
-const float timestep = 0.016;
-const float tensile_instability_k = 0.1;
-//const float tensile_instability_scale = 1.0f / Wpoly6 (0.2f);
-const float xsph_viscosity_c = 0.01;
-const float vorticity_epsilon = 5;
 
 float Wspiky(float r)
 {
@@ -86,8 +77,8 @@ float Wspiky(float r)
 vec3 gradWspiky(vec3 r)
 {
     float l = length (r);
-    if (l > h || l == 0)
-    return vec3 (0, 0, 0);
+    if (l > h || l < 0.0001)
+        return vec3 (0, 0, 0);
     float tmp = h - l;
     return (-3 * 4.774648292756860 * tmp * tmp) * r / (l * h*h*h*h*h*h);
 }
@@ -101,7 +92,6 @@ void main(void)
     float rho = 0;
 
     vec3 grad_pi_Ci = vec3 (0, 0, 0);
-
 
     FOR_EACH_NEIGHBOUR(gid, j)
     {
@@ -131,4 +121,5 @@ void main(void)
     // compute lambda_i (equations 1 and 9)
     float C_i = rho * one_over_rho_0 - 1;
     lambdas[gid] = -C_i / (sum_k_grad_Ci + epsilon);
+
 }

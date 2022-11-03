@@ -21,6 +21,6 @@ layout(std140, binding = 2, set = 1) uniform GridData {
 };
 
 uint GetHash(uint id) {
-    highp ivec3 grid = ivec3 (clamp (particleKeys[id].position, GRID_MIN, GRID_MAX));
-    return uint (dot (grid - GRID_MIN, GRID_HASHWEIGHTS));
+    highp ivec3 grid = ivec3 (clamp (particleKeys[id].position, GRID_MIN, GRID_MAX) - GRID_MIN);
+    return uint (dot (grid, GRID_HASHWEIGHTS));
 }

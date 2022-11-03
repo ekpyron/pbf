@@ -29,11 +29,11 @@ layout(std430, binding = 0, set = 1) readonly buffer GridBoundaryBuffer
 {
     GridBoundaries grid[]; // .x: start; .y: end
 };
-
 uint GetGridIndex(vec3 position) {
-    highp ivec3 grid = ivec3 (clamp (position, GRID_MIN, GRID_MAX));
-    return uint (dot (grid - GRID_MIN, GRID_HASHWEIGHTS));
+    ivec3 gridPositive = ivec3(floor(position)) - GRID_MIN.xyz;
+    return uint(gridPositive.x * GRID_HASHWEIGHTS.x + gridPositive.y * GRID_HASHWEIGHTS.y + gridPositive.z * GRID_HASHWEIGHTS.z);
 }
+
 
 
 #define FOR_EACH_NEIGHBOUR(gid, idx) \

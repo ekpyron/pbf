@@ -7,6 +7,8 @@ out gl_PerVertex {
 
 layout(binding = 0) uniform GlobalUniformBuffer {
     mat4 mat;
+    mat4 invviewmat;
+    mat4 viewmat;
     mat3 viewRot;
 } ubo;
 

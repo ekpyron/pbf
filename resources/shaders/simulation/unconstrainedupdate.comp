@@ -35,7 +35,6 @@ void main (void)
 {
     uint gid = gl_GlobalInvocationID.x;
     ParticleKey key = particleKeys[gid];
-
     vec3 velocity = vec3(key.position - particles[key.idx].position) / lastTimestep;
     velocity += externalForces * timestep;
     particleKeys[gid].position += timestep * velocity;

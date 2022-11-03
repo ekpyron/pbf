@@ -184,6 +184,8 @@ private:
     std::unique_ptr<MemoryManager> _memoryManager;
     struct GlobalUniformData {
         glm::mat4 mvpmatrix;
+		glm::mat4 invviewmat;
+		glm::mat4 viewmat;
 		glm::mat3x4 viewrot;
     };
     std::unique_ptr<Buffer<GlobalUniformData>> _globalUniformBuffer;

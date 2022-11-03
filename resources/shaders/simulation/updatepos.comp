@@ -33,10 +33,9 @@ layout(std430, binding = 0, set = 1) readonly buffer GridBoundaryBuffer
 };
 
 uint GetGridIndex(vec3 position) {
-    highp ivec3 grid = ivec3 (clamp (position, GRID_MIN, GRID_MAX));
-    return uint (dot (grid - GRID_MIN, GRID_HASHWEIGHTS));
+    ivec3 gridPositive = ivec3(floor(position)) - GRID_MIN;
+    return uint(gridPositive.x * GRID_HASHWEIGHTS.x + gridPositive.y * GRID_HASHWEIGHTS.y + gridPositive.z * GRID_HASHWEIGHTS.z);
 }
-
 
     #define FOR_EACH_NEIGHBOUR(gid, idx) \
 for (int _x = -1; _x <= 1; ++_x) { \
@@ -44,7 +43,7 @@ for (int _y = -1; _y <= 1; ++_y) { \
 for (int _z = -1; _z <= 1; ++_z) { \
 vec3 _position = particleKeys[gid].position + vec3(_x,_y,_z); \
 if (!(any(lessThan(_position, vec3(GRID_MIN)))) && all(lessThan(_position, vec3(GRID_MAX)))) { \
-GridBoundaries _gridCell = grid[GetGridIndex(particleKeys[gid].position + vec3(_x,_y,_z))]; \
+GridBoundaries _gridCell = grid[GetGridIndex(_position)]; \
 for (uint idx = _gridCell.startIndex; idx < _gridCell.endIndex; ++idx) { \
 if (idx != gid) { \
 if (distance(particleKeys[idx].position, particleKeys[gid].position) < 1.0) {
@@ -62,22 +61,21 @@ layout(std430, binding = 0, set = 3) writeonly buffer OutputParticleKeys
     ParticleKey outputParticleKeys[];
 };
 
-const float h = 2.0;
+const float h = 2.5;
 
 float Wpoly6(float r)
 {
-    if (r > h)
-    return 0;
+    if (r >= h)
+        return 0;
     float tmp = h * h - r * r;
     return 1.56668147106 * tmp * tmp * tmp / (h*h*h*h*h*h*h*h*h);
 }
 
 const float one_over_rho_0 = 1.0;
-const float epsilon = 5.0;
 const float gravity = 10;
-const float timestep = 0.016;
+const float timestep = (1 / 30);//0.016;
 const float tensile_instability_k = 0.1;
-const float xsph_viscosity_c = 0.01;
+const float xsph_viscosity_c = 0.03;
 const float vorticity_epsilon = 5;
 
 float Wspiky(float r)
@@ -91,7 +89,7 @@ float Wspiky(float r)
 vec3 gradWspiky(vec3 r)
 {
     float l = length (r);
-    if (l > h || l == 0)
+    if (l > h || l < 0.0001)
     return vec3 (0, 0, 0);
     float tmp = h - l;
     return (-3 * 4.774648292756860 * tmp * tmp) * r / (l * h*h*h*h*h*h);
@@ -124,7 +122,42 @@ void main(void)
 
     position += one_over_rho_0 * deltap;
 
-    position = clamp (position, vec3(-64,-64,-64), vec3(64,64,64));
+    // Cylinder Z
+    /* position.z = clamp(position.z, 1, 63);
+    vec2 center = vec2(32, 32);
+    vec2 ptr = position.xy - center;
+    float dist = length(ptr);
+    ptr /= dist;
+    if (dist > 28) {
+        position.xy = center + 28 * ptr;
+    }
+    */
+
+    // Cylinder y
+    /*{
+    position.y = clamp(position.y, 1, 63);
+    vec2 center = vec2(32, 32);
+    vec2 ptr = position.xz - center;
+    float dist = length(ptr);
+    ptr /= dist;
+    if (dist > 28) {
+        position.xz = center + 28 * ptr;
+    }
+    }*/
+
+    // Sphere
+    /*{
+    vec3 center = vec3(32,32,32);
+    vec3 ptr = position - center;
+    float dist = length (ptr);
+    ptr /= dist;
+    if (dist > 28) {
+        position =  center + 28 * ptr;
+    }
+    }*/
+
+    // Cube
+    position = clamp (position, vec3(-64,-64,-64), vec3(63,63,63));
 
     outputParticleKeys[gid].position = position;
     outputParticleKeys[gid].index = particleKeys[gid].index;
