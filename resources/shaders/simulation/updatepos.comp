@@ -62,7 +62,7 @@ layout(std430, binding = 0, set = 3) writeonly buffer OutputParticleKeys
     ParticleKey outputParticleKeys[];
 };
 
-const float h = 2.0;
+const float h = 2.5;
 
 float Wpoly6(float r)
 {
@@ -73,11 +73,11 @@ float Wpoly6(float r)
 }
 
 const float one_over_rho_0 = 1.0;
-const float epsilon = 5.0;
+const float epsilon = 6.0;
 const float gravity = 10;
-const float timestep = 0.016;
-const float tensile_instability_k = 0.1;
-const float xsph_viscosity_c = 0.01;
+const float timestep = (1 / 30);//0.016;
+const float tensile_instability_k = 0.3;
+const float xsph_viscosity_c = 0.03;
 const float vorticity_epsilon = 5;
 
 float Wspiky(float r)
@@ -124,7 +124,42 @@ void main(void)
 
     position += one_over_rho_0 * deltap;
 
-    position = clamp (position, vec3(-64,-64,-64), vec3(64,64,64));
+    // Cylinder Z
+    /* position.z = clamp(position.z, 1, 63);
+    vec2 center = vec2(32, 32);
+    vec2 ptr = position.xy - center;
+    float dist = length(ptr);
+    ptr /= dist;
+    if (dist > 28) {
+        position.xy = center + 28 * ptr;
+    }
+    */
+
+    // Cylinder y
+    {
+    position.y = clamp(position.y, 1, 63);
+    vec2 center = vec2(32, 32);
+    vec2 ptr = position.xz - center;
+    float dist = length(ptr);
+    ptr /= dist;
+    if (dist > 28) {
+        position.xz = center + 28 * ptr;
+    }
+    }
+
+    // Sphere
+    /*{
+    vec3 center = vec3(32,32,32);
+    vec3 ptr = position - center;
+    float dist = length (ptr);
+    ptr /= dist;
+    if (dist > 28) {
+        position =  center + 28 * ptr;
+    }
+    }*/
+
+    // Cube
+    //position = clamp (position, vec3(1,1,1), vec3(63,63,63));
 
     outputParticleKeys[gid].position = position;
     outputParticleKeys[gid].index = particleKeys[gid].index;

@@ -21,9 +21,12 @@ public:
 	uint32_t getNumParticles() const {
 		return _particleData.size();
 	}
+	void resetKeys() { _resetKeys = true; }
 	void run(vk::CommandBuffer buf);
 
 private:
+	void initKeys(Context& context, vk::CommandBuffer buf);
+	bool _resetKeys = false;
 	Context& _context;
 	RingBuffer<ParticleData>& _particleData;
 	RingBuffer<ParticleKey> _particleKeys;

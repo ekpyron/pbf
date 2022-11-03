@@ -40,6 +40,8 @@ public:
 
     void enqueueCommands(vk::CommandBuffer &buf);
 
+	void resetParticles();
+
     Context& context() {
         return _context;
     }
@@ -65,10 +67,11 @@ public:
 	[[nodiscard]] const RingBuffer<ParticleData>& particleData() const { return _particleData; }
 
 private:
+	bool _resetParticles = false;
 
     Context& _context;
 
-	uint32_t _numParticles = 64 * 64 * 64;
+	uint32_t _numParticles = 32 * 32 * 32;
 
 	RingBuffer<ParticleData> _particleData;
 

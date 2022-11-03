@@ -20,6 +20,24 @@
 
 namespace pbf {
 
+void initializeParticleData(ParticleData* data, size_t numParticles)
+{
+	std::random_device rd;  //Will be used to obtain a seed for the random number engine
+	std::mt19937 gen(rd()); //Standard mersenne_twister_engine seeded with rd()
+	std::uniform_real_distribution<float> dist(-0.25f, 0.25f);
+	for (int32_t x = 0; x < 32; ++x)
+		for (int32_t y = 0; y < 32; ++y)
+			for (int32_t z = 0; z < 32; ++z)
+			{
+				auto id = (32 * 32 * y + 32 * z + x);
+				//data[id].position = 0.33f * glm::vec3(x - 32, y - 32, z - 32);
+				data[id].position = glm::vec3(x + 16, y + 16, z + 16);
+				data[id].position += glm::vec3(dist(gen), dist(gen), dist(gen));
+
+			}
+	std::shuffle(data, data + numParticles, gen);
+}
+
 Scene::Scene(InitContext &initContext)
 : _context(initContext.context),
 _particleData([&](){
@@ -38,21 +56,7 @@ _particleData([&](){
 	);
 
 	ParticleData* data = initBuffer.data();
-
-	std::random_device rd;  //Will be used to obtain a seed for the random number engine
-	std::mt19937 gen(rd()); //Standard mersenne_twister_engine seeded with rd()
-	std::uniform_real_distribution<float> dist(-0.25f, 0.25f);
-	for (int32_t x = 0; x < 64; ++x)
-		for (int32_t y = 0; y < 64; ++y)
-			for (int32_t z = 0; z < 64; ++z)
-			{
-				auto id = (64 * 64 * y + 64 * z + x);
-				//data[id].position = 0.33f * glm::vec3(x - 32, y - 32, z - 32);
-				data[id].position = glm::vec3(x - 32, y - 32, z - 32);
-				data[id].position += glm::vec3(dist(gen), dist(gen), dist(gen));
-
-			}
-	std::shuffle(data, data + 64*64*64, gen);
+	initializeParticleData(data, _numParticles);
 	initBuffer.flush();
 
 	auto& initCmdBuf = *initContext.initCommandBuffer;
@@ -71,8 +75,8 @@ _particleData([&](){
 		.srcQueueFamilyIndex = 0,
 		.dstQueueFamilyIndex = 0,
 		.buffer = particleData.buffer(),
-		.offset = sizeof(ParticleData) * _numParticles * (context.renderer().framePrerenderCount() - 1),
-		.size = initBuffer.deviceSize(),
+		.offset = 0,
+		.size = particleData.deviceSize(),
 	}}, {});
 	return particleData;
 }()),
@@ -81,6 +85,11 @@ _simulation(initContext, _particleData)
 {
 }
 
+void Scene::resetParticles()
+{
+	_resetParticles = true;
+	_simulation.resetKeys();
+}
 
 void Scene::frame(vk::CommandBuffer &buf) {
     for(auto* ptr: indirectCommandBuffers) ptr->clear();
@@ -90,6 +99,38 @@ void Scene::frame(vk::CommandBuffer &buf) {
 
 void Scene::enqueueCommands(vk::CommandBuffer &buf) {
     const auto &device = _context.device();
+
+	if (_resetParticles)
+	{
+		auto& initBuffer = _context.renderer().createFrameData<Buffer<ParticleData>>(
+			_context, _numParticles, vk::BufferUsageFlagBits::eTransferSrc, pbf::MemoryType::TRANSIENT
+		);
+		ParticleData* data = initBuffer.data();
+
+		initializeParticleData(data, _numParticles);
+		initBuffer.flush();
+
+		for (size_t i = 0; i < _context.renderer().framePrerenderCount(); ++i)
+			buf.copyBuffer(initBuffer.buffer(), _particleData.buffer(), {
+				vk::BufferCopy {
+					.srcOffset = 0,
+					.dstOffset = sizeof(ParticleData) * _numParticles * i,
+					.size = initBuffer.deviceSize()
+				}
+			});
+
+		buf.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eComputeShader, {}, {}, {vk::BufferMemoryBarrier{
+			.srcAccessMask = vk::AccessFlagBits::eTransferWrite,
+			.dstAccessMask = vk::AccessFlagBits::eShaderRead,
+			.srcQueueFamilyIndex = 0,
+			.dstQueueFamilyIndex = 0,
+			.buffer = _particleData.buffer(),
+			.offset = 0,
+			.size = _particleData.deviceSize(),
+		}}, {});
+		_resetParticles = false;
+	}
+
 
     for (auto& [graphicsPipeline, innerMap] : indirectDrawCalls)
     {

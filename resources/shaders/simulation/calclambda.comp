@@ -69,7 +69,6 @@ float Wpoly6(float r)
 const float one_over_rho_0 = 1.0;
 const float epsilon = 5.0;
 const float gravity = 10;
-const float timestep = 0.016;
 const float tensile_instability_k = 0.1;
 //const float tensile_instability_scale = 1.0f / Wpoly6 (0.2f);
 const float xsph_viscosity_c = 0.01;
