@@ -6,17 +6,15 @@
  * @author clonker
  * @date 1/23/19
  */
-#include <numeric>
 #include <cstdint>
+#include <random>
 
 #include "Scene.h"
 #include "Renderer.h"
 #include "Simulation.h"
 
-#include "descriptors/GraphicsPipeline.h"
 #include "descriptors/DescriptorSetLayout.h"
 #include "IndirectCommandsBuffer.h"
-#include <random>
 
 namespace pbf {
 
@@ -25,15 +23,16 @@ void initializeParticleData(ParticleData* data, size_t numParticles)
 	std::random_device rd;  //Will be used to obtain a seed for the random number engine
 	std::mt19937 gen(rd()); //Standard mersenne_twister_engine seeded with rd()
 	std::uniform_real_distribution<float> dist(-0.25f, 0.25f);
-	for (int32_t x = 0; x < 32; ++x)
-		   for (int32_t y = 0; y < 32; ++y)
-				   for (int32_t z = 0; z < 32; ++z)
-				   {
-						   auto id = (32 * 32 * y + 32 * z + x);
-						   //data[id].position = 0.33f * glm::vec3(x - 32, y - 32, z - 32);
-						   data[id].position = glm::vec3(x - 32, y - 32, z - 32);
-						   data[id].position += glm::vec3(dist(gen), dist(gen), dist(gen));
-				   }
+    size_t id = 0;
+    auto edgeLength = std::ceil(std::cbrt(numParticles));
+	for (int32_t x = 0; x < edgeLength; ++x) {
+        for (int32_t y = 0; y < edgeLength; ++y) {
+            for (int32_t z = 0; z < edgeLength && id < numParticles; ++z, ++id) {
+                data[id].position = glm::vec3(x - 32, y - 32, z - 32);
+                data[id].position += glm::vec3(dist(gen), dist(gen), dist(gen));
+            }
+        }
+    }
 	std::shuffle(data, data + numParticles, gen);
 }
 

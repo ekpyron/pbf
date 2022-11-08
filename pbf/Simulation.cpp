@@ -47,7 +47,7 @@ _particleKeys(initContext.context, particleData.size(), particleData.segments(),
 _gridDataBuffer(_context, 1, vk::BufferUsageFlagBits::eUniformBuffer|vk::BufferUsageFlagBits::eTransferDst, MemoryType::STATIC),
 _lambdaBuffer(initContext.context, particleData.size(), vk::BufferUsageFlagBits::eStorageBuffer, MemoryType::STATIC),
 _radixSort(_context, blockSize, getNumParticles() / blockSize, radixSortDescriptorSetLayout(), "shaders/particlesort"),
-_neighbourCellFinder(_context, GridData{}.numCells()),
+_neighbourCellFinder(_context, GridData{}.numCells(), getNumParticles()),
 _tempBuffer(_context, particleData.size(), 2, vk::BufferUsageFlagBits::eStorageBuffer|vk::BufferUsageFlagBits::eTransferSrc, MemoryType::STATIC)
 {
 	if (getNumParticles() % blockSize)

@@ -9,7 +9,7 @@ namespace pbf {
 class NeighbourCellFinder
 {
 public:
-	NeighbourCellFinder(ContextInterface& context, size_t numGridCells);
+	NeighbourCellFinder(ContextInterface& context, size_t numGridCells, size_t maxID);
 
 
 	static constexpr auto inputDescriptorSetLayout() {

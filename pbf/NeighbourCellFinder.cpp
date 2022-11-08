@@ -5,7 +5,7 @@
 namespace pbf {
 
 
-NeighbourCellFinder::NeighbourCellFinder(ContextInterface& context, size_t numGridCells):
+NeighbourCellFinder::NeighbourCellFinder(ContextInterface& context, size_t numGridCells, size_t maxID):
 _gridBoundaryBuffer(context, numGridCells, vk::BufferUsageFlagBits::eStorageBuffer|vk::BufferUsageFlagBits::eTransferDst, MemoryType::STATIC)
 {
 	auto& cache = context.cache();
@@ -53,7 +53,8 @@ _gridBoundaryBuffer(context, numGridCells, vk::BufferUsageFlagBits::eStorageBuff
 					}),
 				.entryPoint = "main",
 				.specialization = {
-					Specialization<uint32_t>{.constantID = 0, .value = blockSize}
+					Specialization<uint32_t>{.constantID = 0, .value = blockSize},
+                    Specialization<uint32_t>{.constantID = 1, .value = static_cast<uint32_t>(maxID)}
 				}
 			},
 			.pipelineLayout = neighbourCellPipelineLayout,

@@ -3,6 +3,7 @@
 #extension GL_KHR_shader_subgroup_basic : enable
 
 layout (local_size_x_id = 0, local_size_y = 1, local_size_z = 1) in;
+layout (constant_id = 1) const int MAX_ID = 1;
 
 struct ParticleData {
     vec3 position;
@@ -45,7 +46,7 @@ void main (void)
         grid[GetGridIndex(particles[0].position)].startIndex = 0;
         //uint maxID = gl_NumWorkGroups.x * gl_WorkGroupSize.x;
         //grid[GetGridIndex(GRID_MAX)].endIndex = maxID;
-        grid[GetGridIndex(particles[32*32*32 - 1].position)].endIndex = 32*32*32;
+        grid[GetGridIndex(particles[MAX_ID - 1].position)].endIndex = MAX_ID;
         return;
     }
 
