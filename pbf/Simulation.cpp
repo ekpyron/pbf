@@ -500,14 +500,28 @@ void Simulation::run(vk::CommandBuffer buf, float timestep)
 	}, {}, {});
 
 
+
+	std::vector<descriptors::DescriptorSetBinding> initInfos {
+		_particleKeys.segment(_context.renderer().currentFrameSync()),
+		_gridDataBuffer.fullBufferInfo(),
+		_tempBuffer.segment(1)
+	};
+	std::vector<descriptors::DescriptorSetBinding> pingInfos {
+		_tempBuffer.segment(0),
+		_gridDataBuffer.fullBufferInfo(),
+		_tempBuffer.segment(1)
+	};
+	std::vector<descriptors::DescriptorSetBinding> pongInfos {
+		_tempBuffer.segment(1),
+		_gridDataBuffer.fullBufferInfo(),
+		_tempBuffer.segment(0)
+	};
+
 	// TODO: adjust neighbourCellFinderInputInfos according to expected sortResult
 	auto sortResult = _radixSort.stage(
 		buf,
 		30,
-		_particleKeys.segment(_context.renderer().currentFrameSync()),
-		_tempBuffer.segment(0),
-		_tempBuffer.segment(1),
-		_gridDataBuffer.fullBufferInfo()
+		initInfos, pingInfos, pongInfos
 	);
 
 	size_t pingBufferSegment = sortResult == RadixSort::Result::InPingBuffer ? 0 : 1;

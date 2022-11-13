@@ -12,6 +12,7 @@ namespace descriptors {
 class DescriptorSetLayout;
 class ShaderModule;
 class ComputePipeline;
+using DescriptorSetBinding = std::variant<vk::DescriptorBufferInfo>;
 }
 
 class ContextInterface;
@@ -38,10 +39,9 @@ public:
 	Result stage(
 		vk::CommandBuffer buf,
 		uint32_t _sortBits,
-		vk::DescriptorBufferInfo _initBufferInfo,
-		vk::DescriptorBufferInfo _pingBufferInfo,
-		vk::DescriptorBufferInfo _pongBufferInfo,
-		vk::DescriptorBufferInfo _gridDataBufferInfo
+		std::vector<descriptors::DescriptorSetBinding> initInfos,
+		std::vector<descriptors::DescriptorSetBinding> pingInfos,
+		std::vector<descriptors::DescriptorSetBinding> pongInfos
 	) const;
 private:
 	ContextInterface& context;

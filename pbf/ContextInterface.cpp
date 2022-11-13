@@ -1,5 +1,3 @@
-#pragma once
-
 #include <vulkan/vulkan.hpp>
 
 #include <pbf/ContextInterface.h>
@@ -20,7 +18,8 @@ void ContextInterface::bindPipeline(
 	buf.bindPipeline(bindPoint, pipeline);
 	auto const& setLayouts = pipelineLayout.descriptor().setLayouts;
 	std::vector<vk::DescriptorSet> descriptorSets;
-	for (size_t i = 0; i < setLayouts.size(); ++i)
+	size_t numDescriptorSets = std::min(setLayouts.size(), bindings.size());
+	for (size_t i = 0; i < numDescriptorSets; ++i)
 	{
 		descriptorSets.emplace_back(*cache().fetch(
 			descriptors::DescriptorSet{

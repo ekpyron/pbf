@@ -43,38 +43,60 @@ prefixSums(_context, numKeys, vk::BufferUsageFlagBits::eStorageBuffer, MemoryTyp
 
 	auto& cache = context.cache();
 
-	auto sortLayout = cache.fetch(descriptors::DescriptorSetLayout{
-		.createFlags = {},
-		.bindings = {{
-						 .binding = 1,
-						 .descriptorType = vk::DescriptorType::eStorageBuffer,
-						 .descriptorCount = 1,
-						 .stageFlags = vk::ShaderStageFlagBits::eCompute
-					 },{
-						 .binding = 2,
-						 .descriptorType = vk::DescriptorType::eStorageBuffer,
-						 .descriptorCount = 1,
-						 .stageFlags = vk::ShaderStageFlagBits::eCompute
-					 },{
-						 .binding = 3,
-						 .descriptorType = vk::DescriptorType::eStorageBuffer,
-						 .descriptorCount = 1,
-						 .stageFlags = vk::ShaderStageFlagBits::eCompute
-					 }},
-		PBF_DESC_DEBUG_NAME("Stub Descriptor Set Layout")
-	});
-	auto sortPipelineLayout = cache.fetch(
-		descriptors::PipelineLayout{
-			.setLayouts = {sortLayout, cache.fetch(_keyAndGlobalSortShaderDescriptors)},
-			.pushConstants = {
-				vk::PushConstantRange{
-					vk::ShaderStageFlagBits::eCompute,
-					0,
-					sizeof(PushConstants)
+	auto prescanAndGlobalortPipelineLayout = cache.fetch(
+	descriptors::PipelineLayout{
+		.setLayouts = {
+			cache.fetch(
+				descriptors::DescriptorSetLayout{
+					.createFlags = {},
+					.bindings = {{
+									 .binding = 0,
+									 .descriptorType = vk::DescriptorType::eStorageBuffer,
+									 .descriptorCount = 1,
+									 .stageFlags = vk::ShaderStageFlagBits::eCompute
+								 },
+								 {
+									 .binding = 1,
+									 .descriptorType = vk::DescriptorType::eStorageBuffer,
+									 .descriptorCount = 1,
+									 .stageFlags = vk::ShaderStageFlagBits::eCompute
+								 }},
+					PBF_DESC_DEBUG_NAME("global sort Set Layout")
 				}
-			},
-			PBF_DESC_DEBUG_NAME("prescan pipeline Layout")
-		});
+			),
+			cache.fetch(
+				descriptors::DescriptorSetLayout{
+					.createFlags = {},
+					.bindings = {{
+						.binding = 0,
+						.descriptorType = vk::DescriptorType::eStorageBuffer,
+						.descriptorCount = 1,
+						.stageFlags = vk::ShaderStageFlagBits::eCompute
+					},{
+						.binding = 1,
+						.descriptorType = vk::DescriptorType::eUniformBuffer,
+						.descriptorCount = 1,
+						.stageFlags = vk::ShaderStageFlagBits::eCompute
+					},{
+						.binding = 2,
+						.descriptorType = vk::DescriptorType::eStorageBuffer,
+						.descriptorCount = 1,
+						.stageFlags = vk::ShaderStageFlagBits::eCompute
+					}},
+					PBF_DESC_DEBUG_NAME("global sort and hash Particle Key Layout")
+				}
+			)
+		},
+		.pushConstants = {
+			vk::PushConstantRange{
+				vk::ShaderStageFlagBits::eCompute,
+				0,
+				sizeof(PushConstants)
+			}
+		},
+		PBF_DESC_DEBUG_NAME("prescan and global sort pipeline Layout")
+	});
+
 	prescanPipeline = cache.fetch(
 		descriptors::ComputePipeline{
 			.flags = {},
@@ -90,64 +112,33 @@ prefixSums(_context, numKeys, vk::BufferUsageFlagBits::eStorageBuffer, MemoryTyp
 					Specialization<uint32_t>{.constantID = 0, .value = blockSize / 2}
 				}
 			},
-			.pipelineLayout = cache.fetch(
-				descriptors::PipelineLayout{
-					.setLayouts = {
-						cache.fetch(
-							descriptors::DescriptorSetLayout{
-								.createFlags = {},
-								.bindings = {{
-												 .binding = 0,
-												 .descriptorType = vk::DescriptorType::eStorageBuffer,
-												 .descriptorCount = 1,
-												 .stageFlags = vk::ShaderStageFlagBits::eCompute
-											 },
-											 {
-												 .binding = 1,
-												 .descriptorType = vk::DescriptorType::eStorageBuffer,
-												 .descriptorCount = 1,
-												 .stageFlags = vk::ShaderStageFlagBits::eCompute
-											 }},
-								PBF_DESC_DEBUG_NAME("Prescan Set Layout")
-							}
-						),
-						cache.fetch(
-							descriptors::DescriptorSetLayout{
-								.createFlags = {},
-								.bindings = {{
-									.binding = 0,
-									.descriptorType = vk::DescriptorType::eStorageBuffer,
-									.descriptorCount = 1,
-									.stageFlags = vk::ShaderStageFlagBits::eCompute
-								}},
-								PBF_DESC_DEBUG_NAME("Prescan Hash Particle Key Layout")
-							}
-						),
-						cache.fetch(
-							descriptors::DescriptorSetLayout{
-								.createFlags = {},
-								.bindings = {{
-									.binding = 0,
-									.descriptorType = vk::DescriptorType::eUniformBuffer,
-									.descriptorCount = 1,
-									.stageFlags = vk::ShaderStageFlagBits::eCompute
-								}},
-								PBF_DESC_DEBUG_NAME("Prescan Hash Grid Data Layout")
-							}
-						),
-					},
-					.pushConstants = {
-						vk::PushConstantRange{
-							vk::ShaderStageFlagBits::eCompute,
-							0,
-							sizeof(PushConstants)
-						}
-					},
-					PBF_DESC_DEBUG_NAME("prescan pipeline Layout")
-				}),
+			.pipelineLayout = prescanAndGlobalortPipelineLayout,
 			PBF_DESC_DEBUG_NAME("prescan pipeline")
 		}
 	);
+	auto scanAndAddBlockSumLayout = cache.fetch(descriptors::PipelineLayout{
+		.setLayouts = {
+			cache.fetch(
+				descriptors::DescriptorSetLayout{
+					.createFlags = {},
+					.bindings = {{
+									 .binding = 0,
+									 .descriptorType = vk::DescriptorType::eStorageBuffer,
+									 .descriptorCount = 1,
+									 .stageFlags = vk::ShaderStageFlagBits::eCompute
+								 },
+								 {
+									 .binding = 1,
+									 .descriptorType = vk::DescriptorType::eStorageBuffer,
+									 .descriptorCount = 1,
+									 .stageFlags = vk::ShaderStageFlagBits::eCompute
+								 }},
+					PBF_DESC_DEBUG_NAME("scan and add block sum set Layout")
+				}
+			)
+		},
+		PBF_DESC_DEBUG_NAME("scan and add block sum pipeline Layout")
+	});
 	scanPipeline = cache.fetch(
 		descriptors::ComputePipeline{
 			.flags = {},
@@ -163,30 +154,7 @@ prefixSums(_context, numKeys, vk::BufferUsageFlagBits::eStorageBuffer, MemoryTyp
 					Specialization<uint32_t>{.constantID = 0, .value = blockSize / 2 }
 				}
 			},
-			.pipelineLayout = cache.fetch(
-				descriptors::PipelineLayout{
-					.setLayouts = {
-						cache.fetch(
-							descriptors::DescriptorSetLayout{
-								.createFlags = {},
-								.bindings = {{
-												 .binding = 0,
-												 .descriptorType = vk::DescriptorType::eStorageBuffer,
-												 .descriptorCount = 1,
-												 .stageFlags = vk::ShaderStageFlagBits::eCompute
-											 },
-											 {
-												 .binding = 1,
-												 .descriptorType = vk::DescriptorType::eStorageBuffer,
-												 .descriptorCount = 1,
-												 .stageFlags = vk::ShaderStageFlagBits::eCompute
-											 }},
-								PBF_DESC_DEBUG_NAME("Prescan Set Layout")
-							}
-						)
-					},
-					PBF_DESC_DEBUG_NAME("scan pipeline Layout")
-				}),
+			.pipelineLayout = scanAndAddBlockSumLayout,
 			PBF_DESC_DEBUG_NAME("scan pipeline")
 		}
 	);
@@ -206,30 +174,7 @@ prefixSums(_context, numKeys, vk::BufferUsageFlagBits::eStorageBuffer, MemoryTyp
 					Specialization<uint32_t>{.constantID = 0, .value = blockSize }
 				}
 			},
-			.pipelineLayout = cache.fetch(
-				descriptors::PipelineLayout{
-					.setLayouts = {
-						cache.fetch(
-							descriptors::DescriptorSetLayout{
-								.createFlags = {},
-								.bindings = {{
-												 .binding = 0,
-												 .descriptorType = vk::DescriptorType::eStorageBuffer,
-												 .descriptorCount = 1,
-												 .stageFlags = vk::ShaderStageFlagBits::eCompute
-											 },
-											 {
-												 .binding = 1,
-												 .descriptorType = vk::DescriptorType::eStorageBuffer,
-												 .descriptorCount = 1,
-												 .stageFlags = vk::ShaderStageFlagBits::eCompute
-											 }},
-								PBF_DESC_DEBUG_NAME("Add block sum Set Layout")
-							}
-						)
-					},
-					PBF_DESC_DEBUG_NAME("add block sum pipeline Layout")
-				}),
+			.pipelineLayout = scanAndAddBlockSumLayout,
 			PBF_DESC_DEBUG_NAME("add block sum pipeline")
 		}
 	);
@@ -250,153 +195,18 @@ prefixSums(_context, numKeys, vk::BufferUsageFlagBits::eStorageBuffer, MemoryTyp
 					Specialization<uint32_t>{.constantID = 0, .value = blockSize }
 				}
 			},
-			.pipelineLayout = cache.fetch(
-				descriptors::PipelineLayout{
-					.setLayouts = {
-						cache.fetch(
-							descriptors::DescriptorSetLayout{
-								.createFlags = {},
-								.bindings = {{
-												 .binding = 0,
-												 .descriptorType = vk::DescriptorType::eStorageBuffer,
-												 .descriptorCount = 1,
-												 .stageFlags = vk::ShaderStageFlagBits::eCompute
-											 },
-											 {
-												 .binding = 1,
-												 .descriptorType = vk::DescriptorType::eStorageBuffer,
-												 .descriptorCount = 1,
-												 .stageFlags = vk::ShaderStageFlagBits::eCompute
-											 }},
-								PBF_DESC_DEBUG_NAME("global sort Set Layout")
-							}
-						),
-						cache.fetch(
-							descriptors::DescriptorSetLayout{
-								.createFlags = {},
-								.bindings = {{
-									.binding = 0,
-									.descriptorType = vk::DescriptorType::eStorageBuffer,
-									.descriptorCount = 1,
-									.stageFlags = vk::ShaderStageFlagBits::eCompute
-								}},
-								PBF_DESC_DEBUG_NAME("global sort Hash Particle Key Layout")
-							}
-						),
-						cache.fetch(
-							descriptors::DescriptorSetLayout{
-								.createFlags = {},
-								.bindings = {{
-									.binding = 0,
-									.descriptorType = vk::DescriptorType::eUniformBuffer,
-									.descriptorCount = 1,
-									.stageFlags = vk::ShaderStageFlagBits::eCompute
-								}},
-								PBF_DESC_DEBUG_NAME("global sort Hash Grid Data Layout")
-							}
-						),
-						cache.fetch(
-							descriptors::DescriptorSetLayout{
-								.createFlags = {},
-								.bindings = {{
-									.binding = 0,
-									.descriptorType = vk::DescriptorType::eStorageBuffer,
-									.descriptorCount = 1,
-									.stageFlags = vk::ShaderStageFlagBits::eCompute
-								}},
-								PBF_DESC_DEBUG_NAME("global sort output Data Layout")
-							}
-						),
-					},
-					.pushConstants = {
-						vk::PushConstantRange{
-							vk::ShaderStageFlagBits::eCompute,
-							0,
-							sizeof(PushConstants)
-						}
-					},
-					PBF_DESC_DEBUG_NAME("global sort pipeline Layout")
-				}),
+			.pipelineLayout = prescanAndGlobalortPipelineLayout,
 			PBF_DESC_DEBUG_NAME("global sort pipeline")
 		}
 	);
-
-	prescanParams = context.device().allocateDescriptorSets(vk::DescriptorSetAllocateInfo{
-		.descriptorPool = context.descriptorPool(),
-		.descriptorSetCount = 1,
-		.pSetLayouts = &*sortLayout
-	}).front();
-	{
-		auto descriptorInfos = {
-			vk::DescriptorBufferInfo{prefixSums.buffer(), 0, prefixSums.deviceSize()},
-			vk::DescriptorBufferInfo{prescanBlockSum.buffer(), 0, prescanBlockSum.deviceSize()}
-		};
-		context.device().updateDescriptorSets({vk::WriteDescriptorSet{
-			.dstSet = prescanParams,
-			.dstBinding = 1,
-			.dstArrayElement = 0,
-			.descriptorCount = static_cast<uint32_t>(descriptorInfos.size()),
-			.descriptorType = vk::DescriptorType::eStorageBuffer,
-			.pImageInfo = nullptr,
-			.pBufferInfo = &*descriptorInfos.begin(),
-			.pTexelBufferView = nullptr
-		}}, {});
-	}
-
-	std::vector sortLayouts(blockSums.size() - 1, *sortLayout);
-	scanParams = context.device().allocateDescriptorSets(vk::DescriptorSetAllocateInfo{
-		.descriptorPool = context.descriptorPool(),
-		.descriptorSetCount = static_cast<uint32_t>(sortLayouts.size()),
-		.pSetLayouts = sortLayouts.data()
-	});
-	for (size_t i = 0; i < blockSums.size() - 1; ++i)
-	{
-		auto descriptorInfos = {
-			vk::DescriptorBufferInfo{blockSums[i].buffer(), 0, blockSums[i].deviceSize()},
-			vk::DescriptorBufferInfo{blockSums[i + 1].buffer(), 0, blockSums[i + 1].deviceSize()}
-		};
-		context.device().updateDescriptorSets({vk::WriteDescriptorSet{
-			.dstSet = scanParams[i],
-			.dstBinding = 1,
-			.dstArrayElement = 0,
-			.descriptorCount = static_cast<uint32_t>(descriptorInfos.size()),
-			.descriptorType = vk::DescriptorType::eStorageBuffer,
-			.pImageInfo = nullptr,
-			.pBufferInfo = &*descriptorInfos.begin(),
-			.pTexelBufferView = nullptr
-		}}, {});
-	}
-
-	globalSortParams = context.device().allocateDescriptorSets(vk::DescriptorSetAllocateInfo{
-		.descriptorPool = context.descriptorPool(),
-		.descriptorSetCount = 1,
-		.pSetLayouts = &*sortLayout
-	}).front();
-	{
-		auto descriptorInfos = {
-			vk::DescriptorBufferInfo{prefixSums.buffer(), 0, prefixSums.deviceSize()},
-			vk::DescriptorBufferInfo{prescanBlockSum.buffer(), 0, prescanBlockSum.deviceSize()},
-		};
-		context.device().updateDescriptorSets({vk::WriteDescriptorSet{
-			.dstSet = globalSortParams,
-			.dstBinding = 1,
-			.dstArrayElement = 0,
-			.descriptorCount = static_cast<uint32_t>(descriptorInfos.size()),
-			.descriptorType = vk::DescriptorType::eStorageBuffer,
-			.pImageInfo = nullptr,
-			.pBufferInfo = &*descriptorInfos.begin(),
-			.pTexelBufferView = nullptr
-		}}, {});
-	}
 }
 
 RadixSort::Result RadixSort::stage(
 	vk::CommandBuffer buf,
 	uint32_t _sortBits,
-	vk::DescriptorBufferInfo _initBufferInfo,
-	vk::DescriptorBufferInfo _pingBufferInfo,
-	vk::DescriptorBufferInfo _pongBufferInfo,
-	vk::DescriptorBufferInfo _gridDataBufferInfo
+	std::vector<descriptors::DescriptorSetBinding> initInfos,
+	std::vector<descriptors::DescriptorSetBinding> pingInfos,
+	std::vector<descriptors::DescriptorSetBinding> pongInfos
 ) const
 {
 	bool isSwapped = false;
@@ -420,13 +230,7 @@ RadixSort::Result RadixSort::stage(
 					prefixSums.fullBufferInfo(),
 					prescanBlockSum.fullBufferInfo()
 				},
-				{ // set 1
-					(bit == 0) ? _initBufferInfo : _pingBufferInfo
-				},
-				{ // set 2
-					// grid stuff
-					_gridDataBufferInfo
-				}
+				(bit == 0) ? initInfos : pingInfos
 			}
 		);
 
@@ -494,17 +298,7 @@ RadixSort::Result RadixSort::stage(
 					prefixSums.fullBufferInfo(),
 					prescanBlockSum.fullBufferInfo()
 				},
-				{ // set 1
-					{(bit == 0) ? _initBufferInfo: _pingBufferInfo}
-				},
-				{ // set 2
-					// grid stuff
-					_gridDataBufferInfo
-				},
-				{ // set 3
-					// grid stuff
-					_pongBufferInfo
-				}
+				(bit == 0) ? initInfos : pingInfos
 			}
 		);
 		buf.pushConstants(*(globalSortPipeline.descriptor().pipelineLayout), vk::ShaderStageFlagBits::eCompute, 0, sizeof(pushConstants), &pushConstants);
@@ -518,7 +312,7 @@ RadixSort::Result RadixSort::stage(
 			}
 		}, {}, {});
 
-		std::swap(_pingBufferInfo, _pongBufferInfo);
+		std::swap(pingInfos, pongInfos);
 		isSwapped = !isSwapped;
 	} // END OF BIT LOOP
 
