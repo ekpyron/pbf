@@ -21,7 +21,7 @@ RadixSort::RadixSort(
 	ContextInterface& _context,
 	uint32_t _blockSize,
 	uint32_t _numBlocks,
-	descriptors::DescriptorSetLayout const& _keyAndGlobalSortShaderDescriptors,
+	std::vector<descriptors::DescriptorSetLayout> const& _keyAndGlobalSortShaderDescriptorLayouts,
 	std::string_view _shaderPrefix
 ):
 context(_context), blockSize(_blockSize), numBlocks(_numBlocks),
@@ -43,50 +43,32 @@ prefixSums(_context, numKeys, vk::BufferUsageFlagBits::eStorageBuffer, MemoryTyp
 
 	auto& cache = context.cache();
 
+	std::vector<CacheReference<descriptors::DescriptorSetLayout>> setLayouts{
+		cache.fetch(
+			descriptors::DescriptorSetLayout{
+				.createFlags = {},
+				.bindings = {{
+								 .binding = 0,
+								 .descriptorType = vk::DescriptorType::eStorageBuffer,
+								 .descriptorCount = 1,
+								 .stageFlags = vk::ShaderStageFlagBits::eCompute
+							 },
+							 {
+								 .binding = 1,
+								 .descriptorType = vk::DescriptorType::eStorageBuffer,
+								 .descriptorCount = 1,
+								 .stageFlags = vk::ShaderStageFlagBits::eCompute
+							 }},
+				PBF_DESC_DEBUG_NAME("global sort Set Layout")
+			}
+		)
+	};
+	for (auto const& layoutDescriptor: _keyAndGlobalSortShaderDescriptorLayouts)
+		setLayouts.emplace_back(cache.fetch(layoutDescriptor));
+
 	auto prescanAndGlobalortPipelineLayout = cache.fetch(
 	descriptors::PipelineLayout{
-		.setLayouts = {
-			cache.fetch(
-				descriptors::DescriptorSetLayout{
-					.createFlags = {},
-					.bindings = {{
-									 .binding = 0,
-									 .descriptorType = vk::DescriptorType::eStorageBuffer,
-									 .descriptorCount = 1,
-									 .stageFlags = vk::ShaderStageFlagBits::eCompute
-								 },
-								 {
-									 .binding = 1,
-									 .descriptorType = vk::DescriptorType::eStorageBuffer,
-									 .descriptorCount = 1,
-									 .stageFlags = vk::ShaderStageFlagBits::eCompute
-								 }},
-					PBF_DESC_DEBUG_NAME("global sort Set Layout")
-				}
-			),
-			cache.fetch(
-				descriptors::DescriptorSetLayout{
-					.createFlags = {},
-					.bindings = {{
-						.binding = 0,
-						.descriptorType = vk::DescriptorType::eStorageBuffer,
-						.descriptorCount = 1,
-						.stageFlags = vk::ShaderStageFlagBits::eCompute
-					},{
-						.binding = 1,
-						.descriptorType = vk::DescriptorType::eUniformBuffer,
-						.descriptorCount = 1,
-						.stageFlags = vk::ShaderStageFlagBits::eCompute
-					},{
-						.binding = 2,
-						.descriptorType = vk::DescriptorType::eStorageBuffer,
-						.descriptorCount = 1,
-						.stageFlags = vk::ShaderStageFlagBits::eCompute
-					}},
-					PBF_DESC_DEBUG_NAME("global sort and hash Particle Key Layout")
-				}
-			)
-		},
+		.setLayouts = setLayouts,
 		.pushConstants = {
 			vk::PushConstantRange{
 				vk::ShaderStageFlagBits::eCompute,

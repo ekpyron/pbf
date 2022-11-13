@@ -148,6 +148,7 @@ ComputeShaderUnitTestContext::ComputeShaderUnitTestContext() {
 	}).front();
 
 	_descriptorPool = _device->createDescriptorPoolUnique(vk::DescriptorPoolCreateInfo{
+		.flags = vk::DescriptorPoolCreateFlagBits::eFreeDescriptorSet,
 		.maxSets = maxGlobalDescriptorSets,
 		.poolSizeCount = static_cast<std::uint32_t>(globalDescriptorPoolSizes().size()),
 		.pPoolSizes = globalDescriptorPoolSizes().data()

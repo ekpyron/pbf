@@ -1081,28 +1081,26 @@ TEST_CASE_METHOD(ComputeShaderUnitTest, "Compute Shader Sort Test", "[sort] ")
 
 
 	using namespace pbf;
-	descriptors::DescriptorSetLayout keyAndGlobalSortDescriptorSet{
+	std::vector<descriptors::DescriptorSetLayout> keyAndGlobalSortDescriptorSetLayout{descriptors::DescriptorSetLayout{
 		.createFlags = {},
-		.bindings = {
-			{
-				.binding = 0,
-				.descriptorType = vk::DescriptorType::eStorageBuffer,
-				.descriptorCount = 1,
-				.stageFlags = vk::ShaderStageFlagBits::eCompute
-			},
-			{
-				.binding = 1,
-				.descriptorType = vk::DescriptorType::eStorageBuffer,
-				.descriptorCount = 1,
-				.stageFlags = vk::ShaderStageFlagBits::eCompute
-			}
-		}
-	};
+		.bindings = {{
+						 .binding = 0,
+						 .descriptorType = vk::DescriptorType::eStorageBuffer,
+						 .descriptorCount = 1,
+						 .stageFlags = vk::ShaderStageFlagBits::eCompute
+					 },{
+						 .binding = 1,
+						 .descriptorType = vk::DescriptorType::eStorageBuffer,
+						 .descriptorCount = 1,
+						 .stageFlags = vk::ShaderStageFlagBits::eCompute
+					 }},
+		PBF_DESC_DEBUG_NAME("unit test key and global sort descriptor set layout")
+	}};
 	RadixSort radixSort{
 		*this,
 		blockSize,
 		numKeys / blockSize,
-		keyAndGlobalSortDescriptorSet,
+		keyAndGlobalSortDescriptorSetLayout,
 		"shaders/unittestsort"
 	};
 
@@ -1127,54 +1125,13 @@ TEST_CASE_METHOD(ComputeShaderUnitTest, "Compute Shader Sort Test", "[sort] ")
 		}
 	}
 
-	vk::DescriptorSet pingDescriptorSet, pongDescriptorSet;
-	{
-		std::vector pingPongLayouts(2, *cache().fetch(keyAndGlobalSortDescriptorSet));
-		auto descriptorSets = device().allocateDescriptorSets(vk::DescriptorSetAllocateInfo{
-			.descriptorPool = descriptorPool(),
-			.descriptorSetCount = size32(pingPongLayouts),
-			.pSetLayouts = pingPongLayouts.data()
-		});
-		pingDescriptorSet = descriptorSets.front();
-		pongDescriptorSet = descriptorSets.back();
-	}
+	std::vector<descriptors::DescriptorSetBinding> pingInfos = {keysBuffer.fullBufferInfo(), resultBuffer.fullBufferInfo()};
+	std::vector<descriptors::DescriptorSetBinding> pongInfos = {resultBuffer.fullBufferInfo(), keysBuffer.fullBufferInfo()};
 
-	{
-		auto descriptorInfos = {
-			vk::DescriptorBufferInfo{keysBuffer.buffer(), 0, keysBuffer.deviceSize()},
-			vk::DescriptorBufferInfo{resultBuffer.buffer(), 0, resultBuffer.deviceSize()}
-		};
-		device().updateDescriptorSets({vk::WriteDescriptorSet{
-			.dstSet = pingDescriptorSet,
-			.dstBinding = 0,
-			.dstArrayElement = 0,
-			.descriptorCount = static_cast<uint32_t>(descriptorInfos.size()),
-			.descriptorType = vk::DescriptorType::eStorageBuffer,
-			.pImageInfo = nullptr,
-			.pBufferInfo = &*descriptorInfos.begin(),
-			.pTexelBufferView = nullptr
-		}}, {});
-	}
-	{
-		auto descriptorInfos = {
-			vk::DescriptorBufferInfo{resultBuffer.buffer(), 0, resultBuffer.deviceSize()},
-			vk::DescriptorBufferInfo{keysBuffer.buffer(), 0, keysBuffer.deviceSize()}
-		};
-		device().updateDescriptorSets({vk::WriteDescriptorSet{
-			.dstSet = pongDescriptorSet,
-			.dstBinding = 0,
-			.dstArrayElement = 0,
-			.descriptorCount = static_cast<uint32_t>(descriptorInfos.size()),
-			.descriptorType = vk::DescriptorType::eStorageBuffer,
-			.pImageInfo = nullptr,
-			.pBufferInfo = &*descriptorInfos.begin(),
-			.pTexelBufferView = nullptr
-		}}, {});
-	}
 
 	RadixSort::Result result;
 	run([&](vk::CommandBuffer buf) {
-		result = radixSort.stage(buf, sortBitCount, pingDescriptorSet, pingDescriptorSet, pongDescriptorSet);
+		result = radixSort.stage(buf, sortBitCount, pingInfos, pingInfos, pongInfos);
 	});
 
 	{

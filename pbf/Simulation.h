@@ -54,7 +54,6 @@ private:
 	RadixSort _radixSort;
 	NeighbourCellFinder _neighbourCellFinder;
 
-	std::vector<vk::DescriptorSet> initDescriptorSets;
 	std::array<vk::DescriptorSet, 2> neighbourCellFinderInputDescriptorSets;
 	vk::DescriptorSet lambdaDescriptorSet;
 

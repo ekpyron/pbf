@@ -72,6 +72,7 @@ private:
 	std::uint32_t _queueFamilyIndex = -1u;
 	vk::UniqueDevice _device;
 	vk::Queue _queue;
+	vk::UniqueDescriptorPool _descriptorPool;
 	Cache _cache { *this, 100 };
 
 	static const auto &globalDescriptorPoolSizes() {
@@ -84,7 +85,6 @@ private:
 	}
 	static constexpr std::uint32_t maxGlobalDescriptorSets = 1024;
 
-	vk::UniqueDescriptorPool _descriptorPool;
 	vk::UniqueCommandPool _commandPool;
 	vk::CommandBuffer _commandBuffer;
 	std::unique_ptr<MemoryManager> _memoryManager;

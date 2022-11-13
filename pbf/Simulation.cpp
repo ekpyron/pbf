@@ -7,37 +7,27 @@
 namespace pbf {
 
 namespace {
-constexpr auto radixSortDescriptorSetLayout() {
-	return descriptors::DescriptorSetLayout{
+constexpr auto radixSortDescriptorSetLayoutDescriptors() {
+	return std::vector<descriptors::DescriptorSetLayout>{descriptors::DescriptorSetLayout{
 		.createFlags = {},
-		.bindings = {
-			{
-				.binding = 0,
-				.descriptorType = vk::DescriptorType::eStorageBuffer,
-				.descriptorCount = 1,
-				.stageFlags = vk::ShaderStageFlagBits::eCompute
-			},
-			{
-				.binding = 1,
-				.descriptorType = vk::DescriptorType::eStorageBuffer,
-				.descriptorCount = 1,
-				.stageFlags = vk::ShaderStageFlagBits::eCompute
-			},
-			{
-				.binding = 2,
-				.descriptorType = vk::DescriptorType::eUniformBuffer,
-				.descriptorCount = 1,
-				.stageFlags = vk::ShaderStageFlagBits::eCompute
-			},
-			{
-				.binding = 3,
-				.descriptorType = vk::DescriptorType::eStorageBuffer,
-				.descriptorCount = 1,
-				.stageFlags = vk::ShaderStageFlagBits::eCompute
-			}
-		},
-		PBF_DESC_DEBUG_NAME("Simulation particle sort descriptor set layout")
-	};
+		.bindings = {{
+						 .binding = 0,
+						 .descriptorType = vk::DescriptorType::eStorageBuffer,
+						 .descriptorCount = 1,
+						 .stageFlags = vk::ShaderStageFlagBits::eCompute
+					 },{
+						 .binding = 1,
+						 .descriptorType = vk::DescriptorType::eUniformBuffer,
+						 .descriptorCount = 1,
+						 .stageFlags = vk::ShaderStageFlagBits::eCompute
+					 },{
+						 .binding = 2,
+						 .descriptorType = vk::DescriptorType::eStorageBuffer,
+						 .descriptorCount = 1,
+						 .stageFlags = vk::ShaderStageFlagBits::eCompute
+					 }},
+		PBF_DESC_DEBUG_NAME("global sort and hash Particle Key Layout")
+	}};
 }
 }
 
@@ -47,7 +37,7 @@ _particleData(particleData),
 _particleKeys(initContext.context, particleData.size(), particleData.segments(), vk::BufferUsageFlagBits::eStorageBuffer|vk::BufferUsageFlagBits::eTransferDst, MemoryType::STATIC),
 _gridDataBuffer(_context, 1, vk::BufferUsageFlagBits::eUniformBuffer|vk::BufferUsageFlagBits::eTransferDst, MemoryType::STATIC),
 _lambdaBuffer(initContext.context, particleData.size(), vk::BufferUsageFlagBits::eStorageBuffer, MemoryType::STATIC),
-_radixSort(_context, blockSize, getNumParticles() / blockSize, radixSortDescriptorSetLayout(), "shaders/particlesort"),
+_radixSort(_context, blockSize, getNumParticles() / blockSize, radixSortDescriptorSetLayoutDescriptors(), "shaders/particlesort"),
 _neighbourCellFinder(_context, GridData{}.numCells(), getNumParticles()),
 _tempBuffer(_context, particleData.size(), 2, vk::BufferUsageFlagBits::eStorageBuffer|vk::BufferUsageFlagBits::eTransferSrc, MemoryType::STATIC)
 {
@@ -69,14 +59,6 @@ _tempBuffer(_context, particleData.size(), 2, vk::BufferUsageFlagBits::eStorageB
 		PBF_DESC_DEBUG_NAME("Simulation: single storage buffer descriptor set")
 	});
 	{
-		std::vector pingPongLayouts(particleData.segments(), *_context.cache().fetch(radixSortDescriptorSetLayout()));
-		initDescriptorSets = _context.device().allocateDescriptorSets(vk::DescriptorSetAllocateInfo{
-			.descriptorPool = _context.descriptorPool(),
-			.descriptorSetCount = size32(pingPongLayouts),
-			.pSetLayouts = pingPongLayouts.data()
-		});
-	}
-	{
 		std::vector layouts(2, *_context.cache().fetch(NeighbourCellFinder::inputDescriptorSetLayout()));
 		auto sets = _context.device().allocateDescriptorSets(vk::DescriptorSetAllocateInfo{
 			.descriptorPool = _context.descriptorPool(),
@@ -92,33 +74,6 @@ _tempBuffer(_context, particleData.size(), 2, vk::BufferUsageFlagBits::eStorageB
 		.offset = 0u,
 		.range = sizeof(GridData)
 	};
-	for (size_t i = 0; i < _particleKeys.segments(); ++i)
-	{
-		auto initDescriptorSet = initDescriptorSets[i];
-		auto initDescriptorInfos = {
-			_particleKeys.segment(i),
-			_tempBuffer.segment(1)
-		};
-		_context.device().updateDescriptorSets({vk::WriteDescriptorSet{
-			.dstSet = initDescriptorSet,
-			.dstBinding = 0,
-			.dstArrayElement = 0,
-			.descriptorCount = static_cast<uint32_t>(initDescriptorInfos.size()),
-			.descriptorType = vk::DescriptorType::eStorageBuffer,
-			.pImageInfo = nullptr,
-			.pBufferInfo = &*initDescriptorInfos.begin(),
-			.pTexelBufferView = nullptr
-		}, vk::WriteDescriptorSet{
-			.dstSet = initDescriptorSet,
-			.dstBinding = 2,
-			.dstArrayElement = 0,
-			.descriptorCount = 1,
-			.descriptorType = vk::DescriptorType::eUniformBuffer,
-			.pImageInfo = nullptr,
-			.pBufferInfo = &gridDataBufferInfo,
-			.pTexelBufferView = nullptr
-		}}, {});
-	}
 
 	{
 		auto& gridDataInitBuffer = initContext.createInitData<Buffer<GridData>>(

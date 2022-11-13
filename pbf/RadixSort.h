@@ -28,7 +28,7 @@ public:
 		ContextInterface& _context,
 		uint32_t _blockSize,
 		uint32_t _numBlocks,
-		descriptors::DescriptorSetLayout const& _keyAndGlobalSortShaderDescriptors,
+		std::vector<descriptors::DescriptorSetLayout> const& _keyAndGlobalSortShaderDescriptorLayouts,
 		std::string_view _shaderPrefix
 	);
 	RadixSort(const RadixSort&) = delete;

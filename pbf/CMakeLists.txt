@@ -9,11 +9,11 @@ add_library(pbf_common STATIC
         descriptors/DescriptorSet.h descriptors/DescriptorSet.cpp
         Buffer.cpp Buffer.h MemoryManager.cpp MemoryManager.h RadixSort.cpp RadixSort.h
         NeighbourCellFinder.cpp NeighbourCellFinder.h Selection.cpp Selection.h
-        SPH.cpp SPH.h)
+        SPH.cpp SPH.h ContextInterface.h ContextInterface.cpp)
 target_include_directories(pbf_common PUBLIC ${CMAKE_CURRENT_LIST_DIR}/..)
 target_link_libraries(pbf_common PUBLIC fmt Vulkan::Vulkan spdlog_header_only glm crampl Threads::Threads)
 
-set(SOURCES main.cpp glfw.h Context.cpp Context.h ContextInterface.h ContextInterface.cpp common.h Swapchain.cpp Swapchain.h Renderer.cpp Renderer.h
+set(SOURCES main.cpp glfw.h Context.cpp Context.h common.h Swapchain.cpp Swapchain.h Renderer.cpp Renderer.h
         Scene.cpp Scene.h Camera.cpp Camera.h IndirectCommandsBuffer.h IndirectCommandsBuffer.cpp Quad.cpp Quad.h
         Simulation.cpp Simulation.h Image.cpp Image.h GUI.cpp GUI.h)
 
