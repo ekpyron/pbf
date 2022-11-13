@@ -58,22 +58,6 @@ _tempBuffer(_context, particleData.size(), 2, vk::BufferUsageFlagBits::eStorageB
 		},
 		PBF_DESC_DEBUG_NAME("Simulation: single storage buffer descriptor set")
 	});
-	{
-		std::vector layouts(2, *_context.cache().fetch(NeighbourCellFinder::inputDescriptorSetLayout()));
-		auto sets = _context.device().allocateDescriptorSets(vk::DescriptorSetAllocateInfo{
-			.descriptorPool = _context.descriptorPool(),
-			.descriptorSetCount = size32(layouts),
-			.pSetLayouts = layouts.data()
-		});
-		neighbourCellFinderInputDescriptorSets[0] = sets[0];
-		neighbourCellFinderInputDescriptorSets[1] = sets[1];
-	}
-
-	vk::DescriptorBufferInfo gridDataBufferInfo{
-		.buffer = _gridDataBuffer.buffer(),
-		.offset = 0u,
-		.range = sizeof(GridData)
-	};
 
 	{
 		auto& gridDataInitBuffer = initContext.createInitData<Buffer<GridData>>(
@@ -120,52 +104,6 @@ _tempBuffer(_context, particleData.size(), 2, vk::BufferUsageFlagBits::eStorageB
 			},
 			{}, {}
 		);
-	}
-
-	{
-		std::vector layouts(2, *singleStorageBufferDescriptorSetLayout);
-		auto sets = _context.device().allocateDescriptorSets(vk::DescriptorSetAllocateInfo{
-			.descriptorPool = _context.descriptorPool(),
-			.descriptorSetCount = size32(layouts),
-			.pSetLayouts = layouts.data()
-		});
-		_tempBufferDescriptorSets[0] = sets[0];
-		_tempBufferDescriptorSets[1] = sets[1];
-	}
-
-	for(size_t i = 0; i < 2; ++i)
-	{
-		auto neighbourCellFinderInputInfos = {
-			_tempBuffer.segment(i) // TODO may also be zero! Depending on sort bits.
-		};
-		_context.device().updateDescriptorSets({vk::WriteDescriptorSet{
-			.dstSet = neighbourCellFinderInputDescriptorSets[i],
-			.dstBinding = 0,
-			.dstArrayElement = 0,
-			.descriptorCount = 1,
-			.descriptorType = vk::DescriptorType::eStorageBuffer,
-			.pImageInfo = nullptr,
-			.pBufferInfo = &*neighbourCellFinderInputInfos.begin(),
-			.pTexelBufferView = nullptr
-		},vk::WriteDescriptorSet{
-			.dstSet = _tempBufferDescriptorSets[i],
-			.dstBinding = 0,
-			.dstArrayElement = 0,
-			.descriptorCount = 1,
-			.descriptorType = vk::DescriptorType::eStorageBuffer,
-			.pImageInfo = nullptr,
-			.pBufferInfo = &*neighbourCellFinderInputInfos.begin(),
-			.pTexelBufferView = nullptr
-		},vk::WriteDescriptorSet{
-			.dstSet = neighbourCellFinderInputDescriptorSets[i],
-			.dstBinding = 1,
-			.dstArrayElement = 0,
-			.descriptorCount = 1,
-			.descriptorType = vk::DescriptorType::eUniformBuffer,
-			.pImageInfo = nullptr,
-			.pBufferInfo = &gridDataBufferInfo,
-			.pTexelBufferView = nullptr
-		}}, {});
 	}
 
 	auto& cache = _context.cache();
@@ -313,30 +251,6 @@ _tempBuffer(_context, particleData.size(), 2, vk::BufferUsageFlagBits::eStorageB
 			}
 		);
 	}
-
-	{
-		lambdaDescriptorSet = _context.device().allocateDescriptorSets(vk::DescriptorSetAllocateInfo{
-			.descriptorPool = _context.descriptorPool(),
-			.descriptorSetCount = uint32_t(1),
-			.pSetLayouts = &*singleStorageBufferDescriptorSetLayout
-		}).front();
-
-		vk::DescriptorBufferInfo bufferInfo{
-			.buffer = _lambdaBuffer.buffer(),
-			.offset = 0,
-			.range = _lambdaBuffer.deviceSize()
-		};
-		_context.device().updateDescriptorSets({vk::WriteDescriptorSet{
-			.dstSet = lambdaDescriptorSet,
-			.dstBinding = 0,
-			.dstArrayElement = 0,
-			.descriptorCount = 1,
-			.descriptorType = vk::DescriptorType::eStorageBuffer,
-			.pImageInfo = nullptr,
-			.pBufferInfo = &bufferInfo,
-			.pTexelBufferView = nullptr
-		}}, {});
-	}
 }
 
 void Simulation::initKeys(Context& context, vk::CommandBuffer buf)
@@ -482,15 +396,19 @@ void Simulation::run(vk::CommandBuffer buf, float timestep)
 	size_t pingBufferSegment = sortResult == RadixSort::Result::InPingBuffer ? 0 : 1;
 	size_t pongBufferSegment = sortResult == RadixSort::Result::InPingBuffer ? 1 : 0;
 
-	_neighbourCellFinder(buf, _particleData.size(), neighbourCellFinderInputDescriptorSets[pingBufferSegment]);
+	_neighbourCellFinder(buf, _particleData.size(), _tempBuffer.segment(pingBufferSegment), _gridDataBuffer.fullBufferInfo());
 
 	static constexpr size_t numSteps = 5;
 	for (size_t step = 0; step < numSteps; ++step) {
 		bool isLast = step == (numSteps - 1);
-		buf.bindPipeline(vk::PipelineBindPoint::eCompute, *_calcLambdaPipeline);
-		buf.bindDescriptorSets(vk::PipelineBindPoint::eCompute, *(_calcLambdaPipeline.descriptor().pipelineLayout), 0, {
-			neighbourCellFinderInputDescriptorSets[pingBufferSegment], _neighbourCellFinder.gridData(), lambdaDescriptorSet
-		}, {});
+		_context.bindPipeline(
+			buf, _calcLambdaPipeline,
+			{
+				{_tempBuffer.segment(pingBufferSegment), _gridDataBuffer.fullBufferInfo()},
+				{_neighbourCellFinder.gridBoundaryBuffer().fullBufferInfo()},
+				{_lambdaBuffer.fullBufferInfo()}
+			}
+		);
 		buf.dispatch(((getNumParticles() + blockSize - 1) / blockSize), 1, 1);
 
 		buf.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {}, {

@@ -54,12 +54,7 @@ private:
 	RadixSort _radixSort;
 	NeighbourCellFinder _neighbourCellFinder;
 
-	std::array<vk::DescriptorSet, 2> neighbourCellFinderInputDescriptorSets;
-	vk::DescriptorSet lambdaDescriptorSet;
-
-
 	RingBuffer<ParticleData> _tempBuffer;
-	std::array<vk::DescriptorSet, 2> _tempBufferDescriptorSets;
 
 	CacheReference<descriptors::ComputePipeline> _unconstrainedSystemUpdatePipeline;
 	CacheReference<descriptors::ComputePipeline> _particleDataUpdatePipeline;

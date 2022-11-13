@@ -33,16 +33,12 @@ public:
 		};
 	}
 
-	void operator()(vk::CommandBuffer buf, uint32_t numParticles, vk::DescriptorSet input) const;
+	void operator()(vk::CommandBuffer buf, uint32_t numParticles, vk::DescriptorBufferInfo const& input, vk::DescriptorBufferInfo const& gridData) const;
 
 	struct alignas(glm::uvec4) GridBoundaries {
 		uint startIndex = 0;
 		uint endIndex = 0;
 	};
-
-	vk::DescriptorSet gridData() const {
-		return _gridData;
-	}
 
 	const Buffer<GridBoundaries>& gridBoundaryBuffer() const {
 		return _gridBoundaryBuffer;
@@ -51,13 +47,11 @@ public:
 private:
 	static constexpr uint32_t blockSize = 256;
 
+	ContextInterface& _context;
+
 	Buffer<GridBoundaries> _gridBoundaryBuffer;
 
 	CacheReference<descriptors::ComputePipeline> _findCellsPipeline;
-	CacheReference<descriptors::ComputePipeline> _testPipeline;
-	vk::DescriptorSet _gridData;
-
-
 };
 
 }

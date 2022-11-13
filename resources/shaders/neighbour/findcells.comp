@@ -5,14 +5,14 @@
 layout (local_size_x_id = 0, local_size_y = 1, local_size_z = 1) in;
 layout (constant_id = 1) const int MAX_ID = 1;
 
-struct ParticleData {
+struct ParticleKey {
     vec3 position;
-    uint aux;
+    uint index;
 };
 
-layout(std430, binding = 0, set = 0) readonly buffer Particles
+layout(std430, binding = 0, set = 0) readonly buffer ParticleKeys
 {
-    ParticleData particles[];
+    ParticleKey particleKeys[];
 };
 
 struct GridBoundaries {
@@ -43,15 +43,15 @@ void main (void)
 
     if (gid == 0)
     {
-        grid[GetGridIndex(particles[0].position)].startIndex = 0;
+        grid[GetGridIndex(particleKeys[0].position)].startIndex = 0;
         //uint maxID = gl_NumWorkGroups.x * gl_WorkGroupSize.x;
         //grid[GetGridIndex(GRID_MAX)].endIndex = maxID;
-        grid[GetGridIndex(particles[MAX_ID - 1].position)].endIndex = MAX_ID;
+        grid[GetGridIndex(particleKeys[MAX_ID - 1].position)].endIndex = MAX_ID;
         return;
     }
 
-    uint currentGridIndex = GetGridIndex(particles[gid].position);
-    uint previousGridIndex = GetGridIndex(particles[gid - 1].position);
+    uint currentGridIndex = GetGridIndex(particleKeys[gid].position);
+    uint previousGridIndex = GetGridIndex(particleKeys[gid - 1].position);
 
     if (currentGridIndex != previousGridIndex)
     {

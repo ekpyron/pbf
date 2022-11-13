@@ -6,6 +6,7 @@ namespace pbf {
 
 
 NeighbourCellFinder::NeighbourCellFinder(ContextInterface& context, size_t numGridCells, size_t maxID):
+_context(context),
 _gridBoundaryBuffer(context, numGridCells, vk::BufferUsageFlagBits::eStorageBuffer|vk::BufferUsageFlagBits::eTransferDst, MemoryType::STATIC)
 {
 	auto& cache = context.cache();
@@ -61,67 +62,21 @@ _gridBoundaryBuffer(context, numGridCells, vk::BufferUsageFlagBits::eStorageBuff
 			PBF_DESC_DEBUG_NAME("NeighbourCellFinder: find cells pipeline")
 		}
 	);
-
-
-	_testPipeline = cache.fetch(
-		descriptors::ComputePipeline{
-			.flags = {},
-			.shaderStage = descriptors::ShaderStage {
-				.stage = vk::ShaderStageFlagBits::eCompute,
-				.module = cache.fetch(
-					descriptors::ShaderModule{
-						.source = descriptors::ShaderModule::File{"shaders/neighbour/test.comp.spv"},
-						PBF_DESC_DEBUG_NAME("NeighbourCellFinder: Test Compute Shader")
-					}),
-				.entryPoint = "main",
-				.specialization = {
-					Specialization<uint32_t>{.constantID = 0, .value = blockSize}
-				}
-			},
-			.pipelineLayout = neighbourCellPipelineLayout,
-			PBF_DESC_DEBUG_NAME("NeighbourCellFinder: test pipeline")
-		}
-	);
-	_gridData = context.device().allocateDescriptorSets(vk::DescriptorSetAllocateInfo{
-		.descriptorPool = context.descriptorPool(),
-		.descriptorSetCount = 1,
-		.pSetLayouts = &*gridDataDescriptorSetLayout
-	}).front();
-	{
-		auto descriptorInfos = {
-			vk::DescriptorBufferInfo{_gridBoundaryBuffer.buffer(), 0, _gridBoundaryBuffer.deviceSize()},
-		};
-		context.device().updateDescriptorSets({vk::WriteDescriptorSet{
-			.dstSet = _gridData,
-			.dstBinding = 0,
-			.dstArrayElement = 0,
-			.descriptorCount = static_cast<uint32_t>(descriptorInfos.size()),
-			.descriptorType = vk::DescriptorType::eStorageBuffer,
-			.pImageInfo = nullptr,
-			.pBufferInfo = &*descriptorInfos.begin(),
-			.pTexelBufferView = nullptr
-		}}, {});
-	}
 }
 
-void NeighbourCellFinder::operator()(vk::CommandBuffer buf, uint32_t numParticles, vk::DescriptorSet input) const
+void NeighbourCellFinder::operator()(vk::CommandBuffer buf, uint32_t numParticles, vk::DescriptorBufferInfo const& input, vk::DescriptorBufferInfo const& gridData) const
 {
 	buf.fillBuffer(_gridBoundaryBuffer.buffer(), 0, _gridBoundaryBuffer.deviceSize(), 0);
 
-	buf.bindPipeline(vk::PipelineBindPoint::eCompute, *_findCellsPipeline);
-	buf.bindDescriptorSets(vk::PipelineBindPoint::eCompute, *(_findCellsPipeline.descriptor().pipelineLayout), 0, {input, _gridData}, {});
-	// reads keys; writes prefix sums and block sums
-	buf.dispatch(((numParticles + blockSize - 1) / blockSize), 1, 1);
-
-	buf.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {}, {
-		vk::MemoryBarrier{
-			.srcAccessMask = vk::AccessFlagBits::eShaderWrite,
-			.dstAccessMask = vk::AccessFlagBits::eShaderRead
+	_context.bindPipeline(
+		buf,
+		_findCellsPipeline,
+		{
+			{input, gridData},
+			{_gridBoundaryBuffer.fullBufferInfo()},
 		}
-	}, {}, {});
+	);
 
-	buf.bindPipeline(vk::PipelineBindPoint::eCompute, *_testPipeline);
-	buf.bindDescriptorSets(vk::PipelineBindPoint::eCompute, *(_findCellsPipeline.descriptor().pipelineLayout), 0, {input, _gridData}, {});
 	// reads keys; writes prefix sums and block sums
 	buf.dispatch(((numParticles + blockSize - 1) / blockSize), 1, 1);
 
