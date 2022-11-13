@@ -24,11 +24,10 @@ layout(std430, binding = 0, set = 1) buffer OldParticles
     ParticleData particles[];
 };
 
-const float lastTimestep = 1.0 / 60.0;
-const float timestep = 1.0 / 60.0;
-
 layout(push_constant) uniform constants {
     vec3 externalForces;
+    float lastTimestep;
+    float timestep;
 };
 
 void main (void)

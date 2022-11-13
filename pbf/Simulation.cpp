@@ -348,7 +348,7 @@ _tempBuffer(_context, particleData.size(), 2, vk::BufferUsageFlagBits::eStorageB
 					vk::PushConstantRange{
 						vk::ShaderStageFlagBits::eCompute,
 						0,
-						sizeof(glm::vec3)
+						sizeof(UnconstrainedPositionUpdatePushConstants)
 					}
 				},
 				PBF_DESC_DEBUG_NAME("Unconstrained update pipeline Layout")
@@ -566,7 +566,7 @@ void Simulation::initKeys(Context& context, vk::CommandBuffer buf)
 }
 
 // currentFrameSync (readonly) -> nextFrameSync (writeonly)
-void Simulation::run(vk::CommandBuffer buf)
+void Simulation::run(vk::CommandBuffer buf, float timestep)
 {
 	if (_resetKeys)
 	{
@@ -574,10 +574,16 @@ void Simulation::run(vk::CommandBuffer buf)
 		_resetKeys = false;
 	}
 	buf.bindPipeline(vk::PipelineBindPoint::eCompute, *_unconstrainedSystemUpdatePipeline);
-	glm::vec3 externalForces(0.0f, -9.81f, 0.0f);
-	externalForces += glm::vec3(_context.window().getKey(GLFW_KEY_LEFT) ? 20.0f : 0.0f, 0, _context.window().getKey(GLFW_KEY_UP) ? 20.0f : 0.0f);
-	externalForces += glm::vec3(_context.window().getKey(GLFW_KEY_RIGHT) ? -20.0f : 0.0f, 0, _context.window().getKey(GLFW_KEY_DOWN) ? -20.0f : 0.0f);
-	buf.pushConstants(*(_unconstrainedSystemUpdatePipeline.descriptor().pipelineLayout), vk::ShaderStageFlagBits::eCompute, 0, sizeof(glm::vec3), &externalForces);
+	UnconstrainedPositionUpdatePushConstants pushConstants{
+		.externalForces = glm::vec3(0.0f, -9.81f, 0.0f),
+		.lastTimestep = _lastTimestep,
+		.timestep = timestep
+	};
+	_lastTimestep = timestep;
+	pushConstants.externalForces += glm::vec3(_context.window().getKey(GLFW_KEY_LEFT) ? 20.0f : 0.0f, 0, _context.window().getKey(GLFW_KEY_UP) ? 20.0f : 0.0f);
+	pushConstants.externalForces += glm::vec3(_context.window().getKey(GLFW_KEY_RIGHT) ? -20.0f : 0.0f, 0, _context.window().getKey(GLFW_KEY_DOWN) ? -20.0f : 0.0f);
+
+	buf.pushConstants(*(_unconstrainedSystemUpdatePipeline.descriptor().pipelineLayout), vk::ShaderStageFlagBits::eCompute, 0, sizeof(pushConstants), &pushConstants);
 
 	buf.bindDescriptorSets(vk::PipelineBindPoint::eCompute, *(_unconstrainedSystemUpdatePipeline.descriptor().pipelineLayout), 0, {
 		particleKeyDescriptorSets[_context.renderer().currentFrameSync()],

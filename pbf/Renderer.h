@@ -17,7 +17,7 @@ class Renderer {
 public:
     explicit Renderer(InitContext& context);
 
-    void render();
+    void render(float timestep);
 
     [[nodiscard]] CacheReference<descriptors::RenderPass> renderPass() const {
         return _renderPass;

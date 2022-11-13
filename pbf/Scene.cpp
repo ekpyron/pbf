@@ -25,14 +25,21 @@ void initializeParticleData(ParticleData* data, size_t numParticles)
 	std::uniform_real_distribution<float> dist(-0.25f, 0.25f);
     size_t id = 0;
     auto edgeLength = std::ceil(std::cbrt(numParticles));
-	for (int32_t x = 0; x < edgeLength; ++x) {
-        for (int32_t y = 0; y < edgeLength; ++y) {
-            for (int32_t z = 0; z < edgeLength && id < numParticles; ++z, ++id) {
-                data[id].position = glm::vec3(x - 32, y - 32, z - 32);
-                data[id].position += glm::vec3(dist(gen), dist(gen), dist(gen));
-            }
-        }
-    }
+	[&](){
+		for (int32_t x = 0; x < edgeLength; ++x)
+		{
+			for (int32_t y = 0; y < edgeLength; ++y)
+			{
+				for (int32_t z = 0; z < edgeLength; ++z, ++id)
+				{
+					if (id >= numParticles)
+						return;
+					data[id].position = glm::vec3(x - 32, y - 32, z - 32);
+					data[id].position += glm::vec3(dist(gen), dist(gen), dist(gen));
+				}
+			}
+		}
+	}();
 	std::shuffle(data, data + numParticles, gen);
 }
 
@@ -90,14 +97,6 @@ void Scene::resetParticles()
 }
 
 void Scene::frame(vk::CommandBuffer &buf) {
-    for(auto* ptr: indirectCommandBuffers) ptr->clear();
-
-    quad.frame(_numParticles);
-}
-
-void Scene::enqueueCommands(vk::CommandBuffer &buf) {
-    const auto &device = _context.device();
-
 	if (_resetParticles)
 	{
 		auto& initBuffer = _context.renderer().createFrameData<Buffer<ParticleData>>(
@@ -129,6 +128,13 @@ void Scene::enqueueCommands(vk::CommandBuffer &buf) {
 		_resetParticles = false;
 	}
 
+	for(auto* ptr: indirectCommandBuffers) ptr->clear();
+
+    quad.frame(_numParticles);
+}
+
+void Scene::enqueueCommands(vk::CommandBuffer &buf) {
+    const auto &device = _context.device();
 
     for (auto& [graphicsPipeline, innerMap] : indirectDrawCalls)
     {

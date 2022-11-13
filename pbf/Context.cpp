@@ -166,8 +166,14 @@ Context::Context() {
 
     {
         const auto &modes = _physicalDevice.getSurfacePresentModesKHR(*_surface);
-        auto it = std::find(std::begin(modes), std::end(modes), vk::PresentModeKHR::eMailbox);
-        if(it != std::end(modes)) _presentMode = *it;
+		for (auto desiredPresentMode: {vk::PresentModeKHR::eMailbox, vk::PresentModeKHR::eFifoRelaxed})
+		{
+			auto it = std::find(std::begin(modes), std::end(modes), desiredPresentMode);
+			if (it != std::end(modes)) {
+				_presentMode = desiredPresentMode;
+				break;
+			}
+		}
     }
 
 	_descriptorPool = _device->createDescriptorPoolUnique(vk::DescriptorPoolCreateInfo{
@@ -333,7 +339,7 @@ void Context::run() {
 		globalUniformData->invviewmat = glm::inverse(mvmat);
 		globalUniformData->viewmat = mvmat;
         _globalDescriptorSetLayout.keepAlive();
-        _renderer->render();
+        _renderer->render(glm::clamp(timePassed, 1.0 / 180.0, 1.0 / 20.0));
         _cache.frame();
     }
     spdlog::get("console")->debug("Exiting main loop. Waiting for idle device.");

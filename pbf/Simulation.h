@@ -22,14 +22,21 @@ public:
 		return _particleData.size();
 	}
 	void resetKeys() { _resetKeys = true; }
-	void run(vk::CommandBuffer buf);
+	void run(vk::CommandBuffer buf, float timestep);
 
 private:
+	float _lastTimestep = 1.0 / 60.0;
 	void initKeys(Context& context, vk::CommandBuffer buf);
 	bool _resetKeys = false;
 	Context& _context;
 	RingBuffer<ParticleData>& _particleData;
 	RingBuffer<ParticleKey> _particleKeys;
+
+	struct UnconstrainedPositionUpdatePushConstants {
+		glm::vec3 externalForces;
+		float lastTimestep = 1.0f/60.0f;
+		float timestep = 1.0f/60.0f;
+	};
 
 	struct GridData {
 		glm::ivec4 max = glm::ivec4(127, 127, 127, 0);

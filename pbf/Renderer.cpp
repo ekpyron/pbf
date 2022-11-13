@@ -87,7 +87,7 @@ Renderer::Renderer(InitContext &initContext) : _context(initContext.context) {
     reset();
 }
 
-void Renderer::render() {
+void Renderer::render(float timestep) {
     const auto &device = _context.device();
 
     auto &currentFrameSync = _frameSync[_currentFrameSync];
@@ -146,7 +146,7 @@ void Renderer::render() {
         _context.scene().frame(*buffer);
 
 		if (_context.gui().runSPH())
-			_context.scene().simulation().run(*buffer);
+			_context.scene().simulation().run(*buffer, timestep);
 
 		std::array<vk::ClearValue, 2> clearValues;
         clearValues[0].setColor({std::array<float, 4>{0.1f, 0.1f, 0.1f, 1.0f}});
