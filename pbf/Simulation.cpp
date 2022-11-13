@@ -69,56 +69,6 @@ _tempBuffer(_context, particleData.size(), 2, vk::BufferUsageFlagBits::eStorageB
 		PBF_DESC_DEBUG_NAME("Simulation: single storage buffer descriptor set")
 	});
 	{
-		std::vector particleDataLayouts(particleData.segments(), *singleStorageBufferDescriptorSetLayout);
-		particleDataDescriptorSets = _context.device().allocateDescriptorSets(vk::DescriptorSetAllocateInfo{
-			.descriptorPool = _context.descriptorPool(),
-			.descriptorSetCount = uint32_t(_particleData.segments()),
-			.pSetLayouts = particleDataLayouts.data()
-		});
-
-		for (size_t i = 0; i < _particleData.segments(); ++i)
-		{
-			auto descriptorInfos = {
-				_particleData.segment(i)
-			};
-			_context.device().updateDescriptorSets({vk::WriteDescriptorSet{
-				.dstSet = particleDataDescriptorSets[i],
-				.dstBinding = 0,
-				.dstArrayElement = 0,
-				.descriptorCount = static_cast<uint32_t>(descriptorInfos.size()),
-				.descriptorType = vk::DescriptorType::eStorageBuffer,
-				.pImageInfo = nullptr,
-				.pBufferInfo = &*descriptorInfos.begin(),
-				.pTexelBufferView = nullptr
-			}}, {});
-		}
-	}
-	{
-		std::vector particleKeyLayouts(particleData.segments(), *singleStorageBufferDescriptorSetLayout);
-		particleKeyDescriptorSets = _context.device().allocateDescriptorSets(vk::DescriptorSetAllocateInfo{
-			.descriptorPool = _context.descriptorPool(),
-			.descriptorSetCount = uint32_t(_particleKeys.segments()),
-			.pSetLayouts = particleKeyLayouts.data()
-		});
-
-		for (size_t i = 0; i < _particleKeys.segments(); ++i)
-		{
-			auto descriptorInfos = {
-				_particleKeys.segment(i)
-			};
-			_context.device().updateDescriptorSets({vk::WriteDescriptorSet{
-				.dstSet = particleKeyDescriptorSets[i],
-				.dstBinding = 0,
-				.dstArrayElement = 0,
-				.descriptorCount = static_cast<uint32_t>(descriptorInfos.size()),
-				.descriptorType = vk::DescriptorType::eStorageBuffer,
-				.pImageInfo = nullptr,
-				.pBufferInfo = &*descriptorInfos.begin(),
-				.pTexelBufferView = nullptr
-			}}, {});
-		}
-	}
-	{
 		std::vector pingPongLayouts(2 + particleData.segments(), *_context.cache().fetch(radixSortDescriptorSetLayout()));
 		initDescriptorSets = _context.device().allocateDescriptorSets(vk::DescriptorSetAllocateInfo{
 			.descriptorPool = _context.descriptorPool(),
@@ -619,17 +569,10 @@ void Simulation::run(vk::CommandBuffer buf, float timestep)
 		initKeys(_context, buf);
 		_resetKeys = false;
 	}
-	// _particleKeys.segment(i)
 	bindPipeline(_context, buf, _unconstrainedSystemUpdatePipeline, {
-		{
-			_particleKeys.segment(_context.renderer().currentFrameSync())
-		},
-		{
-			_particleData.segment(_context.renderer().previousFrameSync())
-		}
+		{_particleKeys.segment(_context.renderer().currentFrameSync())},
+		{_particleData.segment(_context.renderer().previousFrameSync())}
 	});
-	// buf.bindPipeline(vk::PipelineBindPoint::eCompute, *_unconstrainedSystemUpdatePipeline);
-	// bindPipeline...
 	static constexpr float Gabs = 9.81f;
 	UnconstrainedPositionUpdatePushConstants pushConstants{
 		.externalForces = glm::vec3(0.0f, -Gabs, 0.0f),
@@ -642,11 +585,6 @@ void Simulation::run(vk::CommandBuffer buf, float timestep)
 
 	buf.pushConstants(*(_unconstrainedSystemUpdatePipeline.descriptor().pipelineLayout), vk::ShaderStageFlagBits::eCompute, 0, sizeof(pushConstants), &pushConstants);
 
-/*
-	buf.bindDescriptorSets(vk::PipelineBindPoint::eCompute, *(_unconstrainedSystemUpdatePipeline.descriptor().pipelineLayout), 0, {
-		particleKeyDescriptorSets[_context.renderer().currentFrameSync()],
-		particleDataDescriptorSets[_context.renderer().previousFrameSync()]
-	}, {});*/
 	buf.dispatch(((getNumParticles() + blockSize - 1) / blockSize), 1, 1);
 
 	buf.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {}, {
@@ -682,11 +620,23 @@ void Simulation::run(vk::CommandBuffer buf, float timestep)
 		}, {}, {});
 
 
-		buf.bindPipeline(vk::PipelineBindPoint::eCompute, *_updatePosPipeline);
-		buf.bindDescriptorSets(vk::PipelineBindPoint::eCompute, *(_updatePosPipeline.descriptor().pipelineLayout), 0, {
-			neighbourCellFinderInputDescriptorSets[pingBufferSegment], _neighbourCellFinder.gridData(), lambdaDescriptorSet,
-			isLast ? particleKeyDescriptorSets[_context.renderer().nextFrameSync()] : _tempBufferDescriptorSets[pongBufferSegment]
-		}, {});
+		bindPipeline(_context, buf, _updatePosPipeline,
+					 {
+						 { // set 0
+							 _tempBuffer.segment(pingBufferSegment),
+							 _gridDataBuffer.fullBufferInfo()
+						 },
+						 { // set 1
+							 _neighbourCellFinder.gridBoundaryBuffer().fullBufferInfo()
+						 },
+						 { // set 2
+							 _lambdaBuffer.fullBufferInfo()
+						 },
+						 { // set 3
+							 isLast ? _particleKeys.segment(_context.renderer().nextFrameSync())
+							 		: _tempBuffer.segment(pongBufferSegment)
+						 }
+					 });
 		buf.dispatch(((getNumParticles() + blockSize - 1) / blockSize), 1, 1);
 
 		buf.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {}, {
@@ -699,11 +649,15 @@ void Simulation::run(vk::CommandBuffer buf, float timestep)
 		std::swap(pingBufferSegment, pongBufferSegment);
 	}
 
-	buf.bindPipeline(vk::PipelineBindPoint::eCompute, *_particleDataUpdatePipeline);
-	buf.bindDescriptorSets(vk::PipelineBindPoint::eCompute, *(_particleDataUpdatePipeline.descriptor().pipelineLayout), 0, {
-		particleKeyDescriptorSets[_context.renderer().nextFrameSync()],
-		particleDataDescriptorSets[_context.renderer().nextFrameSync()]
-	}, {});
+	bindPipeline(
+		_context,
+		buf,
+		_particleDataUpdatePipeline,
+		{
+			{_particleKeys.segment(_context.renderer().nextFrameSync())},
+			{_particleData.segment(_context.renderer().nextFrameSync())},
+		}
+	);
 	buf.dispatch(((getNumParticles() + blockSize - 1) / blockSize), 1, 1);
 
 	buf.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {}, {

@@ -55,8 +55,6 @@ private:
 	NeighbourCellFinder _neighbourCellFinder;
 
 	std::vector<vk::DescriptorSet> initDescriptorSets;
-	std::vector<vk::DescriptorSet> particleDataDescriptorSets;
-	std::vector<vk::DescriptorSet> particleKeyDescriptorSets;
 	vk::DescriptorSet pingDescriptorSet;
 	vk::DescriptorSet pongDescriptorSet;
 	std::array<vk::DescriptorSet, 2> neighbourCellFinderInputDescriptorSets;

@@ -82,6 +82,14 @@ public:
         return reinterpret_cast<Buffer<D>*>(this);
     }
 
+	vk::DescriptorBufferInfo fullBufferInfo() const {
+		return vk::DescriptorBufferInfo {
+			.buffer = _buffer,
+			.offset = 0,
+			.range = deviceSize()
+		};
+	}
+
 private:
 	ContextInterface* context {nullptr};
     std::size_t _size {0};
