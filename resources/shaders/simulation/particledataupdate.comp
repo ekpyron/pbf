@@ -14,7 +14,7 @@ struct ParticleData {
     uint aux;
 };
 
-layout(std430, binding = 0, set = 0) readonly buffer Particles
+layout(std430, binding = 0, set = 0) buffer Particles
 {
     ParticleKey particleKeys[];
 };
@@ -28,5 +28,17 @@ void main (void)
 {
     uint gid = gl_GlobalInvocationID.x;
     ParticleKey key = particleKeys[gid];
-    particles[key.idx].position = key.position;
+    vec3 position = key.position;
+    {
+        vec3 cornerToPosition = position - vec3(-64,-64,-64);
+        cornerToPosition *= vec3(lessThan(cornerToPosition, vec3(0,0,0))) * (-1.4) + 1;
+        position = vec3(-64,-64,-64) + cornerToPosition;
+    }
+    {
+        vec3 cornerToPosition = position - vec3(63,63,63);
+        cornerToPosition *= vec3(greaterThan(cornerToPosition, vec3(0,0,0))) * (-1.4) + 1;
+        position = vec3(63,63,63) + cornerToPosition;
+    }
+    particleKeys[gid].position = position;
+    particles[key.idx].position = position;
 }

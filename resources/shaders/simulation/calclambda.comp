@@ -77,8 +77,10 @@ float Wspiky(float r)
 vec3 gradWspiky(vec3 r)
 {
     float l = length (r);
-    if (l > h || l < 0.0001)
+    if (l > h)
         return vec3 (0, 0, 0);
+    // TODO: carefully re-evaluate.
+    if (l < 0.01) l = 0.01;
     float tmp = h - l;
     return (-3 * 4.774648292756860 * tmp * tmp) * r / (l * h*h*h*h*h*h);
 }

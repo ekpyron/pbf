@@ -574,14 +574,15 @@ void Simulation::run(vk::CommandBuffer buf, float timestep)
 		_resetKeys = false;
 	}
 	buf.bindPipeline(vk::PipelineBindPoint::eCompute, *_unconstrainedSystemUpdatePipeline);
+	static constexpr float Gabs = 9.81f;
 	UnconstrainedPositionUpdatePushConstants pushConstants{
-		.externalForces = glm::vec3(0.0f, -9.81f, 0.0f),
+		.externalForces = glm::vec3(0.0f, -Gabs, 0.0f),
 		.lastTimestep = _lastTimestep,
 		.timestep = timestep
 	};
 	_lastTimestep = timestep;
-	pushConstants.externalForces += glm::vec3(_context.window().getKey(GLFW_KEY_LEFT) ? 20.0f : 0.0f, 0, _context.window().getKey(GLFW_KEY_UP) ? 20.0f : 0.0f);
-	pushConstants.externalForces += glm::vec3(_context.window().getKey(GLFW_KEY_RIGHT) ? -20.0f : 0.0f, 0, _context.window().getKey(GLFW_KEY_DOWN) ? -20.0f : 0.0f);
+	pushConstants.externalForces += glm::vec3(_context.window().getKey(GLFW_KEY_LEFT) ? 0.5f * Gabs : 0.0f, 0, _context.window().getKey(GLFW_KEY_UP) ? 0.5f * Gabs : 0.0f);
+	pushConstants.externalForces += glm::vec3(_context.window().getKey(GLFW_KEY_RIGHT) ? -0.5f * Gabs : 0.0f, 0, _context.window().getKey(GLFW_KEY_DOWN) ? -0.5f * Gabs : 0.0f);
 
 	buf.pushConstants(*(_unconstrainedSystemUpdatePipeline.descriptor().pipelineLayout), vk::ShaderStageFlagBits::eCompute, 0, sizeof(pushConstants), &pushConstants);
 

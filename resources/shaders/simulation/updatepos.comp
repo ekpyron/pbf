@@ -72,8 +72,6 @@ float Wpoly6(float r)
 }
 
 const float one_over_rho_0 = 1.0;
-const float gravity = 10;
-const float timestep = (1 / 30);//0.016;
 const float tensile_instability_k = 0.1;
 const float xsph_viscosity_c = 0.03;
 const float vorticity_epsilon = 5;
@@ -89,8 +87,10 @@ float Wspiky(float r)
 vec3 gradWspiky(vec3 r)
 {
     float l = length (r);
-    if (l > h || l < 0.0001)
+    if (l > h)
     return vec3 (0, 0, 0);
+    // TODO: carefully re-evaluate.
+    if (l < 0.01) l = 0.01;
     float tmp = h - l;
     return (-3 * 4.774648292756860 * tmp * tmp) * r / (l * h*h*h*h*h*h);
 }
@@ -157,7 +157,15 @@ void main(void)
     }*/
 
     // Cube
-    position = clamp (position, vec3(-64,-64,-64), vec3(63,63,63));
+    // position = clamp (position, vec3(-64,-64,-64), vec3(63,63,63));
+
+    // Cube with pseudo-reflective boundaries.
+
+/*
+    position *= vec3(lessThan(position, vec3(-64,-64,-64))) * (-2) + 1;
+    position *= vec3(greaterThan(position, vec3(63,63,63))) * (-2) + 1;
+*/
+    position = clamp (position, vec3(-100,-100,-100), vec3(100,100,100));
 
     outputParticleKeys[gid].position = position;
     outputParticleKeys[gid].index = particleKeys[gid].index;

@@ -146,7 +146,12 @@ void Renderer::render(float timestep) {
         _context.scene().frame(*buffer);
 
 		if (_context.gui().runSPH())
+		{
 			_context.scene().simulation().run(*buffer, timestep);
+			// TODO: refactor to allow this:
+			// _context.scene().simulation().run(*buffer, timestep / 2.0f);
+			// _context.scene().simulation().run(*buffer, timestep / 2.0f);
+		}
 
 		std::array<vk::ClearValue, 2> clearValues;
         clearValues[0].setColor({std::array<float, 4>{0.1f, 0.1f, 0.1f, 1.0f}});
