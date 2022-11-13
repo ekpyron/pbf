@@ -12,16 +12,28 @@ struct ParticleKey {
 struct ParticleData {
     vec3 position;
     uint aux;
+    vec3 velocity;
 };
 
-layout(std430, binding = 0, set = 0) buffer Particles
+layout(std430, binding = 0, set = 0) buffer ParticleKeys
 {
     ParticleKey particleKeys[];
 };
 
-layout(std430, binding = 0, set = 1) writeonly buffer ParticleKeys
+layout(std430, binding = 0, set = 1) writeonly buffer Particles
 {
     ParticleData particles[];
+};
+
+
+layout(std430, binding = 0, set = 2) readonly buffer ParticlesOld
+{
+    ParticleData oldParticles[];
+};
+
+
+layout(push_constant) uniform constants {
+    float timestep;
 };
 
 void main (void)
@@ -39,6 +51,8 @@ void main (void)
         cornerToPosition *= vec3(greaterThan(cornerToPosition, vec3(0,0,0))) * (-1.4) + 1;
         position = vec3(63,63,63) + cornerToPosition;
     }
+    vec3 oldPosition = oldParticles[key.idx].position;
     particleKeys[gid].position = position;
     particles[key.idx].position = position;
+    particles[key.idx].velocity = (position - oldPosition) / timestep;
 }

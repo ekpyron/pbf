@@ -7,6 +7,7 @@ layout(location = 0) in vec2 fCoords;
 layout(location = 1) flat in uint fAux;
 layout(location = 2) in vec3 fGrid;
 layout(location = 3) in vec3 fPosition;
+layout(location = 4) in vec3 fVelocity;
 
 
 layout(binding = 0, std140) uniform GlobalUniformBuffer {
@@ -77,4 +78,7 @@ void main() {
 
     //outColor = vec4(float(fAux) / (64.0*64.0*64.0), 0, 0, 1);
 #endif
+
+    outColor = vec4(abs(fVelocity) / 64.0, 1.0);
+
 }

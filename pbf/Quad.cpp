@@ -73,7 +73,13 @@ Quad::Quad(InitContext& initContext, pbf::Scene& scene) : scene(scene) {
 						.binding = 1,
 						.format = vk::Format::eR32Uint,
 						.offset = offsetof(ParticleData, aux)
-					}
+					},
+				vk::VertexInputAttributeDescription{
+					.location = 3,
+					.binding = 1,
+					.format = vk::Format::eR32G32B32Sfloat,
+					.offset = offsetof(ParticleData, velocity)
+				}
 			},
             .primitiveTopology = vk::PrimitiveTopology::eTriangleList,
             .rasterizationStateCreateInfo = vk::PipelineRasterizationStateCreateInfo().setLineWidth(1.0f),

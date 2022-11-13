@@ -111,7 +111,14 @@ _tempBuffer(_context, particleData.size(), 2, vk::BufferUsageFlagBits::eStorageB
 
 		auto particleDataUpdatePipelineLayout = cache.fetch(
 			descriptors::PipelineLayout{
-				.setLayouts = {singleStorageBufferDescriptorSetLayout, singleStorageBufferDescriptorSetLayout},
+				.setLayouts = {singleStorageBufferDescriptorSetLayout, singleStorageBufferDescriptorSetLayout, singleStorageBufferDescriptorSetLayout},
+				.pushConstants = {
+					vk::PushConstantRange{
+						vk::ShaderStageFlagBits::eCompute,
+						0,
+						sizeof(float)
+					}
+				},
 				PBF_DESC_DEBUG_NAME("Particle data update pipeline Layout")
 			});
 		_particleDataUpdatePipeline = cache.fetch(
@@ -280,49 +287,30 @@ void Simulation::initKeys(Context& context, vk::CommandBuffer buf)
 				.setLayouts = {keyInitSetLayout},
 				PBF_DESC_DEBUG_NAME("Key init pipeline layout.")
 			});
-		buf.bindPipeline(
-			vk::PipelineBindPoint::eCompute,
-			*cache.fetch(
-				descriptors::ComputePipeline{
-					.flags = {},
-					.shaderStage = descriptors::ShaderStage {
-						.stage = vk::ShaderStageFlagBits::eCompute,
-						.module = cache.fetch(
-							descriptors::ShaderModule{
-								.source = descriptors::ShaderModule::File{"shaders/simulation/keyinit.comp.spv"},
-								PBF_DESC_DEBUG_NAME("Simulation: key init shader module")
-							}),
-						.entryPoint = "main",
-						.specialization = {
-							Specialization<uint32_t>{.constantID = 0, .value = blockSize}
-						}
-					},
-					.pipelineLayout = keyInitPipelineLayout,
-					PBF_DESC_DEBUG_NAME("Simulation: key init shader pipeline")
+		auto keyInitPipeline = cache.fetch(
+		descriptors::ComputePipeline{
+			.flags = {},
+			.shaderStage = descriptors::ShaderStage {
+				.stage = vk::ShaderStageFlagBits::eCompute,
+				.module = cache.fetch(
+					descriptors::ShaderModule{
+						.source = descriptors::ShaderModule::File{"shaders/simulation/keyinit.comp.spv"},
+						PBF_DESC_DEBUG_NAME("Simulation: key init shader module")
+					}),
+				.entryPoint = "main",
+				.specialization = {
+					Specialization<uint32_t>{.constantID = 0, .value = blockSize}
 				}
-			)
+			},
+			.pipelineLayout = keyInitPipelineLayout,
+			PBF_DESC_DEBUG_NAME("Simulation: key init shader pipeline")
+		}
 		);
 		for (size_t i = 0; i < _context.renderer().framePrerenderCount(); ++i) {
-			auto keyInitDescriptorSet = _context.device().allocateDescriptorSets(vk::DescriptorSetAllocateInfo{
-				.descriptorPool = _context.descriptorPool(),
-				.descriptorSetCount = 1,
-				.pSetLayouts = &*keyInitSetLayout
-			}).front();
-			auto keyInitInfos = {
-				_particleData.segment(i),
-				_particleKeys.segment(i)
-			};
-			_context.device().updateDescriptorSets({vk::WriteDescriptorSet{
-				.dstSet = keyInitDescriptorSet,
-				.dstBinding = 0,
-				.dstArrayElement = 0,
-				.descriptorCount = 2,
-				.descriptorType = vk::DescriptorType::eStorageBuffer,
-				.pImageInfo = nullptr,
-				.pBufferInfo = &*keyInitInfos.begin(),
-				.pTexelBufferView = nullptr
-			}}, {});
-			buf.bindDescriptorSets(vk::PipelineBindPoint::eCompute, *keyInitPipelineLayout, 0, {keyInitDescriptorSet}, {});
+			_context.bindPipeline(
+				buf, keyInitPipeline,
+				{{_particleData.segment(i), _particleKeys.segment(i)}}
+			);
 			buf.dispatch(((getNumParticles() + blockSize - 1) / blockSize), 1, 1);
 		}
 
@@ -345,7 +333,7 @@ void Simulation::run(vk::CommandBuffer buf, float timestep)
 	}
 	_context.bindPipeline(buf, _unconstrainedSystemUpdatePipeline, {
 		{_particleKeys.segment(_context.renderer().currentFrameSync())},
-		{_particleData.segment(_context.renderer().previousFrameSync())}
+		{_particleData.segment(_context.renderer().currentFrameSync())}
 	});
 	static constexpr float Gabs = 9.81f;
 	UnconstrainedPositionUpdatePushConstants pushConstants{
@@ -454,8 +442,10 @@ void Simulation::run(vk::CommandBuffer buf, float timestep)
 		{
 			{_particleKeys.segment(_context.renderer().nextFrameSync())},
 			{_particleData.segment(_context.renderer().nextFrameSync())},
+			{_particleData.segment(_context.renderer().currentFrameSync())}
 		}
 	);
+	buf.pushConstants(*(_particleDataUpdatePipeline.descriptor().pipelineLayout), vk::ShaderStageFlagBits::eCompute, 0, sizeof(float), &timestep);
 	buf.dispatch(((getNumParticles() + blockSize - 1) / blockSize), 1, 1);
 
 	buf.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {}, {
