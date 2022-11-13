@@ -177,6 +177,7 @@ Context::Context() {
     }
 
 	_descriptorPool = _device->createDescriptorPoolUnique(vk::DescriptorPoolCreateInfo{
+		.flags = vk::DescriptorPoolCreateFlagBits::eFreeDescriptorSet, // TODO: reconsider
 		.maxSets = maxGlobalDescriptorSets,
 		.poolSizeCount = static_cast<std::uint32_t>(globalDescriptorPoolSizes().size()),
 		.pPoolSizes = globalDescriptorPoolSizes().data()

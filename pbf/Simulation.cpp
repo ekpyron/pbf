@@ -2,6 +2,7 @@
 #include "Context.h"
 #include "Renderer.h"
 #include "Scene.h"
+#include <pbf/descriptors/DescriptorSet.h>
 
 namespace pbf {
 
@@ -565,6 +566,51 @@ void Simulation::initKeys(Context& context, vk::CommandBuffer buf)
 	}
 }
 
+vk::DescriptorSet makeDescriptorSet(
+	Cache& cache,
+	CacheReference<descriptors::DescriptorSetLayout> setLayout,
+	std::vector<descriptors::DescriptorSetBinding> const& bindings
+)
+{
+	return *cache.fetch(
+		descriptors::DescriptorSet{
+			.setLayout = setLayout,
+			.bindings = bindings
+		}
+	);
+}
+
+template<typename PipelineType>
+void bindPipeline(
+	ContextInterface& context,
+	vk::CommandBuffer buf,
+	CacheReference<PipelineType> pipeline,
+	std::vector<std::vector<descriptors::DescriptorSetBinding>> const& bindings
+)
+{
+	Cache& cache = context.cache();
+	buf.bindPipeline(PipelineType::bindPoint, *pipeline);
+	CacheReference<descriptors::PipelineLayout> pipelineLayout = pipeline.descriptor().pipelineLayout;
+	auto const& setLayouts = pipelineLayout.descriptor().setLayouts;
+	std::vector<vk::DescriptorSet> descriptorSets;
+	for (size_t i = 0; i < setLayouts.size(); ++i)
+	{
+		descriptorSets.emplace_back(*cache.fetch(
+			descriptors::DescriptorSet{
+				.setLayout = setLayouts[i],
+				.bindings = bindings[i]
+			}
+		));
+	}
+	buf.bindDescriptorSets(
+		PipelineType::bindPoint,
+		*pipelineLayout,
+		0,
+		descriptorSets,
+		{}
+	);
+}
+
 // currentFrameSync (readonly) -> nextFrameSync (writeonly)
 void Simulation::run(vk::CommandBuffer buf, float timestep)
 {
@@ -573,7 +619,17 @@ void Simulation::run(vk::CommandBuffer buf, float timestep)
 		initKeys(_context, buf);
 		_resetKeys = false;
 	}
-	buf.bindPipeline(vk::PipelineBindPoint::eCompute, *_unconstrainedSystemUpdatePipeline);
+	// _particleKeys.segment(i)
+	bindPipeline(_context, buf, _unconstrainedSystemUpdatePipeline, {
+		{
+			_particleKeys.segment(_context.renderer().currentFrameSync())
+		},
+		{
+			_particleData.segment(_context.renderer().previousFrameSync())
+		}
+	});
+	// buf.bindPipeline(vk::PipelineBindPoint::eCompute, *_unconstrainedSystemUpdatePipeline);
+	// bindPipeline...
 	static constexpr float Gabs = 9.81f;
 	UnconstrainedPositionUpdatePushConstants pushConstants{
 		.externalForces = glm::vec3(0.0f, -Gabs, 0.0f),
@@ -586,10 +642,11 @@ void Simulation::run(vk::CommandBuffer buf, float timestep)
 
 	buf.pushConstants(*(_unconstrainedSystemUpdatePipeline.descriptor().pipelineLayout), vk::ShaderStageFlagBits::eCompute, 0, sizeof(pushConstants), &pushConstants);
 
+/*
 	buf.bindDescriptorSets(vk::PipelineBindPoint::eCompute, *(_unconstrainedSystemUpdatePipeline.descriptor().pipelineLayout), 0, {
 		particleKeyDescriptorSets[_context.renderer().currentFrameSync()],
 		particleDataDescriptorSets[_context.renderer().previousFrameSync()]
-	}, {});
+	}, {});*/
 	buf.dispatch(((getNumParticles() + blockSize - 1) / blockSize), 1, 1);
 
 	buf.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {}, {

@@ -6,6 +6,7 @@ add_library(pbf_common STATIC
         descriptors/ShaderModule.h descriptors/PipelineLayout.cpp descriptors/PipelineLayout.h
         descriptors/ComputePipeline.h descriptors/ComputePipeline.cpp
         descriptors/DescriptorSetLayout.h descriptors/DescriptorSetLayout.cpp
+        descriptors/DescriptorSet.h descriptors/DescriptorSet.cpp
         Buffer.cpp Buffer.h MemoryManager.cpp MemoryManager.h RadixSort.cpp RadixSort.h
         NeighbourCellFinder.cpp NeighbourCellFinder.h Selection.cpp Selection.h
         SPH.cpp SPH.h)

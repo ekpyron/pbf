@@ -17,7 +17,7 @@ struct ComputePipeline {
 
 	CacheReference<PipelineLayout> pipelineLayout;
 
-
+	static constexpr vk::PipelineBindPoint bindPoint = vk::PipelineBindPoint::eCompute;
 private:
 	using T = ComputePipeline;
 public:

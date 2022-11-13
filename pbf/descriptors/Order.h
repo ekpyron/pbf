@@ -34,7 +34,9 @@ concept AllowNativeComparison = T::AllowNativeComparison ||
 	std::is_same_v<T, std::uint32_t> ||
 	std::is_same_v<T, std::int32_t> ||
 	std::is_same_v<T, bool> ||
-	std::is_same_v<T, float>;
+	std::is_same_v<T, float> ||
+	std::is_same_v<T, vk::DeviceSize> ||
+	std::is_same_v<T, vk::Buffer>; // TODO: dangerous wrt life-times... cuckoo pointers
 
 template<AllowNativeComparison T>
 struct Order<T> {
@@ -232,5 +234,7 @@ struct Order<T> : PBFMemberComparator<&T::width, &T::height> {};
 template<identity_concept<vk::PushConstantRange> T>
 struct Order<T> : PBFMemberComparator<&T::stageFlags, &T::offset, &T::size> {};
 
+template<identity_concept<vk::DescriptorBufferInfo> T>
+struct Order<T> : PBFMemberComparator<&T::buffer, &T::offset, &T::range> {};
 
 }

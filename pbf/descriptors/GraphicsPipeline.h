@@ -41,6 +41,8 @@ struct GraphicsPipeline {
     CacheReference<PipelineLayout> pipelineLayout;
     CacheReference<RenderPass> renderPass;
 
+	static constexpr vk::PipelineBindPoint bindPoint = vk::PipelineBindPoint::eGraphics;
+
 #ifndef NDEBUG
     std::string debugName;
 #endif
