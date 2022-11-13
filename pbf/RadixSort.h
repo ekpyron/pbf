@@ -38,9 +38,10 @@ public:
 	Result stage(
 		vk::CommandBuffer buf,
 		uint32_t _sortBits,
-		vk::DescriptorSet _initDescriptorSet,
-		vk::DescriptorSet _pingDescriptorSet,
-		vk::DescriptorSet _pongDescriptorSet
+		vk::DescriptorBufferInfo _initBufferInfo,
+		vk::DescriptorBufferInfo _pingBufferInfo,
+		vk::DescriptorBufferInfo _pongBufferInfo,
+		vk::DescriptorBufferInfo _gridDataBufferInfo
 	) const;
 private:
 	ContextInterface& context;

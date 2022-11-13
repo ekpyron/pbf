@@ -69,15 +69,12 @@ _tempBuffer(_context, particleData.size(), 2, vk::BufferUsageFlagBits::eStorageB
 		PBF_DESC_DEBUG_NAME("Simulation: single storage buffer descriptor set")
 	});
 	{
-		std::vector pingPongLayouts(2 + particleData.segments(), *_context.cache().fetch(radixSortDescriptorSetLayout()));
+		std::vector pingPongLayouts(particleData.segments(), *_context.cache().fetch(radixSortDescriptorSetLayout()));
 		initDescriptorSets = _context.device().allocateDescriptorSets(vk::DescriptorSetAllocateInfo{
 			.descriptorPool = _context.descriptorPool(),
 			.descriptorSetCount = size32(pingPongLayouts),
 			.pSetLayouts = pingPongLayouts.data()
 		});
-		pingDescriptorSet = initDescriptorSets[initDescriptorSets.size() - 2];
-		pongDescriptorSet = initDescriptorSets[initDescriptorSets.size() - 1];
-		initDescriptorSets.resize(initDescriptorSets.size() - 2);
 	}
 	{
 		std::vector layouts(2, *_context.cache().fetch(NeighbourCellFinder::inputDescriptorSetLayout()));
@@ -123,53 +120,6 @@ _tempBuffer(_context, particleData.size(), 2, vk::BufferUsageFlagBits::eStorageB
 		}}, {});
 	}
 
-	{
-		auto pingDescriptorInfos = {
-			_tempBuffer.segment(0),
-			_tempBuffer.segment(1)
-		};
-		auto pongDescriptorInfos = {
-			_tempBuffer.segment(1),
-			_tempBuffer.segment(0)
-		};
-		_context.device().updateDescriptorSets({vk::WriteDescriptorSet{
-			.dstSet = pingDescriptorSet,
-			.dstBinding = 0,
-			.dstArrayElement = 0,
-			.descriptorCount = static_cast<uint32_t>(pingDescriptorInfos.size()),
-			.descriptorType = vk::DescriptorType::eStorageBuffer,
-			.pImageInfo = nullptr,
-			.pBufferInfo = &*pingDescriptorInfos.begin(),
-			.pTexelBufferView = nullptr
-		}, vk::WriteDescriptorSet{
-			.dstSet = pingDescriptorSet,
-			.dstBinding = 2,
-			.dstArrayElement = 0,
-			.descriptorCount = 1,
-			.descriptorType = vk::DescriptorType::eUniformBuffer,
-			.pImageInfo = nullptr,
-			.pBufferInfo = &gridDataBufferInfo,
-			.pTexelBufferView = nullptr
-		}, vk::WriteDescriptorSet{
-			.dstSet = pongDescriptorSet,
-			.dstBinding = 0,
-			.dstArrayElement = 0,
-			.descriptorCount = static_cast<uint32_t>(pongDescriptorInfos.size()),
-			.descriptorType = vk::DescriptorType::eStorageBuffer,
-			.pImageInfo = nullptr,
-			.pBufferInfo = &*pongDescriptorInfos.begin(),
-			.pTexelBufferView = nullptr
-		}, vk::WriteDescriptorSet{
-			.dstSet = pongDescriptorSet,
-			.dstBinding = 2,
-			.dstArrayElement = 0,
-			.descriptorCount = 1,
-			.descriptorType = vk::DescriptorType::eUniformBuffer,
-			.pImageInfo = nullptr,
-			.pBufferInfo = &gridDataBufferInfo,
-			.pTexelBufferView = nullptr
-		}}, {});
-	}
 	{
 		auto& gridDataInitBuffer = initContext.createInitData<Buffer<GridData>>(
 			_context,
@@ -516,51 +466,6 @@ void Simulation::initKeys(Context& context, vk::CommandBuffer buf)
 	}
 }
 
-vk::DescriptorSet makeDescriptorSet(
-	Cache& cache,
-	CacheReference<descriptors::DescriptorSetLayout> setLayout,
-	std::vector<descriptors::DescriptorSetBinding> const& bindings
-)
-{
-	return *cache.fetch(
-		descriptors::DescriptorSet{
-			.setLayout = setLayout,
-			.bindings = bindings
-		}
-	);
-}
-
-template<typename PipelineType>
-void bindPipeline(
-	ContextInterface& context,
-	vk::CommandBuffer buf,
-	CacheReference<PipelineType> pipeline,
-	std::vector<std::vector<descriptors::DescriptorSetBinding>> const& bindings
-)
-{
-	Cache& cache = context.cache();
-	buf.bindPipeline(PipelineType::bindPoint, *pipeline);
-	CacheReference<descriptors::PipelineLayout> pipelineLayout = pipeline.descriptor().pipelineLayout;
-	auto const& setLayouts = pipelineLayout.descriptor().setLayouts;
-	std::vector<vk::DescriptorSet> descriptorSets;
-	for (size_t i = 0; i < setLayouts.size(); ++i)
-	{
-		descriptorSets.emplace_back(*cache.fetch(
-			descriptors::DescriptorSet{
-				.setLayout = setLayouts[i],
-				.bindings = bindings[i]
-			}
-		));
-	}
-	buf.bindDescriptorSets(
-		PipelineType::bindPoint,
-		*pipelineLayout,
-		0,
-		descriptorSets,
-		{}
-	);
-}
-
 // currentFrameSync (readonly) -> nextFrameSync (writeonly)
 void Simulation::run(vk::CommandBuffer buf, float timestep)
 {
@@ -569,7 +474,7 @@ void Simulation::run(vk::CommandBuffer buf, float timestep)
 		initKeys(_context, buf);
 		_resetKeys = false;
 	}
-	bindPipeline(_context, buf, _unconstrainedSystemUpdatePipeline, {
+	_context.bindPipeline(buf, _unconstrainedSystemUpdatePipeline, {
 		{_particleKeys.segment(_context.renderer().currentFrameSync())},
 		{_particleData.segment(_context.renderer().previousFrameSync())}
 	});
@@ -596,7 +501,14 @@ void Simulation::run(vk::CommandBuffer buf, float timestep)
 
 
 	// TODO: adjust neighbourCellFinderInputInfos according to expected sortResult
-	auto sortResult = _radixSort.stage(buf, 30, initDescriptorSets[_context.renderer().currentFrameSync()], pingDescriptorSet, pongDescriptorSet);
+	auto sortResult = _radixSort.stage(
+		buf,
+		30,
+		_particleKeys.segment(_context.renderer().currentFrameSync()),
+		_tempBuffer.segment(0),
+		_tempBuffer.segment(1),
+		_gridDataBuffer.fullBufferInfo()
+	);
 
 	size_t pingBufferSegment = sortResult == RadixSort::Result::InPingBuffer ? 0 : 1;
 	size_t pongBufferSegment = sortResult == RadixSort::Result::InPingBuffer ? 1 : 0;
@@ -620,7 +532,7 @@ void Simulation::run(vk::CommandBuffer buf, float timestep)
 		}, {}, {});
 
 
-		bindPipeline(_context, buf, _updatePosPipeline,
+		_context.bindPipeline(buf, _updatePosPipeline,
 					 {
 						 { // set 0
 							 _tempBuffer.segment(pingBufferSegment),
@@ -649,8 +561,7 @@ void Simulation::run(vk::CommandBuffer buf, float timestep)
 		std::swap(pingBufferSegment, pongBufferSegment);
 	}
 
-	bindPipeline(
-		_context,
+	_context.bindPipeline(
 		buf,
 		_particleDataUpdatePipeline,
 		{

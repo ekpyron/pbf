@@ -5,7 +5,7 @@
 #include <pbf/common.h>
 #include <pbf/Cache.h>
 #include <pbf/descriptors/Order.h>
-
+#include <pbf/descriptors/DescriptorSetLayout.h>
 
 namespace pbf::descriptors {
 
