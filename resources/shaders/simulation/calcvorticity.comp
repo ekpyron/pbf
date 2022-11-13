@@ -48,9 +48,27 @@ if (distance(particleKeys[idx].position, particleKeys[gid].position) < 1.0) {
 
 #define END_FOR_EACH_NEIGHBOUR() }}}}}}}
 
-layout(std430, binding = 0, set = 2) writeonly buffer LambdaBuffer
+layout(std430, binding = 0, set = 2) writeonly buffer VorticityBuffer
 {
-    float lambdas[];
+    vec4 vorticities[];
+};
+
+
+struct ParticleData {
+    vec3 position;
+    uint aux;
+    vec3 velocity;
+};
+
+layout(std430, binding = 0, set = 3) readonly buffer Particles
+{
+    ParticleData particles[];
+};
+
+
+layout(std430, binding = 0, set = 4) writeonly buffer NextParticles
+{
+    ParticleData nextParticles[];
 };
 
 const float h = 2.5;
@@ -65,6 +83,7 @@ float Wpoly6(float r)
 
 const float one_over_rho_0 = 1.0;
 const float epsilon = 5.0;
+//const float xsph_viscosity_c = 0.01;
 const float xsph_viscosity_c = 0.01;
 
 float Wspiky(float r)
@@ -92,16 +111,23 @@ void main(void)
     ParticleKey key = particleKeys[gid];
     vec3 position = key.position;
 
+    vec3 velocity = particles[key.index].velocity;
+
     float sum_k_grad_Ci = 0;
     float rho = 0;
 
     vec3 grad_pi_Ci = vec3 (0, 0, 0);
 
+    vec3 vorticity = vec3(0,0,0);
+    vec3 v = vec3(0,0,0);
+    // TODO: cleanup
     FOR_EACH_NEIGHBOUR(gid, j)
     {
         ParticleKey key_j = particleKeys[j];
         vec3 position_j = key_j.position;
+        vec3 velocity_j = particles[key_j.index].velocity;
 
+        vec3 v_ij = velocity_j - velocity;
         vec3 p_ij = position - position_j;
 
         // compute rho_i (equation 2)
@@ -109,23 +135,19 @@ void main(void)
         float tmp = Wpoly6 (len);
         rho += tmp;
 
+        v += v_ij * tmp;
+
 
         // sum gradients of Ci (equation 8 and parts of equation 9)
         // use j as k so that we can stay in the same loop
         vec3 grad_pk_Ci = gradWspiky (p_ij);
-        grad_pk_Ci *= one_over_rho_0;
-        sum_k_grad_Ci += dot (grad_pk_Ci, grad_pk_Ci);
-
-        // now use j as j again and accumulate grad_pi_Ci for the case k=i
-        // from equation 8
-        grad_pi_Ci += grad_pk_Ci; // = gradWspiky (particle.position - particles[j].position);
+        vorticity += cross(v_ij, grad_pk_Ci);
     }
     END_FOR_EACH_NEIGHBOUR()
 
-    // add grad_pi_Ci to the sum
-    sum_k_grad_Ci += dot (grad_pi_Ci, grad_pi_Ci);
+    vec3 nextVelocity = velocity + xsph_viscosity_c * v;
+    nextParticles[key.index].velocity = nextVelocity;
 
-    // compute lambda_i (equations 1 and 9)
-    float C_i = rho * one_over_rho_0 - 1;
-    lambdas[gid] = -C_i / (sum_k_grad_Ci + epsilon);
+    vec4 vorticityAndLength = vec4(vorticity, length(vorticity));
+    vorticities[gid] = vorticityAndLength;
 }

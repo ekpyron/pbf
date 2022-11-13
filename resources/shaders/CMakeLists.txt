@@ -38,6 +38,8 @@ add_shader(simulation/keyinit.comp.spv simulation/keyinit.comp)
 add_shader(simulation/particledataupdate.comp.spv simulation/particledataupdate.comp)
 add_shader(simulation/calclambda.comp.spv simulation/calclambda.comp)
 add_shader(simulation/updatepos.comp.spv simulation/updatepos.comp)
+add_shader(simulation/calcvorticity.comp.spv simulation/calcvorticity.comp)
+add_shader(simulation/updatevel.comp.spv simulation/updatevel.comp)
 
 add_radix_sort(particlesort particlesort/hash.comp particlesort/globalsort.comp)
 add_radix_sort(unittestsort unittestsort/hash.comp unittestsort/globalsort.comp)

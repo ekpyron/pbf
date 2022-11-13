@@ -50,14 +50,26 @@ if (distance(particleKeys[idx].position, particleKeys[gid].position) < 1.0) {
 
     #define END_FOR_EACH_NEIGHBOUR() }}}}}}}
 
-layout(std430, binding = 0, set = 2) readonly buffer LambdaBuffer
+layout(std430, binding = 0, set = 2) readonly buffer VorticityBuffer
 {
-    float lambdas[];
+    vec4 vorticities[];
 };
 
-layout(std430, binding = 0, set = 3) writeonly buffer OutputParticleKeys
+
+struct ParticleData {
+    vec3 position;
+    uint aux;
+    vec3 velocity;
+};
+
+layout(std430, binding = 0, set = 3) readonly buffer Particles
 {
-    ParticleKey outputParticleKeys[];
+    ParticleData particles[];
+};
+
+layout(std430, binding = 0, set = 4) writeonly buffer OutputParticles
+{
+    ParticleData outputParticles[];
 };
 
 
@@ -72,10 +84,11 @@ float Wpoly6(float r)
 }
 
 const float one_over_rho_0 = 1.0;
-const float tensile_instability_k = 0.1;
-const float xsph_viscosity_c = 0.03;
 const float vorticity_epsilon = 5;
-const float timestep = 1.0 / 60.0; // TODO
+
+layout(push_constant) uniform constants {
+    float timestep;
+};
 
 float Wspiky(float r)
 {
@@ -104,73 +117,25 @@ void main(void)
 
     vec3 deltap = vec3 (0, 0, 0);
 
-    float lambda = lambdas[gid];
-
     float tensile_instability_scale = 1.0f / Wpoly6 (0.2f);
+
+    vec3 gradVorticity = vec3(0,0,0);
 
     FOR_EACH_NEIGHBOUR(gid, j)
     {
         vec3 position_j = particleKeys[j].position;
         vec3 p_ij = position - position_j;
         vec3 grad = gradWspiky(p_ij);
-
-        float scorr = tensile_instability_scale * Wpoly6 (length (p_ij));
-        scorr *= scorr;
-        scorr *= scorr;
-        scorr = -tensile_instability_k * scorr;
-
-        // accumulate position corrections (part of equation 12)
-        deltap += (lambda + lambdas[j] + scorr) * grad;
+        gradVorticity += vorticities[j].w * grad;
     }
     END_FOR_EACH_NEIGHBOUR()
 
-    position += one_over_rho_0 * deltap;
+    vec3 velocity = particles[key.index].velocity;
 
-    // Cylinder Z
-    /* position.z = clamp(position.z, 1, 63);
-    vec2 center = vec2(32, 32);
-    vec2 ptr = position.xy - center;
-    float dist = length(ptr);
-    ptr /= dist;
-    if (dist > 28) {
-        position.xy = center + 28 * ptr;
-    }
-    */
+    float l = length(gradVorticity);
+    if (l > 0.001)
+            gradVorticity /= l;
+    velocity += timestep * vorticity_epsilon * cross(gradVorticity, vorticities[gid].xyz);
 
-    // Cylinder y
-    /*{
-    position.y = clamp(position.y, 1, 63);
-    vec2 center = vec2(32, 32);
-    vec2 ptr = position.xz - center;
-    float dist = length(ptr);
-    ptr /= dist;
-    if (dist > 28) {
-        position.xz = center + 28 * ptr;
-    }
-    }*/
-
-    // Sphere
-    /*{
-    vec3 center = vec3(32,32,32);
-    vec3 ptr = position - center;
-    float dist = length (ptr);
-    ptr /= dist;
-    if (dist > 28) {
-        position =  center + 28 * ptr;
-    }
-    }*/
-
-    // Cube
-    // position = clamp (position, vec3(-64,-64,-64), vec3(63,63,63));
-
-    // Cube with pseudo-reflective boundaries.
-
-/*
-    position *= vec3(lessThan(position, vec3(-64,-64,-64))) * (-2) + 1;
-    position *= vec3(greaterThan(position, vec3(63,63,63))) * (-2) + 1;
-*/
-    position = clamp (position, vec3(-100,-100,-100), vec3(100,100,100));
-
-    outputParticleKeys[gid].position = position;
-    outputParticleKeys[gid].index = particleKeys[gid].index;
+    outputParticles[key.index].velocity = velocity;
 }

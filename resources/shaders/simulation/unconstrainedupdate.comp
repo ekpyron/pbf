@@ -38,4 +38,5 @@ void main (void)
     vec3 velocity = particles[key.idx].velocity;
     velocity += externalForces * timestep;
     particleKeys[gid].position += timestep * velocity;
+    particles[key.idx].velocity = velocity;
 }

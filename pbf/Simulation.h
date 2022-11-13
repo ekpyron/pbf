@@ -50,16 +50,19 @@ private:
 	Buffer<GridData> _gridDataBuffer;
 
 	Buffer<float> _lambdaBuffer;
+	Buffer<glm::vec4> _vorticityBuffer;
 
 	RadixSort _radixSort;
 	NeighbourCellFinder _neighbourCellFinder;
 
-	RingBuffer<ParticleData> _tempBuffer;
+	RingBuffer<ParticleKey> _tempBuffer;
 
 	CacheReference<descriptors::ComputePipeline> _unconstrainedSystemUpdatePipeline;
 	CacheReference<descriptors::ComputePipeline> _particleDataUpdatePipeline;
 	CacheReference<descriptors::ComputePipeline> _calcLambdaPipeline;
 	CacheReference<descriptors::ComputePipeline> _updatePosPipeline;
+	CacheReference<descriptors::ComputePipeline> _calcVorticityPipeline;
+	CacheReference<descriptors::ComputePipeline> _updateVelPipeline;
 
 	static constexpr std::uint32_t blockSize = 256;
 };

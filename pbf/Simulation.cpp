@@ -37,6 +37,7 @@ _particleData(particleData),
 _particleKeys(initContext.context, particleData.size(), particleData.segments(), vk::BufferUsageFlagBits::eStorageBuffer|vk::BufferUsageFlagBits::eTransferDst, MemoryType::STATIC),
 _gridDataBuffer(_context, 1, vk::BufferUsageFlagBits::eUniformBuffer|vk::BufferUsageFlagBits::eTransferDst, MemoryType::STATIC),
 _lambdaBuffer(initContext.context, particleData.size(), vk::BufferUsageFlagBits::eStorageBuffer, MemoryType::STATIC),
+_vorticityBuffer(initContext.context, particleData.size(), vk::BufferUsageFlagBits::eStorageBuffer, MemoryType::STATIC),
 _radixSort(_context, blockSize, getNumParticles() / blockSize, radixSortDescriptorSetLayoutDescriptors(), "shaders/particlesort"),
 _neighbourCellFinder(_context, GridData{}.numCells(), getNumParticles()),
 _tempBuffer(_context, particleData.size(), 2, vk::BufferUsageFlagBits::eStorageBuffer|vk::BufferUsageFlagBits::eTransferSrc, MemoryType::STATIC)
@@ -208,7 +209,11 @@ _tempBuffer(_context, particleData.size(), 2, vk::BufferUsageFlagBits::eStorageB
 		});
 		auto calcLambdaPipelineLayout = cache.fetch(
 			descriptors::PipelineLayout{
-				.setLayouts = {inputDescriptorSetLayout, gridDataDescriptorSetLayout, singleStorageBufferDescriptorSetLayout /* lambda */},
+				.setLayouts = {inputDescriptorSetLayout, gridDataDescriptorSetLayout,
+					singleStorageBufferDescriptorSetLayout /* lambda */,
+					singleStorageBufferDescriptorSetLayout /* vorticity */,
+					singleStorageBufferDescriptorSetLayout /* particle data */,
+					singleStorageBufferDescriptorSetLayout /* next particle data */},
 				PBF_DESC_DEBUG_NAME("Calc lambda pipeline Layout")
 			});
 
@@ -232,9 +237,84 @@ _tempBuffer(_context, particleData.size(), 2, vk::BufferUsageFlagBits::eStorageB
 			}
 		);
 
+		auto calcVorticityPipelineLayout = cache.fetch(
+			descriptors::PipelineLayout{
+				.setLayouts = {inputDescriptorSetLayout, gridDataDescriptorSetLayout,
+					singleStorageBufferDescriptorSetLayout /* vorticity */,
+					singleStorageBufferDescriptorSetLayout /* particle data */,
+					singleStorageBufferDescriptorSetLayout /* next particle data */},
+				PBF_DESC_DEBUG_NAME("Calc lambda pipeline Layout")
+			});
+
+		_calcVorticityPipeline = cache.fetch(
+			descriptors::ComputePipeline{
+				.flags = {},
+				.shaderStage = descriptors::ShaderStage {
+					.stage = vk::ShaderStageFlagBits::eCompute,
+					.module = cache.fetch(
+						descriptors::ShaderModule{
+							.source = descriptors::ShaderModule::File{"shaders/simulation/calcvorticity.comp.spv"},
+							PBF_DESC_DEBUG_NAME("Simulation: Calc Vorticity Shader")
+						}),
+					.entryPoint = "main",
+					.specialization = {
+						Specialization<uint32_t>{.constantID = 0, .value = blockSize}
+					}
+				},
+				.pipelineLayout = calcVorticityPipelineLayout,
+				PBF_DESC_DEBUG_NAME("Simulation: calc vorticity pipeline")
+			}
+		);
+
+		auto updateVelPipelineLayout = cache.fetch(
+			descriptors::PipelineLayout{
+				.setLayouts = {inputDescriptorSetLayout, gridDataDescriptorSetLayout,
+					singleStorageBufferDescriptorSetLayout /* lambda */,
+					singleStorageBufferDescriptorSetLayout /* key output */,
+					singleStorageBufferDescriptorSetLayout /* vorticities */,
+					singleStorageBufferDescriptorSetLayout /* particle data in */,
+					singleStorageBufferDescriptorSetLayout /* particle data out */
+				},
+				.pushConstants = {
+					vk::PushConstantRange{
+						vk::ShaderStageFlagBits::eCompute,
+						0,
+						sizeof(float)
+					}
+				},
+				PBF_DESC_DEBUG_NAME("Calc lambda pipeline Layout")
+			});
+
+		_updateVelPipeline = cache.fetch(
+			descriptors::ComputePipeline{
+				.flags = {},
+				.shaderStage = descriptors::ShaderStage {
+					.stage = vk::ShaderStageFlagBits::eCompute,
+					.module = cache.fetch(
+						descriptors::ShaderModule{
+							.source = descriptors::ShaderModule::File{"shaders/simulation/updatevel.comp.spv"},
+							PBF_DESC_DEBUG_NAME("Simulation: Update Vel Shader")
+						}),
+					.entryPoint = "main",
+					.specialization = {
+						Specialization<uint32_t>{.constantID = 0, .value = blockSize}
+					}
+				},
+				.pipelineLayout = updateVelPipelineLayout,
+				PBF_DESC_DEBUG_NAME("Simulation: update vel pipeline")
+			}
+		);
+
+
 		auto updatePosPipelineLayout = cache.fetch(
 			descriptors::PipelineLayout{
-				.setLayouts = {inputDescriptorSetLayout, gridDataDescriptorSetLayout, singleStorageBufferDescriptorSetLayout /* lambda */, singleStorageBufferDescriptorSetLayout /* key output */},
+				.setLayouts = {inputDescriptorSetLayout, gridDataDescriptorSetLayout,
+					singleStorageBufferDescriptorSetLayout /* lambda */,
+					singleStorageBufferDescriptorSetLayout /* key output */,
+					singleStorageBufferDescriptorSetLayout /* vorticities */,
+					singleStorageBufferDescriptorSetLayout /* particle data in */,
+					singleStorageBufferDescriptorSetLayout /* particle data out */
+				},
 				PBF_DESC_DEBUG_NAME("Calc lambda pipeline Layout")
 			});
 
@@ -394,7 +474,8 @@ void Simulation::run(vk::CommandBuffer buf, float timestep)
 			{
 				{_tempBuffer.segment(pingBufferSegment), _gridDataBuffer.fullBufferInfo()},
 				{_neighbourCellFinder.gridBoundaryBuffer().fullBufferInfo()},
-				{_lambdaBuffer.fullBufferInfo()}
+				{_lambdaBuffer.fullBufferInfo()},
+				{_vorticityBuffer.fullBufferInfo()}
 			}
 		);
 		buf.dispatch(((getNumParticles() + blockSize - 1) / blockSize), 1, 1);
@@ -455,8 +536,47 @@ void Simulation::run(vk::CommandBuffer buf, float timestep)
 		}
 	}, {}, {});
 
+	_context.bindPipeline(
+		buf,
+		_calcVorticityPipeline,
+		{
+			{_particleKeys.segment(_context.renderer().nextFrameSync()), _gridDataBuffer.fullBufferInfo()},
+			{_neighbourCellFinder.gridBoundaryBuffer().fullBufferInfo()},
+			{_vorticityBuffer.fullBufferInfo()},
+			{_particleData.segment(_context.renderer().nextFrameSync())},
+			{_particleData.segment(_context.renderer().currentFrameSync())},
+		}
+	);
+	buf.dispatch(((getNumParticles() + blockSize - 1) / blockSize), 1, 1);
+
+	buf.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {}, {
+		vk::MemoryBarrier{
+			.srcAccessMask = vk::AccessFlagBits::eShaderWrite,
+			.dstAccessMask = vk::AccessFlagBits::eShaderRead
+		}
+	}, {}, {});
+
+	_context.bindPipeline(
+		buf,
+		_updateVelPipeline,
+		{
+			{_particleKeys.segment(_context.renderer().nextFrameSync()), _gridDataBuffer.fullBufferInfo()},
+			{_neighbourCellFinder.gridBoundaryBuffer().fullBufferInfo()},
+			{_vorticityBuffer.fullBufferInfo()},
+			{_particleData.segment(_context.renderer().currentFrameSync())},
+			{_particleData.segment(_context.renderer().nextFrameSync())}
+		}
+	);
+	buf.pushConstants(*(_updateVelPipeline.descriptor().pipelineLayout), vk::ShaderStageFlagBits::eCompute, 0, sizeof(float), &timestep);
+	buf.dispatch(((getNumParticles() + blockSize - 1) / blockSize), 1, 1);
 
 
+	buf.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {}, {
+		vk::MemoryBarrier{
+			.srcAccessMask = vk::AccessFlagBits::eShaderWrite,
+			.dstAccessMask = vk::AccessFlagBits::eShaderRead
+		}
+	}, {}, {});
 }
 
 }
