@@ -17,11 +17,13 @@ layout(location = 1) flat out uint fAux;
 layout(location = 2) out vec3 fGrid;
 layout(location = 3) out vec3 fPosition;
 layout(location = 4) out vec3 fVelocity;
+layout(location = 5) out uint fType;
 
 layout(location = 0) in vec2 vPosition;
 layout(location = 1) in vec3 vParticlePosition;
 layout(location = 2) in uint vAux;
 layout(location = 3) in vec3 vVelocity;
+layout(location = 4) in uint vType;
 
 
 void main() {
@@ -35,4 +37,5 @@ void main() {
     fAux = vAux;
     fPosition = (ubo.viewmat * vec4(pos, 1.0)).xyz;
     fVelocity = vVelocity;
+    fType = vType;
 }

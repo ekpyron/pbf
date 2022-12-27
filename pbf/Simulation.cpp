@@ -278,7 +278,7 @@ void Simulation::run(vk::CommandBuffer buf, float timestep)
 				{_tempBuffer.segment(pingBufferSegment), _gridDataBuffer.fullBufferInfo()},
 				{_neighbourCellFinder.gridBoundaryBuffer().fullBufferInfo()},
 				{_lambdaBuffer.fullBufferInfo()},
-				{_vorticityBuffer.fullBufferInfo()}
+				{_particleData.segment(_context.renderer().nextFrameSync())}
 			}
 		);
 		buf.dispatch(((getNumParticles() + blockSize - 1) / blockSize), 1, 1);
@@ -306,7 +306,8 @@ void Simulation::run(vk::CommandBuffer buf, float timestep)
 						 { // set 3
 							 isLast ? _particleKeys.segment(_context.renderer().nextFrameSync())
 							 		: _tempBuffer.segment(pongBufferSegment)
-						 }
+						 },
+						 {_particleData.segment(_context.renderer().nextFrameSync())}
 					 });
 		buf.dispatch(((getNumParticles() + blockSize - 1) / blockSize), 1, 1);
 

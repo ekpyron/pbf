@@ -7,6 +7,7 @@ struct ParticleData {
     vec3 position;
     uint aux;
     vec3 velocity;
+    uint type;
 };
 
 struct GridBoundaries {

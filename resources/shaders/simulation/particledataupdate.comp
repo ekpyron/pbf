@@ -33,14 +33,14 @@ void main (void)
     vec3 position = key.position;
     // Reflective boundary with 0.4 dampening factor.
     {
-        vec3 cornerToPosition = position - vec3(-64,-64,-64);
+        vec3 cornerToPosition = position - vec3(-30,-64,-30);
         cornerToPosition *= vec3(lessThan(cornerToPosition, vec3(0,0,0))) * (-1.4) + 1;
-        position = vec3(-64,-64,-64) + cornerToPosition;
+        position = vec3(-30,-64,-30) + cornerToPosition;
     }
     {
-        vec3 cornerToPosition = position - vec3(63,63,63);
+        vec3 cornerToPosition = position - vec3(30,63,30);
         cornerToPosition *= vec3(greaterThan(cornerToPosition, vec3(0,0,0))) * (-1.4) + 1;
-        position = vec3(63,63,63) + cornerToPosition;
+        position = vec3(30,63,30) + cornerToPosition;
     }
     vec3 oldPosition = oldParticles[key.index].position;
     particleKeys[gid].position = position;

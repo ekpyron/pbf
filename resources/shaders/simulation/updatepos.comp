@@ -22,11 +22,18 @@ layout(std430, binding = 0, set = 3) writeonly buffer OutputParticleKeys
 };
 
 
+layout(std430, binding = 0, set = 4) readonly buffer Particles
+{
+    ParticleData particles[];
+};
+
+
 void main(void)
 {
     uint gid = gl_GlobalInvocationID.x;
     ParticleKey key = particleKeys[gid];
     vec3 position = key.position;
+    uint type = particles[key.index].type;
 
     vec3 deltap = vec3 (0, 0, 0);
 
@@ -34,17 +41,22 @@ void main(void)
 
     FOR_EACH_NEIGHBOUR(gid, j)
     {
-        vec3 position_j = particleKeys[j].position;
+        ParticleKey key_j = particleKeys[j];
+        vec3 position_j = key_j.position;
+        uint type_j = particles[key_j.index].type;
         vec3 p_ij = position - position_j;
+        float len = length (p_ij);
         vec3 grad = gradWspiky(p_ij);
 
-        float scorr = tensile_instability_scale * Wpoly6 (length (p_ij));
+        float scorr = tensile_instability_scale * Wpoly6 (len);
         scorr *= scorr;
         scorr *= scorr;
         scorr = -tensile_instability_k * scorr;
 
         // accumulate position corrections (part of equation 12)
         deltap += (lambda + lambdas[j] + scorr) * grad;
+
+        deltap += (len < 1.2 ? 1 : 0) * ((type == type_j) ? 0.0 : -1.0) * ((0.10 * (len - 1.2)) / len * p_ij);
     }
     END_FOR_EACH_NEIGHBOUR()
 

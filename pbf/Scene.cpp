@@ -38,6 +38,7 @@ void initializeParticleData(ParticleData* data, size_t numParticles)
 					data[id].position += glm::vec3(dist(gen), dist(gen), dist(gen));
 					data[id].position *= 0.8f;
 					data[id].velocity = glm::vec3(0,0,0);
+					data[id].type = id > (numParticles / 2);
 				}
 			}
 		}

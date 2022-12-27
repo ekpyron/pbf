@@ -25,7 +25,7 @@ struct ParticleData {
 	glm::vec3 position;
 	uint32_t aux = 0;
 	glm::vec3 velocity;
-	uint32_t padding = 0;
+	uint32_t type = 0;
 };
 
 struct ParticleKey {

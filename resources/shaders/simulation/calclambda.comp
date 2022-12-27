@@ -16,11 +16,19 @@ layout(std430, binding = 0, set = 2) writeonly buffer LambdaBuffer
     float lambdas[];
 };
 
+layout(std430, binding = 0, set = 3) readonly buffer Particles
+{
+    ParticleData particles[];
+};
+
+
 void main(void)
 {
     uint gid = gl_GlobalInvocationID.x;
     ParticleKey key = particleKeys[gid];
     vec3 position = key.position;
+
+    uint type = particles[key.index].type;
 
     float sum_k_grad_Ci = 0;
     float rho = 0;
@@ -31,12 +39,13 @@ void main(void)
     {
         ParticleKey key_j = particleKeys[j];
         vec3 position_j = key_j.position;
+        uint type_j = particles[key_j.index].type;
 
         vec3 p_ij = position - position_j;
 
         // compute rho_i (equation 2)
         float len = length(p_ij);
-        float tmp = Wpoly6 (len);
+        float tmp = Wpoly6(len);
         rho += tmp;
 
 
