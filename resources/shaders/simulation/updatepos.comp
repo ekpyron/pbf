@@ -32,8 +32,6 @@ void main(void)
 
     float lambda = lambdas[gid];
 
-    float tensile_instability_scale = 1.0f / Wpoly6 (0.2f);
-
     FOR_EACH_NEIGHBOUR(gid, j)
     {
         vec3 position_j = particleKeys[j].position;

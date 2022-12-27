@@ -1,6 +1,7 @@
 #pragma once
 
 #include "common.h"
+#include "UIControlled.h"
 #include "Buffer.h"
 #include "Cache.h"
 #include "RadixSort.h"
@@ -14,7 +15,7 @@ class InitContext;
 class ParticleData;
 class ParticleKey;
 
-class Simulation
+class Simulation: public UIControlled
 {
 public:
 	Simulation(InitContext& context, RingBuffer<ParticleData>& particleData);
@@ -23,8 +24,19 @@ public:
 	}
 	void resetKeys() { _resetKeys = true; }
 	void run(vk::CommandBuffer buf, float timestep);
-
+protected:
+	void ui() override;
 private:
+
+	void buildPipelines();
+
+	float h = glm::length(glm::vec3(1.0f, 1.0f, 1.0f));
+	float rho_0 = 1.0f;
+	float epsilon = 5.0f;
+	float xsph_viscosity_c = 0.01f;
+	float tensile_instability_k = 0.1f;
+	float vorticity_epsilon = 5.0f;
+
 	float _lastTimestep = 1.0 / 60.0;
 	void initKeys(Context& context, vk::CommandBuffer buf);
 	bool _resetKeys = false;
@@ -63,6 +75,8 @@ private:
 	CacheReference<descriptors::ComputePipeline> _updatePosPipeline;
 	CacheReference<descriptors::ComputePipeline> _calcVorticityPipeline;
 	CacheReference<descriptors::ComputePipeline> _updateVelPipeline;
+
+	descriptors::ShaderStage::SpecializationInfo makeSpecializationInfo() const;
 
 	static constexpr std::uint32_t blockSize = 256;
 };

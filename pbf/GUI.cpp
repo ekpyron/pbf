@@ -59,6 +59,8 @@ void GUI::render(vk::CommandBuffer buf)
 	ImGui_ImplGlfw_NewFrame();
 	ImGui::NewFrame();
 
+	bool doNavigation = !ImGui::IsAnyItemActive(); //!ImGui::GetIO().WantCaptureMouse;
+
 	if (ImGui::IsKeyDown(ImGuiKey_H) && ImGui::IsMouseClicked(ImGuiMouseButton_Left, false))
 	{
 		auto [xpos, ypos] = _context.window().getCursorPos();
@@ -101,28 +103,31 @@ void GUI::render(vk::CommandBuffer buf)
 		}
 	}
 
-	ImVec2 dragDelta = ImGui::GetMouseDragDelta(ImGuiMouseButton_Left);
-	ImGui::ResetMouseDragDelta(ImGuiMouseButton_Left);
-	auto [width, height] = _context.window().framebufferSize();
-	dragDelta.x /= float(width);
-	dragDelta.y /= float(height);
+	if (doNavigation)
+	{
+		ImVec2 dragDelta = ImGui::GetMouseDragDelta(ImGuiMouseButton_Left);
+		ImGui::ResetMouseDragDelta(ImGuiMouseButton_Left);
+		auto [width, height] = _context.window().framebufferSize();
+		dragDelta.x /= float(width);
+		dragDelta.y /= float(height);
 
-	if (ImGui::IsKeyDown(ImGuiKey_LeftCtrl))
-	{
-		_context.camera().Zoom(dragDelta.x + dragDelta.y);
-	}
-	else if (ImGui::IsKeyDown(ImGuiKey_LeftShift))
-	{
-		_context.camera().MoveX (dragDelta.x);
-		_context.camera().MoveY (dragDelta.y);
-	}
-	else
-	{
-		_context.camera().Rotate (dragDelta.y, -dragDelta.x);
+		if (ImGui::IsKeyDown(ImGuiKey_LeftCtrl))
+		{
+			_context.camera().Zoom(dragDelta.x + dragDelta.y);
+		}
+		else if (ImGui::IsKeyDown(ImGuiKey_LeftShift))
+		{
+			_context.camera().MoveX (dragDelta.x);
+			_context.camera().MoveY (dragDelta.y);
+		}
+		else
+		{
+			_context.camera().Rotate (dragDelta.y, -dragDelta.x);
+		}
 	}
 
 	{
-		ImGui::Begin("PBF", nullptr, ImGuiWindowFlags_AlwaysAutoResize);
+		ImGui::Begin("PBF", nullptr, ImGuiWindowFlags_AlwaysAutoResize|ImGuiWindowFlags_NoNavInputs);
 		if (ImGui::Button(_runSPH ? "Stop" : "Run"))
 			_runSPH = !_runSPH;
 		ImGui::SameLine();
@@ -145,6 +150,9 @@ void GUI::render(vk::CommandBuffer buf)
 			frameCount = 0;
 		}
 		ImGui::Text("FPS %d", FPS);
+
+		for (auto* uiControlled: _uiControlled)
+			uiControlled->ui();
 
 		ImGui::End();
 	}

@@ -38,8 +38,6 @@ void main(void)
 
     vec3 deltap = vec3 (0, 0, 0);
 
-    float tensile_instability_scale = 1.0f / Wpoly6 (0.2f);
-
     vec3 gradVorticity = vec3(0,0,0);
 
     FOR_EACH_NEIGHBOUR(gid, j)

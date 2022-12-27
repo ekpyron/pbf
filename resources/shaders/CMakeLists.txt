@@ -8,7 +8,8 @@ macro(add_shader_internal OUTPUT_NAME SOURCE_FILES DEPS ARGUMENTS)
 
     add_custom_command(OUTPUT ${FULL_OUT}
             DEPENDS ${DEPS} ${Vulkan_GLSLC_EXECUTABLE}
-            COMMAND ${Vulkan_GLSLC_EXECUTABLE} -g -O --target-env=vulkan1.1 -o "${FULL_OUT}" ${ARGUMENTS} ${SOURCE_FILES}
+            DEPFILE "${FULL_OUT}.d"
+            COMMAND ${Vulkan_GLSLC_EXECUTABLE} -g -O --target-env=vulkan1.1 -MD -MF "${FULL_OUT}.d" -o "${FULL_OUT}" ${ARGUMENTS} ${SOURCE_FILES}
             WORKING_DIRECTORY "${CMAKE_CURRENT_LIST_DIR}"
             VERBATIM
     )

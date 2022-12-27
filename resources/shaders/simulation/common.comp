@@ -43,14 +43,13 @@ uint GetGridIndex(vec3 position) {
     return uint(gridPositive.x * GRID_HASHWEIGHTS.x + gridPositive.y * GRID_HASHWEIGHTS.y + gridPositive.z * GRID_HASHWEIGHTS.z);
 }
 
-
-const float h = 2.5; // TODO
-const float one_over_rho_0 = 1.0;
-const float epsilon = 5.0;
-const float xsph_viscosity_c = 0.01;
-//const float xsph_viscosity_c = 0.03;
-const float tensile_instability_k = 0.1;
-const float vorticity_epsilon = 5;
+layout (constant_id = 1) const float h = 2.5; // TODO
+layout (constant_id = 2) const float one_over_rho_0 = 1.0;
+layout (constant_id = 3) const float epsilon = 5.0;
+layout (constant_id = 4) const float xsph_viscosity_c = 0.01;
+layout (constant_id = 5) const float tensile_instability_k = 0.1;
+layout (constant_id = 6) const float vorticity_epsilon = 5;
+layout (constant_id = 7) const float tensile_instability_scale = 0.0f;
 
 float Wpoly6(float r)
 {

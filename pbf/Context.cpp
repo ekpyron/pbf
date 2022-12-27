@@ -233,8 +233,8 @@ Context::Context() {
 	});
 
     _renderer = std::make_unique<Renderer>(initContext);
-    _scene = std::make_unique<Scene>(initContext);
 	_gui = std::make_unique<GUI>(initContext);
+    _scene = std::make_unique<Scene>(initContext);
 
 	initContext.initCommandBuffer->end();
 
