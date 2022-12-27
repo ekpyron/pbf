@@ -2,9 +2,9 @@
 #extension GL_ARB_separate_shader_objects : enable
 #extension GL_KHR_shader_subgroup_basic : enable
 
-layout (local_size_x_id = 0, local_size_y = 1, local_size_z = 1) in;
+#include <params.comp>
 
-const uint BLOCKSIZE = gl_WorkGroupSize.x;
+layout (local_size_x_id = 0, local_size_y = 1, local_size_z = 1) in;
 
 layout(std430, binding = 0, set = 0) readonly buffer PrefixSums
 {
@@ -21,9 +21,8 @@ layout(push_constant) uniform constants {
     int bitShift;
 };
 
-uint GetHash(uint);
-
-uint GetPermutation(uint id) {
-    uint bits = bitfieldExtract(GetHash(id), bitShift, 2);
-    return blockSum[blockSumOffsets[bits] + gl_WorkGroupID.x] + prefixSum[gl_GlobalInvocationID.x];
+void main()
+{
+    uint bits = bitfieldExtract(getHash(gl_GlobalInvocationID.x), bitShift, 2);
+    sortingCopy(gl_GlobalInvocationID.x, blockSum[blockSumOffsets[bits] + gl_WorkGroupID.x] + prefixSum[gl_GlobalInvocationID.x]);
 }

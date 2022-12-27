@@ -13,7 +13,7 @@ set(FMT_DOC OFF CACHE BOOL "" FORCE)
 set(GLM_TEST_ENABLE OFF CACHE BOOL "" FORCE)
 
 find_package(glfw3 REQUIRED)
-find_package(Vulkan COMPONENTS glslangValidator REQUIRED)
+find_package(Vulkan COMPONENTS glslangValidator glslc REQUIRED)
 
 add_subdirectory(contrib/fmt)
 add_definitions(-DSPDLOG_FMT_EXTERNAL -DVULKAN_HPP_NO_STRUCT_CONSTRUCTORS)
