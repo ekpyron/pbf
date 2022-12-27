@@ -3,16 +3,6 @@
 
 namespace pbf {
 
-UIControlled::UIControlled(GUI &gui): _gui(&gui)
-{
-	addMyself();
-}
-
-UIControlled::~UIControlled()
-{
-	removeMyself();
-}
-
 void UIControlled::removeMyself()
 {
 	if (_gui)

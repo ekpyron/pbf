@@ -59,7 +59,6 @@ void GUI::render(vk::CommandBuffer buf)
 	ImGui_ImplGlfw_NewFrame();
 	ImGui::NewFrame();
 
-	bool doNavigation = !ImGui::IsAnyItemActive(); //!ImGui::GetIO().WantCaptureMouse;
 
 	if (ImGui::IsKeyDown(ImGuiKey_H) && ImGui::IsMouseClicked(ImGuiMouseButton_Left, false))
 	{
@@ -103,28 +102,6 @@ void GUI::render(vk::CommandBuffer buf)
 		}
 	}
 
-	if (doNavigation)
-	{
-		ImVec2 dragDelta = ImGui::GetMouseDragDelta(ImGuiMouseButton_Left);
-		ImGui::ResetMouseDragDelta(ImGuiMouseButton_Left);
-		auto [width, height] = _context.window().framebufferSize();
-		dragDelta.x /= float(width);
-		dragDelta.y /= float(height);
-
-		if (ImGui::IsKeyDown(ImGuiKey_LeftCtrl))
-		{
-			_context.camera().Zoom(dragDelta.x + dragDelta.y);
-		}
-		else if (ImGui::IsKeyDown(ImGuiKey_LeftShift))
-		{
-			_context.camera().MoveX (dragDelta.x);
-			_context.camera().MoveY (dragDelta.y);
-		}
-		else
-		{
-			_context.camera().Rotate (dragDelta.y, -dragDelta.x);
-		}
-	}
 
 	{
 		ImGui::Begin("PBF", nullptr, ImGuiWindowFlags_AlwaysAutoResize|ImGuiWindowFlags_NoNavInputs);
@@ -151,8 +128,13 @@ void GUI::render(vk::CommandBuffer buf)
 		}
 		ImGui::Text("FPS %d", FPS);
 
+
 		for (auto* uiControlled: _uiControlled)
-			uiControlled->ui();
+		{
+			std::string category = uiControlled->uiCategory();
+			if (category.empty() || ImGui::CollapsingHeader(category.c_str(), ImGuiTreeNodeFlags_DefaultOpen))
+				uiControlled->ui();
+		}
 
 		ImGui::End();
 	}

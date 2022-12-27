@@ -102,6 +102,10 @@ _tempBuffer(_context, particleData.size(), 2, vk::BufferUsageFlagBits::eStorageB
 	buildPipelines();
 }
 
+std::string Simulation::uiCategory() const
+{
+	return "Simulation";
+}
 
 void Simulation::ui()
 {

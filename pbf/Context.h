@@ -42,7 +42,7 @@ public:
 	vk::Format depthFormat() const;
 
 	GUI& gui() { return *_gui; }
-	Camera& camera() { return _camera; }
+	Camera& camera() { return *_camera; }
 
 	uint32_t graphicsQueueFamily() const {
 		return _families.graphics;
@@ -198,7 +198,7 @@ private:
 
     std::unique_ptr<Scene> _scene;
 
-	Camera _camera;
+	std::unique_ptr<Camera> _camera;
 };
 
 struct InitContext {

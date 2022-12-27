@@ -1,35 +1,17 @@
-/*
- * Copyright (c) 2013-2014 Daniel Kirchner
- *
- * Permission is hereby granted, free of charge, to any person obtaining a copy
- * of this software and associated documentation files (the "Software"), to deal
- * in the Software without restriction, including without limitation the rights
- * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
- * copies of the Software, and to permit persons to whom the Software is
- * furnished to do so, subject to the following conditions:
- *
- * The above copyright notice and this permission notice shall be included in
- * all copies or substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
- * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
- * FITNESS FOR A PARTICULAR PURPOSE ANDNONINFRINGEMENT. IN NO EVENT SHALL THE
- * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
- * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
- * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
- * THE SOFTWARE.
- */
-#ifndef CAMERA_H
-#define CAMERA_H
+#pragma once
 
 #include "common.h"
+#include "UIControlled.h"
+
+namespace pbf {
 
 /** Camera class.
  * The camera class processes user input in order to create a view matrix for the scene.
  */
-class Camera
+class Camera: public UIControlled
 {
 public:
+	Camera(Context& _context);
     /** Generate a view matrix.
      * Generates and returns a view matrix for the current camera position and orientation.
      * \returns the generated view matrix
@@ -70,7 +52,10 @@ public:
     void SetPosition (const glm::vec3 &pos);
 
 	glm::mat4 GetViewRot() const;
+protected:
+	void ui() override;
 private:
+	Context& context;
     /** Current position of the camera.
      */
     glm::vec3 pos;
@@ -88,4 +73,4 @@ private:
     float yangle = 0.0f;
 };
 
-#endif /* CAMERA_H */
+}

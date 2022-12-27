@@ -26,6 +26,7 @@ public:
 	void run(vk::CommandBuffer buf, float timestep);
 protected:
 	void ui() override;
+	std::string uiCategory() const override;
 private:
 
 	void buildPipelines();

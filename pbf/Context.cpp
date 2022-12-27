@@ -234,6 +234,7 @@ Context::Context() {
 
     _renderer = std::make_unique<Renderer>(initContext);
 	_gui = std::make_unique<GUI>(initContext);
+	_camera = std::make_unique<Camera>(*this);
     _scene = std::make_unique<Scene>(initContext);
 
 	initContext.initCommandBuffer->end();
@@ -326,7 +327,7 @@ void Context::run() {
     spdlog::get("console")->debug("Entering main loop.");
 	float rot = 0.0f;
 	double lastTime = glfwGetTime();
-	_camera.SetPosition(glm::vec3 (0, 0, -100));
+	_camera->SetPosition(glm::vec3 (0, 0, -100));
     while (!_window->shouldClose()) {
 		double now = glfwGetTime();
 		double timePassed = now - lastTime;
@@ -338,10 +339,10 @@ void Context::run() {
 									    0.0f,  0.0f, 0.5f, 0.0f,
 									    0.0f,  0.0f, 0.5f, 1.0f);
 		glm::mat4 projmat = glm::perspective(glm::radians(60.0f), float(width) / float(height), 0.1f, 1000.0f);
-		glm::mat4 mvmat = _camera.GetViewMatrix(); // glm::rotate(glm::translate(glm::mat4(1), glm::vec3(0,0,-3)), rot, glm::vec3(0,0,1));
+		glm::mat4 mvmat = _camera->GetViewMatrix(); // glm::rotate(glm::translate(glm::mat4(1), glm::vec3(0,0,-3)), rot, glm::vec3(0,0,1));
 		rot += 1.0f * timePassed;
 		globalUniformData->mvpmatrix = clip * projmat * mvmat;
-		globalUniformData->viewrot = _camera.GetViewRot();
+		globalUniformData->viewrot = _camera->GetViewRot();
 		globalUniformData->invviewmat = glm::inverse(mvmat);
 		globalUniformData->viewmat = mvmat;
         _globalDescriptorSetLayout.keepAlive();

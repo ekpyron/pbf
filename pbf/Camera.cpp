@@ -1,25 +1,40 @@
-/*
- * Copyright (c) 2013-2014 Daniel Kirchner
- *
- * Permission is hereby granted, free of charge, to any person obtaining a copy
- * of this software and associated documentation files (the "Software"), to deal
- * in the Software without restriction, including without limitation the rights
- * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
- * copies of the Software, and to permit persons to whom the Software is
- * furnished to do so, subject to the following conditions:
- *
- * The above copyright notice and this permission notice shall be included in
- * all copies or substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
- * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
- * FITNESS FOR A PARTICULAR PURPOSE ANDNONINFRINGEMENT. IN NO EVENT SHALL THE
- * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
- * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
- * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
- * THE SOFTWARE.
- */
 #include "Camera.h"
+#include "Context.h"
+#include <imgui.h>
+
+namespace pbf {
+
+Camera::Camera(Context& context): UIControlled(context.gui()), context(context)
+{
+}
+
+void Camera::ui()
+{
+	bool doNavigation = !ImGui::IsAnyItemActive() && !ImGui::GetIO().WantCaptureMouse;
+
+	if (doNavigation)
+	{
+		ImVec2 dragDelta = ImGui::GetMouseDragDelta(ImGuiMouseButton_Left);
+		ImGui::ResetMouseDragDelta(ImGuiMouseButton_Left);
+		auto [width, height] = context.window().framebufferSize();
+		dragDelta.x /= float(width);
+		dragDelta.y /= float(height);
+
+		if (ImGui::IsKeyDown(ImGuiKey_LeftCtrl))
+		{
+			context.camera().Zoom(dragDelta.x + dragDelta.y);
+		}
+		else if (ImGui::IsKeyDown(ImGuiKey_LeftShift))
+		{
+			context.camera().MoveX (dragDelta.x);
+			context.camera().MoveY (dragDelta.y);
+		}
+		else
+		{
+			context.camera().Rotate (dragDelta.y, -dragDelta.x);
+		}
+	}
+}
 
 const glm::vec3 &Camera::GetPosition () const
 {
@@ -69,4 +84,6 @@ void Camera::MoveX (float value)
 void Camera::MoveY (float value)
 {
     pos += 50.0f * value * (rot * glm::vec3 (0, 1, 0));
+}
+
 }
