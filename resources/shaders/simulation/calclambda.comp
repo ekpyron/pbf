@@ -48,18 +48,19 @@ void main(void)
         float tmp = Wpoly6(len);
         rho += tmp;
 
-
         // sum gradients of Ci (equation 8 and parts of equation 9)
         // use j as k so that we can stay in the same loop
         vec3 grad_pk_Ci = gradWspiky (p_ij);
-        grad_pk_Ci *= one_over_rho_0;
-        sum_k_grad_Ci += dot (grad_pk_Ci, grad_pk_Ci);
+        sum_k_grad_Ci += dot(grad_pk_Ci, grad_pk_Ci);
 
         // now use j as j again and accumulate grad_pi_Ci for the case k=i
         // from equation 8
-        grad_pi_Ci += grad_pk_Ci; // = gradWspiky (particle.position - particles[j].position);
+        grad_pi_Ci += grad_pk_Ci;
     }
     END_FOR_EACH_NEIGHBOUR()
+
+    grad_pi_Ci *= one_over_rho_0;
+    sum_k_grad_Ci *= one_over_rho_0 * one_over_rho_0;
 
     // add grad_pi_Ci to the sum
     sum_k_grad_Ci += dot (grad_pi_Ci, grad_pi_Ci);

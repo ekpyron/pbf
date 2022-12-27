@@ -39,28 +39,46 @@ void main(void)
 
     float lambda = lambdas[gid];
 
-    FOR_EACH_NEIGHBOUR(gid, j)
+    if (type == 0)
     {
-        ParticleKey key_j = particleKeys[j];
-        vec3 position_j = key_j.position;
-        uint type_j = particles[key_j.index].type;
-        vec3 p_ij = position - position_j;
-        float len = length (p_ij);
-        vec3 grad = gradWspiky(p_ij);
-
-        float scorr = tensile_instability_scale * Wpoly6 (len);
-        scorr *= scorr;
-        scorr *= scorr;
-        scorr = -tensile_instability_k * scorr;
-
-        // accumulate position corrections (part of equation 12)
-        deltap += (lambda + lambdas[j] + scorr) * grad;
-
-        deltap += (len < 1.2 ? 1 : 0) * ((type == type_j) ? 0.0 : -1.0) * ((0.10 * (len - 1.2)) / len * p_ij);
+        Constraint[6] constraints = unpackConstraints(particles[key.index].packedConstraints);
+        for(int c = 0; c < 6; ++c)
+        {
+            Constraint constraint = constraints[c];
+            if (constraint.dist > 0.01) {
+                    vec3 position_j = particles[constraint.j].position;
+                    vec3 p_ij = position - position_j;
+                    float len = length (p_ij);
+                    deltap -= 0.0001 * (len - constraint.dist) * p_ij;
+            }
+        }
     }
-    END_FOR_EACH_NEIGHBOUR()
+    else
+    {
+        FOR_EACH_NEIGHBOUR(gid, j)
+        {
+            ParticleKey key_j = particleKeys[j];
+            vec3 position_j = key_j.position;
+            uint type_j = particles[key_j.index].type;
+            vec3 p_ij = position - position_j;
+            float len = length (p_ij);
+            vec3 grad = gradWspiky(p_ij);
 
-    position += one_over_rho_0 * deltap;
+            float scorr = tensile_instability_scale * Wpoly6 (len);
+            scorr *= scorr;
+            scorr *= scorr;
+            scorr = -tensile_instability_k * scorr;
+
+            // accumulate position corrections (part of equation 12)
+            deltap += (lambda + lambdas[j] + scorr) * grad;
+
+            deltap += (len < 1.2 ? 1 : 0) * ((type == type_j) ? 0.0 : -1.0) * ((0.10 * (len - 1.2)) / len * p_ij);
+        }
+        END_FOR_EACH_NEIGHBOUR()
+        deltap *= one_over_rho_0;
+    }
+
+    position += deltap;
 
     // Cylinder Z
     /* position.z = clamp(position.z, 1, 63);

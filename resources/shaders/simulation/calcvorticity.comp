@@ -33,6 +33,7 @@ void main(void)
     vec3 position = key.position;
 
     vec3 velocity = particles[key.index].velocity;
+    uint type = particles[key.index].type;
 
     float sum_k_grad_Ci = 0;
     float rho = 0;
@@ -66,9 +67,16 @@ void main(void)
     }
     END_FOR_EACH_NEIGHBOUR()
 
-    vec3 nextVelocity = velocity + xsph_viscosity_c * v;
-    nextParticles[key.index].velocity = nextVelocity;
+    if (type == 0)
+    {
 
-    vec4 vorticityAndLength = vec4(vorticity, length(vorticity));
-    vorticities[gid] = vorticityAndLength;
+    }
+    else
+    {
+        vec3 nextVelocity = velocity + xsph_viscosity_c * v;
+        nextParticles[key.index].velocity = nextVelocity;
+
+        vec4 vorticityAndLength = vec4(vorticity, length(vorticity));
+        vorticities[gid] = vorticityAndLength;
+    }
 }

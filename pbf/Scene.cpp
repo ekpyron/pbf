@@ -23,8 +23,69 @@ void initializeParticleData(ParticleData* data, size_t numParticles)
 	std::random_device rd;  //Will be used to obtain a seed for the random number engine
 	std::mt19937 gen(rd()); //Standard mersenne_twister_engine seeded with rd()
 	std::uniform_real_distribution<float> dist(-0.25f, 0.25f);
-    size_t id = 0;
-    auto edgeLength = std::ceil(std::cbrt(numParticles));
+
+	struct Constraint {
+		uint32_t j = 0;
+		float dist = 0.0f;
+	};
+
+	glm::ivec3 offsets[6] = {
+		glm::ivec3(1, 0, 0),
+		glm::ivec3(-1, 0, 0),
+		glm::ivec3(0, 1, 0),
+		glm::ivec3(0, -1, 0),
+		glm::ivec3(0, 0, 1),
+		glm::ivec3(0, 0, -1)
+	};
+
+	auto cubeSide = std::floor(std::cbrt(numParticles / 2));
+	auto linearize = [&](glm::ivec3 const& _v) {
+		return _v.x * cubeSide * cubeSide + _v.y * cubeSide + _v.z;
+	};
+	auto packConstraints = [](Constraint const* src, glm::vec4* dst) {
+		size_t dstIndex = 0;
+		size_t dstComponent = 0;
+		auto pushBack = [&](uint32_t j, float dist) {
+			dst[dstIndex][dstComponent++] = *reinterpret_cast<float*>(&j);
+			dst[dstIndex][dstComponent++] = dist;
+			if (dstComponent >= 4) {
+				dstComponent = 0;
+				++dstIndex;
+			}
+		};
+
+		for (int32_t i = 0; i < 6; ++i)
+			pushBack(src[i].j, src[i].dist);
+	};
+	for (int32_t x = 0; x < cubeSide; ++x)
+		for (int32_t y = 0; y < cubeSide; ++y)
+			for (int32_t z = 0; z < cubeSide; ++z)
+			{
+				glm::ivec3 ix3 (x,y,z);
+				int32_t id = linearize(ix3);
+				data[id].position = glm::vec3(x - 32, -63 + y, z - 32);
+				data[id].velocity = glm::vec3(0,0,0);
+				data[id].type = 0;
+
+				Constraint constraints[6];
+				for(int32_t i = 0; i < 6; ++i)
+				{
+					glm::ivec3 jx3 = ix3 + offsets[i];
+					if (jx3.x >= 0 && jx3.y >= 0 && jx3.z >= 0 &&
+						jx3.x < cubeSide && jx3.y < cubeSide && jx3.z < cubeSide)
+					{
+						constraints[i].dist = 1.0f;
+						constraints[i].j = linearize(jx3);
+					}
+					else
+						constraints[i] = {};
+				}
+				packConstraints(constraints, data[id].packedData);
+			}
+
+	size_t id = cubeSide * cubeSide * cubeSide;
+
+	auto edgeLength = std::ceil(std::cbrt(numParticles / 2));
 	[&](){
 		for (int32_t x = 0; x < edgeLength; ++x)
 		{
@@ -34,15 +95,16 @@ void initializeParticleData(ParticleData* data, size_t numParticles)
 				{
 					if (id >= numParticles)
 						return;
-					data[id].position = glm::vec3(x - 32, -63 + y, z - 32);
+					data[id].position = glm::vec3(x - 32, -63 + y + cubeSide * 2, z - 32);
 					data[id].position += glm::vec3(dist(gen), dist(gen), dist(gen));
 					data[id].position *= 0.8f;
 					data[id].velocity = glm::vec3(0,0,0);
-					data[id].type = id > (numParticles / 2);
+					data[id].type = 1;
 				}
 			}
 		}
 	}();
+
 	std::shuffle(data, data + numParticles, gen);
 }
 

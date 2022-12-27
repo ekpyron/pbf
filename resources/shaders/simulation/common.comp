@@ -3,12 +3,50 @@ struct ParticleKey {
     uint index;
 };
 
+
+struct Constraint {
+    uint j;
+    float dist;
+};
+
 struct ParticleData {
     vec3 position;
     uint aux;
     vec3 velocity;
     uint type;
+    vec4 packedConstraints[3];
 };
+
+Constraint[6] unpackConstraints(vec4 packedConstraints[3]) {
+    Constraint constraints[6];
+/*
+    contraints[0].j = floatBitsToUint(packedConstraints[0][0]);
+    contraints[0].dist = packedConstraints[0][1];
+
+    contraints[1].j = floatBitsToUint(packedConstraints[0][2]);
+    contraints[1].dist = packedConstraints[0][3];
+
+    contraints[2].j = floatBitsToUint(packedConstraints[1][0]);
+    contraints[2].dist = packedConstraints[1][1];
+
+    contraints[3].j = floatBitsToUint(packedConstraints[1][2]);
+    contraints[3].dist = packedConstraints[1][3];
+
+    contraints[4].j = floatBitsToUint(packedConstraints[2][0]);
+    contraints[4].dist = packedConstraints[2][1];
+
+    contraints[5].j = floatBitsToUint(packedConstraints[2][2]);
+    contraints[5].dist = packedConstraints[2][3];
+*/
+    // TODO: verify
+    for (uint i = 0; i < 6; ++i)
+    {
+        constraints[i].j = floatBitsToUint(packedConstraints[i / 2u][(i & 1u) * 2u]);
+        constraints[i].dist = packedConstraints[i / 2u][(i & 1u) * 2u + 1u];
+    }
+
+    return constraints;
+}
 
 struct GridBoundaries {
     uint startIndex;

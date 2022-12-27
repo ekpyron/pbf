@@ -35,6 +35,7 @@ void main(void)
     uint gid = gl_GlobalInvocationID.x;
     ParticleKey key = particleKeys[gid];
     vec3 position = key.position;
+    uint type = particles[key.index].type;
 
     vec3 deltap = vec3 (0, 0, 0);
 
@@ -49,12 +50,15 @@ void main(void)
     }
     END_FOR_EACH_NEIGHBOUR()
 
-    vec3 velocity = particles[key.index].velocity;
+    if (type != 0)
+    {
+        vec3 velocity = particles[key.index].velocity;
 
-    float l = length(gradVorticity);
-    if (l > 0.001)
-            gradVorticity /= l;
-    velocity += timestep * vorticity_epsilon * cross(gradVorticity, vorticities[gid].xyz);
+        float l = length(gradVorticity);
+        if (l > 0.001)
+        gradVorticity /= l;
+        velocity += timestep * vorticity_epsilon * cross(gradVorticity, vorticities[gid].xyz);
 
-    outputParticles[key.index].velocity = velocity;
+        outputParticles[key.index].velocity = velocity;
+    }
 }
