@@ -6,9 +6,9 @@
 
 layout (local_size_x_id = 0, local_size_y = 1, local_size_z = 1) in;
 
-layout(std430, binding = 0, set = 0) readonly buffer ParticleKeys
+layout(std430, binding = 0, set = 0) readonly buffer Particles
 {
-    ParticleKey particleKeys[];
+    ParticleData particles[];
 };
 
 layout(std430, binding = 0, set = 2) readonly buffer LambdaBuffer
@@ -16,24 +16,19 @@ layout(std430, binding = 0, set = 2) readonly buffer LambdaBuffer
     float lambdas[];
 };
 
-layout(std430, binding = 0, set = 3) writeonly buffer OutputParticleKeys
+layout(std430, binding = 0, set = 3) writeonly buffer OutputParticles
 {
-    ParticleKey outputParticleKeys[];
+    ParticleData outputParticles[];
 };
 
-
-layout(std430, binding = 0, set = 4) readonly buffer Particles
-{
-    ParticleData particles[];
-};
 
 
 void main(void)
 {
     uint gid = gl_GlobalInvocationID.x;
-    ParticleKey key = particleKeys[gid];
-    vec3 position = key.position;
-    uint type = particles[key.index].type;
+    ParticleData data = particles[gid];
+    vec3 position = data.position;
+    uint type = data.type;
 
     vec3 deltap = vec3 (0, 0, 0);
 
@@ -41,9 +36,9 @@ void main(void)
 
     FOR_EACH_NEIGHBOUR(gid, j)
     {
-        ParticleKey key_j = particleKeys[j];
-        vec3 position_j = key_j.position;
-        uint type_j = particles[key_j.index].type;
+        ParticleData data_j = particles[j];
+        vec3 position_j = data_j.position;
+        uint type_j = data_j.type;
         vec3 p_ij = position - position_j;
         float len = length (p_ij);
         vec3 grad = gradWspiky(p_ij);
@@ -105,8 +100,8 @@ void main(void)
     position *= vec3(lessThan(position, vec3(-64,-64,-64))) * (-2) + 1;
     position *= vec3(greaterThan(position, vec3(63,63,63))) * (-2) + 1;
 */
-    position = clamp (position, vec3(-100,-100,-100), vec3(100,100,100));
+    position = clamp (position, vec3(-127,-127,-127), vec3(127,127,127));
 
-    outputParticleKeys[gid].position = position;
-    outputParticleKeys[gid].index = particleKeys[gid].index;
+    data.position = position;
+    outputParticles[gid] = data;
 }

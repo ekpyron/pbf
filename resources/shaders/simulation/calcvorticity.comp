@@ -6,9 +6,9 @@
 
 layout (local_size_x_id = 0, local_size_y = 1, local_size_z = 1) in;
 
-layout(std430, binding = 0, set = 0) readonly buffer ParticleKeys
+layout(std430, binding = 0, set = 0) readonly buffer Particles
 {
-    ParticleKey particleKeys[];
+    ParticleData particles[];
 };
 
 layout(std430, binding = 0, set = 2) writeonly buffer VorticityBuffer
@@ -16,12 +16,7 @@ layout(std430, binding = 0, set = 2) writeonly buffer VorticityBuffer
     vec4 vorticities[];
 };
 
-layout(std430, binding = 0, set = 3) readonly buffer Particles
-{
-    ParticleData particles[];
-};
-
-layout(std430, binding = 0, set = 4) writeonly buffer NextParticles
+layout(std430, binding = 0, set = 3) writeonly buffer NextParticles
 {
     ParticleData nextParticles[];
 };
@@ -29,10 +24,9 @@ layout(std430, binding = 0, set = 4) writeonly buffer NextParticles
 void main(void)
 {
     uint gid = gl_GlobalInvocationID.x;
-    ParticleKey key = particleKeys[gid];
-    vec3 position = key.position;
-
-    vec3 velocity = particles[key.index].velocity;
+    ParticleData data = particles[gid];
+    vec3 position = data.position;
+    vec3 velocity = data.velocity;
 
     float sum_k_grad_Ci = 0;
     float rho = 0;
@@ -44,9 +38,9 @@ void main(void)
     // TODO: cleanup
     FOR_EACH_NEIGHBOUR(gid, j)
     {
-        ParticleKey key_j = particleKeys[j];
-        vec3 position_j = key_j.position;
-        vec3 velocity_j = particles[key_j.index].velocity;
+        ParticleData data_j = particles[j];
+        vec3 position_j = data_j.position;
+        vec3 velocity_j = data_j.velocity;
 
         vec3 v_ij = velocity_j - velocity;
         vec3 p_ij = position - position_j;
@@ -67,7 +61,7 @@ void main(void)
     END_FOR_EACH_NEIGHBOUR()
 
     vec3 nextVelocity = velocity + xsph_viscosity_c * v;
-    nextParticles[key.index].velocity = nextVelocity;
+    nextParticles[gid].velocity = nextVelocity;
 
     vec4 vorticityAndLength = vec4(vorticity, length(vorticity));
     vorticities[gid] = vorticityAndLength;

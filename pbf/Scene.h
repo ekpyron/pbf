@@ -26,6 +26,8 @@ struct ParticleData {
 	uint32_t aux = 0;
 	glm::vec3 velocity;
 	uint32_t type = 0;
+	glm::vec3 oldPosition;
+	uint32_t padding = 0;
 };
 
 struct ParticleKey {
@@ -73,7 +75,7 @@ private:
 
     Context& _context;
 
-	uint32_t _numParticles = 64 * 64 * 32;
+	uint32_t _numParticles = ((80 * 80 * 80) / 1024) * 1024;
 
 	RingBuffer<ParticleData> _particleData;
 

@@ -13,7 +13,6 @@ namespace pbf {
 class Context;
 class InitContext;
 class ParticleData;
-class ParticleKey;
 
 class Simulation: public UIControlled
 {
@@ -22,7 +21,6 @@ public:
 	uint32_t getNumParticles() const {
 		return _particleData.size();
 	}
-	void resetKeys() { _resetKeys = true; }
 	void run(vk::CommandBuffer buf, float timestep);
 protected:
 	void ui() override;
@@ -39,11 +37,8 @@ private:
 	float vorticity_epsilon = 5.0f;
 
 	float _lastTimestep = 1.0 / 60.0;
-	void initKeys(Context& context, vk::CommandBuffer buf);
-	bool _resetKeys = false;
 	Context& _context;
 	RingBuffer<ParticleData>& _particleData;
-	RingBuffer<ParticleKey> _particleKeys;
 
 	struct UnconstrainedPositionUpdatePushConstants {
 		glm::vec3 externalForces;
@@ -68,7 +63,7 @@ private:
 	RadixSort _radixSort;
 	NeighbourCellFinder _neighbourCellFinder;
 
-	RingBuffer<ParticleKey> _tempBuffer;
+	RingBuffer<ParticleData> _tempBuffer;
 
 	CacheReference<descriptors::ComputePipeline> _unconstrainedSystemUpdatePipeline;
 	CacheReference<descriptors::ComputePipeline> _particleDataUpdatePipeline;

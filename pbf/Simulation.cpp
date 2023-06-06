@@ -36,7 +36,6 @@ Simulation::Simulation(InitContext &initContext, RingBuffer<ParticleData>& parti
 UIControlled(initContext.context.gui()),
 _context(initContext.context),
 _particleData(particleData),
-_particleKeys(initContext.context, particleData.size(), particleData.segments(), vk::BufferUsageFlagBits::eStorageBuffer|vk::BufferUsageFlagBits::eTransferDst, MemoryType::STATIC),
 _gridDataBuffer(_context, 1, vk::BufferUsageFlagBits::eUniformBuffer|vk::BufferUsageFlagBits::eTransferDst, MemoryType::STATIC),
 _lambdaBuffer(initContext.context, particleData.size(), vk::BufferUsageFlagBits::eStorageBuffer, MemoryType::STATIC),
 _vorticityBuffer(initContext.context, particleData.size(), vk::BufferUsageFlagBits::eStorageBuffer, MemoryType::STATIC),
@@ -97,8 +96,6 @@ _tempBuffer(_context, particleData.size(), 2, vk::BufferUsageFlagBits::eStorageB
 	}
 
 
-	initKeys(initContext.context, *initContext.initCommandBuffer);
-
 	buildPipelines();
 }
 
@@ -142,81 +139,12 @@ descriptors::ShaderStage::SpecializationInfo Simulation::makeSpecializationInfo(
 	};
 }
 
-
-void Simulation::initKeys(Context& context, vk::CommandBuffer buf)
-{
-	Cache& cache = context.cache();
-	{
-		auto keyInitSetLayout = cache.fetch(descriptors::DescriptorSetLayout{
-			.createFlags = {},
-			.bindings = {
-				{
-					.binding = 0,
-					.descriptorType = vk::DescriptorType::eStorageBuffer,
-					.descriptorCount = 1,
-					.stageFlags = vk::ShaderStageFlagBits::eCompute
-				},
-				{
-					.binding = 1,
-					.descriptorType = vk::DescriptorType::eStorageBuffer,
-					.descriptorCount = 1,
-					.stageFlags = vk::ShaderStageFlagBits::eCompute
-				}
-			},
-			PBF_DESC_DEBUG_NAME("Simulation key init descriptor set layout")
-		});
-		auto keyInitPipelineLayout = cache.fetch(
-			descriptors::PipelineLayout{
-				.setLayouts = {keyInitSetLayout},
-				PBF_DESC_DEBUG_NAME("Key init pipeline layout.")
-			});
-		auto keyInitPipeline = cache.fetch(
-		descriptors::ComputePipeline{
-			.flags = {},
-			.shaderStage = descriptors::ShaderStage {
-				.stage = vk::ShaderStageFlagBits::eCompute,
-				.module = cache.fetch(
-					descriptors::ShaderModule{
-						.source = descriptors::ShaderModule::File{"shaders/simulation/keyinit.comp.spv"},
-						PBF_DESC_DEBUG_NAME("Simulation: key init shader module")
-					}),
-				.entryPoint = "main",
-				.specialization = {
-					Specialization<uint32_t>{.constantID = 0, .value = blockSize}
-				}
-			},
-			.pipelineLayout = keyInitPipelineLayout,
-			PBF_DESC_DEBUG_NAME("Simulation: key init shader pipeline")
-		}
-		);
-		for (size_t i = 0; i < _context.renderer().framePrerenderCount(); ++i) {
-			_context.bindPipeline(
-				buf, keyInitPipeline,
-				{{_particleData.segment(i), _particleKeys.segment(i)}}
-			);
-			buf.dispatch(((getNumParticles() + blockSize - 1) / blockSize), 1, 1);
-		}
-
-		buf.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {}, {
-			vk::MemoryBarrier{
-				.srcAccessMask = vk::AccessFlagBits::eShaderWrite,
-				.dstAccessMask = vk::AccessFlagBits::eShaderRead
-			}
-		}, {}, {});
-	}
-}
-
 // currentFrameSync (readonly) -> nextFrameSync (writeonly)
 void Simulation::run(vk::CommandBuffer buf, float timestep)
 {
-	if (_resetKeys)
-	{
-		initKeys(_context, buf);
-		_resetKeys = false;
-	}
 	_context.bindPipeline(buf, _unconstrainedSystemUpdatePipeline, {
-		{_particleKeys.segment(_context.renderer().currentFrameSync())},
-		{_particleData.segment(_context.renderer().currentFrameSync())}
+		{_particleData.segment(_context.renderer().currentFrameSync())},
+		{_tempBuffer.segment(0)}
 	});
 	static constexpr float Gabs = 9.81f;
 	UnconstrainedPositionUpdatePushConstants pushConstants{
@@ -240,12 +168,6 @@ void Simulation::run(vk::CommandBuffer buf, float timestep)
 	}, {}, {});
 
 
-
-	std::vector<descriptors::DescriptorSetBinding> initInfos {
-		_particleKeys.segment(_context.renderer().currentFrameSync()),
-		_gridDataBuffer.fullBufferInfo(),
-		_tempBuffer.segment(1)
-	};
 	std::vector<descriptors::DescriptorSetBinding> pingInfos {
 		_tempBuffer.segment(0),
 		_gridDataBuffer.fullBufferInfo(),
@@ -257,11 +179,10 @@ void Simulation::run(vk::CommandBuffer buf, float timestep)
 		_tempBuffer.segment(0)
 	};
 
-	// TODO: adjust neighbourCellFinderInputInfos according to expected sortResult
 	auto sortResult = _radixSort.stage(
 		buf,
 		30,
-		initInfos, pingInfos, pongInfos
+		pingInfos, pingInfos, pongInfos
 	);
 
 	size_t pingBufferSegment = sortResult == RadixSort::Result::InPingBuffer ? 0 : 1;
@@ -277,8 +198,7 @@ void Simulation::run(vk::CommandBuffer buf, float timestep)
 			{
 				{_tempBuffer.segment(pingBufferSegment), _gridDataBuffer.fullBufferInfo()},
 				{_neighbourCellFinder.gridBoundaryBuffer().fullBufferInfo()},
-				{_lambdaBuffer.fullBufferInfo()},
-				{_particleData.segment(_context.renderer().nextFrameSync())}
+				{_lambdaBuffer.fullBufferInfo()}
 			}
 		);
 		buf.dispatch(((getNumParticles() + blockSize - 1) / blockSize), 1, 1);
@@ -304,10 +224,9 @@ void Simulation::run(vk::CommandBuffer buf, float timestep)
 							 _lambdaBuffer.fullBufferInfo()
 						 },
 						 { // set 3
-							 isLast ? _particleKeys.segment(_context.renderer().nextFrameSync())
+							 isLast ? _particleData.segment(_context.renderer().nextFrameSync())
 							 		: _tempBuffer.segment(pongBufferSegment)
-						 },
-						 {_particleData.segment(_context.renderer().nextFrameSync())}
+						 }
 					 });
 		buf.dispatch(((getNumParticles() + blockSize - 1) / blockSize), 1, 1);
 
@@ -325,9 +244,7 @@ void Simulation::run(vk::CommandBuffer buf, float timestep)
 		buf,
 		_particleDataUpdatePipeline,
 		{
-			{_particleKeys.segment(_context.renderer().nextFrameSync())},
-			{_particleData.segment(_context.renderer().nextFrameSync())},
-			{_particleData.segment(_context.renderer().currentFrameSync())}
+			{_particleData.segment(_context.renderer().nextFrameSync())}
 		}
 	);
 	buf.pushConstants(*(_particleDataUpdatePipeline.descriptor().pipelineLayout), vk::ShaderStageFlagBits::eCompute, 0, sizeof(float), &timestep);
@@ -344,11 +261,10 @@ void Simulation::run(vk::CommandBuffer buf, float timestep)
 		buf,
 		_calcVorticityPipeline,
 		{
-			{_particleKeys.segment(_context.renderer().nextFrameSync()), _gridDataBuffer.fullBufferInfo()},
+			{_particleData.segment(_context.renderer().nextFrameSync()), _gridDataBuffer.fullBufferInfo()},
 			{_neighbourCellFinder.gridBoundaryBuffer().fullBufferInfo()},
 			{_vorticityBuffer.fullBufferInfo()},
-			{_particleData.segment(_context.renderer().nextFrameSync())},
-			{_particleData.segment(_context.renderer().currentFrameSync())},
+			{_tempBuffer.segment(0)},
 		}
 	);
 	buf.dispatch(((getNumParticles() + blockSize - 1) / blockSize), 1, 1);
@@ -364,10 +280,9 @@ void Simulation::run(vk::CommandBuffer buf, float timestep)
 		buf,
 		_updateVelPipeline,
 		{
-			{_particleKeys.segment(_context.renderer().nextFrameSync()), _gridDataBuffer.fullBufferInfo()},
+			{_tempBuffer.segment(0), _gridDataBuffer.fullBufferInfo()},
 			{_neighbourCellFinder.gridBoundaryBuffer().fullBufferInfo()},
 			{_vorticityBuffer.fullBufferInfo()},
-			{_particleData.segment(_context.renderer().currentFrameSync())},
 			{_particleData.segment(_context.renderer().nextFrameSync())}
 		}
 	);

@@ -1,14 +1,4 @@
-struct ParticleKey {
-    vec3 position;
-    uint index;
-};
-
-struct ParticleData {
-    vec3 position;
-    uint aux;
-    vec3 velocity;
-    uint type;
-};
+#include "../particledata.comp"
 
 struct GridBoundaries {
     uint startIndex;
@@ -19,12 +9,12 @@ struct GridBoundaries {
 for (int _x = -1; _x <= 1; ++_x) { \
 for (int _y = -1; _y <= 1; ++_y) { \
 for (int _z = -1; _z <= 1; ++_z) { \
-vec3 _position = particleKeys[gid].position + vec3(_x,_y,_z); \
+vec3 _position = particles[gid].position + vec3(_x,_y,_z); \
 if (!(any(lessThan(_position, vec3(GRID_MIN)))) && all(lessThan(_position, vec3(GRID_MAX)))) { \
 GridBoundaries _gridCell = grid[GetGridIndex(_position)]; \
 for (uint idx = _gridCell.startIndex; idx < _gridCell.endIndex; ++idx) { \
 if (idx != gid) { \
-if (distance(particleKeys[idx].position, particleKeys[gid].position) < 1.0) {
+if (distance(particles[idx].position, particles[gid].position) < 1.0) {
 
 #define END_FOR_EACH_NEIGHBOUR() }}}}}}}
 

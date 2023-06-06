@@ -34,9 +34,10 @@ void initializeParticleData(ParticleData* data, size_t numParticles)
 				{
 					if (id >= numParticles)
 						return;
-					data[id].position = glm::vec3(x - 32, -63 + y, z - 32);
+					data[id].position = glm::vec3(x - (edgeLength / 2), -edgeLength/2 + y, z - (edgeLength / 2));
 					data[id].position += glm::vec3(dist(gen), dist(gen), dist(gen));
 					data[id].position *= 0.8f;
+					data[id].oldPosition = data[id].position;
 					data[id].velocity = glm::vec3(0,0,0);
 					data[id].type = id > (numParticles / 2);
 				}
@@ -96,7 +97,6 @@ _simulation(initContext, _particleData)
 void Scene::resetParticles()
 {
 	_resetParticles = true;
-	_simulation.resetKeys();
 }
 
 void Scene::frame(vk::CommandBuffer &buf) {

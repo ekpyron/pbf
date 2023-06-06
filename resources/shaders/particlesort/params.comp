@@ -1,11 +1,8 @@
-struct ParticleKey {
-    vec3 position;
-    uint index;
-};
+#include "../particledata.comp"
 
 layout(std430, binding = 0, set = 1) readonly buffer ParticleKeys
 {
-    ParticleKey particleKeys[];
+    ParticleData particles[];
 };
 
 layout(std140, binding = 1, set = 1) uniform GridData {
@@ -16,14 +13,14 @@ layout(std140, binding = 1, set = 1) uniform GridData {
 
 layout(std430, binding = 2, set = 1) writeonly buffer SortedParticles
 {
-    ParticleKey particleKeysSorted[];
+    ParticleData particlesSorted[];
 };
 
 uint getHash(uint id) {
-    highp ivec3 grid = ivec3 (clamp (particleKeys[id].position, GRID_MIN, GRID_MAX) - GRID_MIN);
+    highp ivec3 grid = ivec3 (clamp (particles[id].position, GRID_MIN, GRID_MAX) - GRID_MIN);
     return uint (dot (grid, GRID_HASHWEIGHTS));
 }
 
 void sortingCopy(uint src, uint dst) {
-    particleKeysSorted[dst] = particleKeys[src];
+    particlesSorted[dst] = particles[src];
 }

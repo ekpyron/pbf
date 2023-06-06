@@ -6,21 +6,10 @@
 
 layout (local_size_x_id = 0, local_size_y = 1, local_size_z = 1) in;
 
-layout(std430, binding = 0, set = 0) buffer ParticleKeys
-{
-    ParticleKey particleKeys[];
-};
-
-layout(std430, binding = 0, set = 1) writeonly buffer Particles
+layout(std430, binding = 0, set = 0) buffer Particles
 {
     ParticleData particles[];
 };
-
-layout(std430, binding = 0, set = 2) readonly buffer ParticlesOld
-{
-    ParticleData oldParticles[];
-};
-
 
 layout(push_constant) uniform constants {
     float timestep;
@@ -29,21 +18,19 @@ layout(push_constant) uniform constants {
 void main (void)
 {
     uint gid = gl_GlobalInvocationID.x;
-    ParticleKey key = particleKeys[gid];
-    vec3 position = key.position;
+    ParticleData data = particles[gid];
+    vec3 position = data.position;
     // Reflective boundary with 0.4 dampening factor.
     {
-        vec3 cornerToPosition = position - vec3(-30,-64,-30);
+        vec3 cornerToPosition = position - vec3(-63,-63,-63);
         cornerToPosition *= vec3(lessThan(cornerToPosition, vec3(0,0,0))) * (-1.4) + 1;
-        position = vec3(-30,-64,-30) + cornerToPosition;
+        position = vec3(-63,-63,-63) + cornerToPosition;
     }
     {
-        vec3 cornerToPosition = position - vec3(30,63,30);
+        vec3 cornerToPosition = position - vec3(63,63,63);
         cornerToPosition *= vec3(greaterThan(cornerToPosition, vec3(0,0,0))) * (-1.4) + 1;
-        position = vec3(30,63,30) + cornerToPosition;
+        position = vec3(63,63,63) + cornerToPosition;
     }
-    vec3 oldPosition = oldParticles[key.index].position;
-    particleKeys[gid].position = position;
-    particles[key.index].position = position;
-    particles[key.index].velocity = (position - oldPosition) / timestep;
+    data.velocity = (position - data.oldPosition) / timestep;
+    particles[gid] = data;
 }
