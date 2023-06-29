@@ -23,7 +23,7 @@ public:
     HeapManager(const HeapManager&) = delete;
     HeapManager &operator=(const HeapManager &) = delete;
     HeapManager(HeapManager &&) noexcept = default;
-    HeapManager&operator=(HeapManager &&) noexcept = default;
+    HeapManager&operator=(HeapManager &&) noexcept = delete;
 
     DeviceMemory allocate(std::size_t size, std::size_t alignment, bool hostVisible);
     void free(const DeviceMemory &);
