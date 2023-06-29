@@ -46,7 +46,7 @@ private:
 	RingBuffer<ParticleKey> _particleKeys;
 
 	struct UnconstrainedPositionUpdatePushConstants {
-		glm::vec3 externalForces;
+		glm::vec3 externalAccell;
 		float lastTimestep = 1.0f/60.0f;
 		float timestep = 1.0f/60.0f;
 	};

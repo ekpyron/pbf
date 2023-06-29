@@ -346,7 +346,7 @@ void Context::run() {
 		globalUniformData->invviewmat = glm::inverse(mvmat);
 		globalUniformData->viewmat = mvmat;
         _globalDescriptorSetLayout.keepAlive();
-        _renderer->render(glm::clamp(timePassed, 1.0 / 180.0, 1.0 / 20.0));
+        _renderer->render(glm::clamp(timePassed, 1.0 / 1000.0, 1.0 / 20.0));
         _cache.frame();
     }
     spdlog::get("console")->debug("Exiting main loop. Waiting for idle device.");
