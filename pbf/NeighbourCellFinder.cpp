@@ -5,9 +5,9 @@
 namespace pbf {
 
 
-NeighbourCellFinder::NeighbourCellFinder(ContextInterface& context, size_t numGridCells, size_t maxID):
+NeighbourCellFinder::NeighbourCellFinder(ContextInterface& context, size_t numGridCells, size_t maxID, pbf::MemoryType gridBoundaryBufferMemoryType):
 _context(context),
-_gridBoundaryBuffer(context, numGridCells, vk::BufferUsageFlagBits::eStorageBuffer|vk::BufferUsageFlagBits::eTransferDst, MemoryType::STATIC)
+_gridBoundaryBuffer(context, numGridCells, vk::BufferUsageFlagBits::eStorageBuffer|vk::BufferUsageFlagBits::eTransferDst, gridBoundaryBufferMemoryType)
 {
 	auto& cache = context.cache();
 

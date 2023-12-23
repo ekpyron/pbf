@@ -9,8 +9,17 @@ namespace pbf {
 class NeighbourCellFinder
 {
 public:
-	NeighbourCellFinder(ContextInterface& context, size_t numGridCells, size_t maxID);
+	NeighbourCellFinder(ContextInterface& context, size_t numGridCells, size_t maxID, MemoryType gridBoundaryBufferMemoryType = MemoryType::STATIC);
 
+    struct GridData {
+        glm::ivec4 max = glm::ivec4(127, 127, 127, 0);
+        glm::ivec4 min = glm::ivec4(-128, -128, -128, 0);
+        glm::ivec4 hashweights = glm::ivec4(1, (max.x - min.x + 1), (max.x - min.x + 1) * (max.y - min.y + 1), 0);
+        [[nodiscard]] inline size_t numCells() const {
+            glm::ivec3 gridExtents = glm::ivec3(max) - glm::ivec3(min);
+            return (gridExtents.x + 1) * (gridExtents.y + 1) * (gridExtents.z + 1);
+        }
+    };
 
 	static constexpr auto inputDescriptorSetLayout() {
 		return descriptors::DescriptorSetLayout{
@@ -38,6 +47,7 @@ public:
 	struct alignas(glm::uvec4) GridBoundaries {
 		uint startIndex = 0;
 		uint endIndex = 0;
+        std::strong_ordering operator<=>(GridBoundaries const& _rhs) const = default;
 	};
 
 	const Buffer<GridBoundaries>& gridBoundaryBuffer() const {
