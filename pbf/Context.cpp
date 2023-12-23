@@ -52,7 +52,7 @@ Context::Context() {
                 .applicationVersion = VK_MAKE_VERSION(0, 0, 0),
                 .pEngineName = "PBF",
                 .engineVersion = VK_MAKE_VERSION(0, 0, 0),
-                .apiVersion = VK_API_VERSION_1_1
+                .apiVersion = VK_API_VERSION_1_3
         };
 #ifndef NDEBUG
 		vk::ValidationFeatureEnableEXT enables[] = {
