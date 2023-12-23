@@ -77,7 +77,7 @@ public:
         VkSurfaceKHR surface;
         auto result = glfwCreateWindowSurface(instance, _window, nullptr, &surface);
         if(result != VK_SUCCESS) {
-            vk::throwResultException(static_cast<vk::Result>(result), "Cannot create Vulkan surface");
+            vk::detail::throwResultException(static_cast<vk::Result>(result), "Cannot create Vulkan surface");
         }
         return vk::UniqueSurfaceKHR(surface, {instance});
     }

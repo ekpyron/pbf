@@ -117,7 +117,7 @@ void Renderer::render(float timestep) {
 			case vk::Result::eSuboptimalKHR:
 				break;
 			default: {
-				vk::throwResultException(result, "cannot acquire image");
+				vk::detail::throwResultException(result, "cannot acquire image");
 			}
 		}
 	} catch (vk::OutOfDateKHRError const&) {
@@ -231,7 +231,7 @@ void Renderer::render(float timestep) {
 			.pResults = nullptr
 		});
 		if (result != vk::Result::eSuccess)
-			vk::throwResultException(result, "");
+			vk::detail::throwResultException(result, "");
 	} catch (const vk::OutOfDateKHRError&) {
 		reset();
 	}
