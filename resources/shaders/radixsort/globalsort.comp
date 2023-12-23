@@ -24,5 +24,7 @@ layout(push_constant) uniform constants {
 void main()
 {
     uint bits = bitfieldExtract(getHash(gl_GlobalInvocationID.x), bitShift, 2);
-    sortingCopy(gl_GlobalInvocationID.x, blockSum[blockSumOffsets[bits] + gl_WorkGroupID.x] + prefixSum[gl_GlobalInvocationID.x]);
+    sortingCopy(gl_GlobalInvocationID.x, blockSum[
+        /* additional cast to avoid radv driver bug */uvec4(blockSumOffsets)[bits]
+        + gl_WorkGroupID.x] + prefixSum[gl_GlobalInvocationID.x]);
 }

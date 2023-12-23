@@ -28,9 +28,9 @@ auto debugUtilMessengerCallback(vk::DebugUtilsMessageSeverityFlagsEXT messageSev
     else if (messageType & vk::DebugUtilsMessageTypeFlagBitsEXT::ePerformance)
         messageTypeString = "Performance";
     if (messageSeverity & vk::DebugUtilsMessageSeverityFlagBitsEXT::eError) {
-		WARN(fmt::format("[ERROR] [{}] {}", messageTypeString, message));
+        UNSCOPED_INFO(fmt::format("[ERROR] [{}] {}", messageTypeString, message));
     } else if (messageSeverity & vk::DebugUtilsMessageSeverityFlagBitsEXT::eWarning) {
-		WARN(fmt::format("[WARNING] [{}] {}", messageTypeString, message));
+        UNSCOPED_INFO(fmt::format("[WARNING] [{}] {}", messageTypeString, message));
     } else if (messageSeverity & vk::DebugUtilsMessageSeverityFlagBitsEXT::eInfo) {
 		UNSCOPED_INFO(fmt::format("[INFO] [{}] {}", messageTypeString, message));
     } else if (messageSeverity & vk::DebugUtilsMessageSeverityFlagBitsEXT::eVerbose) {
@@ -78,14 +78,15 @@ ComputeShaderUnitTestContext::ComputeShaderUnitTestContext() {
 			.applicationVersion = VK_MAKE_VERSION(0, 0, 0),
 			.pEngineName = "PBF",
 			.engineVersion = VK_MAKE_VERSION(0, 0, 0),
-			.apiVersion = VK_API_VERSION_1_1
+			.apiVersion = VK_API_VERSION_1_3
 		};
-		vk::ValidationFeatureEnableEXT enables[] = {
+		std::array enables = {
 			vk::ValidationFeatureEnableEXT::eGpuAssisted
+            //, vk::ValidationFeatureEnableEXT::eDebugPrintf
 		};
 		vk::ValidationFeaturesEXT validationFeatures{
-			.enabledValidationFeatureCount = 1,
-			.pEnabledValidationFeatures = enables
+			.enabledValidationFeatureCount = enables.size(),
+			.pEnabledValidationFeatures = enables.data()
 		};
 		_instance = vk::createInstanceUnique(vk::InstanceCreateInfo{
 			.pNext = &validationFeatures,

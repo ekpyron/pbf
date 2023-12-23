@@ -606,7 +606,7 @@ void main()
 	if (gl_LocalInvocationIndex == 0)
 	{
 		for(uint i = 0; i < 4; ++i)
-			blockSum[blockSumOffsets[i] + gl_WorkGroupID.x] = tmp[BLOCKSIZE - 1][i];
+			blockSum[uvec4(blockSumOffsets)[i] + gl_WorkGroupID.x] = tmp[BLOCKSIZE - 1][i];
 		tmp[BLOCKSIZE - 1] = uvec4(0, 0, 0, 0);
 	}
 
@@ -823,7 +823,7 @@ layout(push_constant) uniform constants {
 
 uint GetPermutation(uint id) {
 	uint bits = bitfieldExtract(GetHash(id), bitShift, 2);
-	return blockSum[blockSumOffsets[bits] + gl_WorkGroupID.x] + prefixSum[gl_GlobalInvocationID.x];
+	return blockSum[uvec4(blockSumOffsets)[bits] + gl_WorkGroupID.x] + prefixSum[gl_GlobalInvocationID.x];
 }
 
 void main()
@@ -1055,17 +1055,19 @@ void main()
 
 TEST_CASE_METHOD(ComputeShaderUnitTest, "Compute Shader Sort Test", "[sort] ")
 {
+    const size_t minParticleCount = 1;
 	const size_t maxParticleCount = 128*128*128;
 	const uint32_t sortBitCount = 32; // sort up to # of bits
 	const uint32_t blockSize = 256;
 
 	std::vector<uint32_t> initialKeys;
 
+    REQUIRE(maxParticleCount > 0);
 	{
 		std::random_device rd;
 		std::mt19937 gen(rd());
 		std::uniform_int_distribution<uint32_t> distrib(0, std::numeric_limits<uint32_t>::max());
-		for (size_t i = 0; i < std::uniform_int_distribution<size_t>(0, maxParticleCount)(gen); ++i)
+		for (size_t i = 0; i < std::uniform_int_distribution<size_t>(minParticleCount, maxParticleCount)(gen); ++i)
 			initialKeys.emplace_back(distrib(gen));
 	}
 
@@ -1135,12 +1137,11 @@ TEST_CASE_METHOD(ComputeShaderUnitTest, "Compute Shader Sort Test", "[sort] ")
 	});
 
 	{
-
 		auto ptr = result == RadixSort::Result::InPongBuffer ? resultBuffer.data() : keysBuffer.data();
 
 		std::sort(initialKeys.begin(), initialKeys.end());
-		for (auto i = 0; i < numKeys; ++i)
-			CHECK(ptr[i] == initialKeys[i]);
+
+        REQUIRE_THAT(std::span(ptr, numKeys), EqualsRange(initialKeys));
 	}
 
 }
