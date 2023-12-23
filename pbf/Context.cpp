@@ -75,7 +75,7 @@ Context::Context() {
 		 }, nullptr, dls);
     }
 #ifndef NDEBUG
-    dldi = std::make_unique<vk::DispatchLoaderDynamic>(*_instance, vkGetInstanceProcAddr);
+    dldi = std::make_unique<vk::DispatchLoaderDynamic>(*_instance, ::vkGetInstanceProcAddr);
     _debugUtilsMessenger = _instance->createDebugUtilsMessengerEXTUnique(
             vk::DebugUtilsMessengerCreateInfoEXT {
 				.messageSeverity = ~vk::DebugUtilsMessageSeverityFlagBitsEXT(),
@@ -125,8 +125,12 @@ Context::Context() {
 #ifndef NDEBUG
         layers.push_back("VK_LAYER_KHRONOS_validation");
 #endif
+        vk::PhysicalDeviceMaintenance4Features maintenance4Features{
+            .maintenance4 = vk::True
+        };
         auto extensionName = VK_KHR_SWAPCHAIN_EXTENSION_NAME;
         _device = _physicalDevice.createDeviceUnique(vk::DeviceCreateInfo{
+            .pNext = &maintenance4Features,
 			.queueCreateInfoCount = static_cast<uint32_t>(queueCreateInfos.size()),
 			.pQueueCreateInfos = queueCreateInfos.data(),
 			.enabledLayerCount = 1,
@@ -135,10 +139,6 @@ Context::Context() {
 			.ppEnabledExtensionNames = &extensionName,
 			.pEnabledFeatures = &features
 		});
-        PBF_DEBUG_SET_OBJECT_NAME(*this, _physicalDevice, "Physical Device");
-        PBF_DEBUG_SET_OBJECT_NAME(*this, *_surface, "Main Window");
-        //PBF_DEBUG_SET_OBJECT_NAME(*this, *_debugUtilsMessenger, "Debug Utils Messenger");
-        PBF_DEBUG_SET_OBJECT_NAME(*this, *_device, "Main Device");
 
         _graphicsQueue = _device->getQueue(_families.graphics, 0);
         if (_families.graphics != _families.present) {
