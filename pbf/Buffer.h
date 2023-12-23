@@ -59,10 +59,25 @@ public:
     }
 
     T* data() { return reinterpret_cast<T*>(_deviceMemory.data()); }
-    [[nodiscard]] const T* data() const { return reinterpret_cast<T*>(_deviceMemory.data()); }
+    auto span() { return std::span(data(), size()); }
+    auto span() const { return std::span(data(), size()); }
+    [[nodiscard]] const T* data() const { return reinterpret_cast<const T*>(_deviceMemory.data()); }
     [[nodiscard]] std::size_t size() const { return _size; }
     [[nodiscard]] std::size_t deviceSize() const { return _size * itemSize(); }
     [[nodiscard]] vk::Buffer buffer() const { return _buffer; }
+
+    auto begin() {
+        return data();
+    }
+    auto begin() const {
+        return data();
+    }
+    auto end() {
+        return data() + size();
+    }
+    auto end() const {
+        return data() + size();
+    }
 
     void flush() {
         _deviceMemory.flush();
