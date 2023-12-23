@@ -257,21 +257,23 @@ void Simulation::run(vk::CommandBuffer buf, float timestep)
 		_tempBuffer.segment(0)
 	};
 
-	// TODO: adjust neighbourCellFinderInputInfos according to expected sortResult
-	auto sortResult = _radixSort.stage(
-		buf,
-		30,
-		initInfos, pingInfos, pongInfos
-	);
-
-	size_t pingBufferSegment = sortResult == RadixSort::Result::InPingBuffer ? 0 : 1;
-	size_t pongBufferSegment = sortResult == RadixSort::Result::InPingBuffer ? 1 : 0;
-
-	_neighbourCellFinder(buf, _particleData.size(), _tempBuffer.segment(pingBufferSegment), _gridDataBuffer.fullBufferInfo());
-
 	static constexpr size_t numSteps = 5;
 	for (size_t step = 0; step < numSteps; ++step) {
-		bool isLast = step == (numSteps - 1);
+        // TODO: adjust neighbourCellFinderInputInfos according to expected sortResult
+        auto sortResult = _radixSort.stage(
+                buf,
+                30,
+                step == 0 ? initInfos : pingInfos, pingInfos, pongInfos
+        );
+
+        size_t pingBufferSegment = sortResult == RadixSort::Result::InPingBuffer ? 0 : 1;
+        size_t pongBufferSegment = sortResult == RadixSort::Result::InPingBuffer ? 1 : 0;
+
+        _neighbourCellFinder(buf, _particleData.size(), _tempBuffer.segment(pingBufferSegment), _gridDataBuffer.fullBufferInfo());
+
+
+
+        bool isLast = step == (numSteps - 1);
 		_context.bindPipeline(
 			buf, _calcLambdaPipeline,
 			{
