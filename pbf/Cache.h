@@ -89,7 +89,7 @@ public:
         if (!_obj) {
 #ifndef NDEBUG
             _objectIncarnation++;
-            spdlog::get("console")->debug("[Cache] Create [{}]", objectDebugName());
+            spdlog::get("console")->debug("[Cache] Starting to create [{}]", objectDebugName());
 #endif
             _obj = _objdesc.realize(_cache->context());
 #ifndef NDEBUG
@@ -102,7 +102,11 @@ public:
                             objectDebugName());
                 }
             }
+#endif
 
+#ifndef NDEBUG
+            _objectIncarnation++;
+            spdlog::get("console")->debug("[Cache] Created [{}]", objectDebugName());
 #endif
         }
         _lastUsedFrameNumber = _cache->currentFrame();
