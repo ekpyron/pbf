@@ -20,7 +20,7 @@ layout(std430, binding = 2, set = 1) writeonly buffer SortedParticles
 };
 
 uint getHash(uint id) {
-    highp ivec3 grid = ivec3 (clamp (particleKeys[id].position, GRID_MIN, GRID_MAX) - GRID_MIN);
+    highp ivec3 grid = ivec3(floor(clamp (particleKeys[id].position, GRID_MIN, GRID_MAX) - GRID_MIN));
     return uint (dot (grid, GRID_HASHWEIGHTS));
 }
 
