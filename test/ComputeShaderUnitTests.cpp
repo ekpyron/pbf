@@ -11,6 +11,7 @@
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/matchers/catch_matchers_templated.hpp>
 #include "ComputeShaderUnitTestContext.h"
+#include <pbf/NeighbourCellFinder.h>
 #include <pbf/RadixSort.h>
 #include <ranges>
 #include <random>
@@ -1143,5 +1144,126 @@ TEST_CASE_METHOD(ComputeShaderUnitTest, "Compute Shader Sort Test", "[sort] ")
 
         REQUIRE_THAT(std::span(ptr, numKeys), EqualsRange(initialKeys));
 	}
+}
 
+TEST_CASE_METHOD(ComputeShaderUnitTest, "Compute Shader Sort Test", "[neighbour_list] ")
+{
+    constexpr pbf::NeighbourCellFinder::GridData gridData{
+        .max = glm::ivec4(7, 7, 7, 0),
+        .min = glm::ivec4(-8, -8, -8, 0),
+    };
+    constexpr size_t numValues = 256;
+    constexpr size_t blockSize = 16;
+    REQUIRE(gridData.numCells() % blockSize == 0);
+    REQUIRE(gridData.numCells() % 256 == 0);
+    pbf::NeighbourCellFinder neighbourCellFinder(*this, gridData.numCells(), numValues, pbf::MemoryType::DYNAMIC);
+
+    struct ParticleKeys {
+        glm::vec3 position;
+        uint32_t index;
+    };
+
+    std::random_device rd;
+    std::mt19937 gen(rd());
+    std::uniform_real_distribution<float> distrib(0, 3.5f);
+
+    std::vector<ParticleKeys> particleInitData(numValues);
+    for (auto& key: particleInitData)
+        key = ParticleKeys{glm::vec3(distrib(gen), distrib(gen),distrib(gen)), 0};
+    std::sort(particleInitData.begin(), particleInitData.end(),[&](auto const& a, auto const& b) {
+        return glm::dot(glm::vec3(gridData.hashweights), glm::floor(a.position)) < glm::dot(glm::vec3(gridData.hashweights), glm::floor(b.position));
+    });
+    pbf::Buffer<ParticleKeys> particleKeys(*this, numValues, vk::BufferUsageFlagBits::eStorageBuffer, pbf::MemoryType::DYNAMIC);
+    auto ptr = particleKeys.data();
+    std::copy(particleInitData.begin(), particleInitData.end(), ptr);
+
+    pbf::Buffer<pbf::NeighbourCellFinder::GridData> gridDataBuffer(*this, 1, vk::BufferUsageFlagBits::eUniformBuffer, pbf::MemoryType::DYNAMIC);
+    *gridDataBuffer.data() = gridData;
+
+
+    auto cellOutputLayoutSet0 = cache().fetch(neighbourCellFinder.inputDescriptorSetLayout());
+    auto cellOutputLayoutSet1 = cache().fetch(pbf::descriptors::DescriptorSetLayout{
+            .createFlags = {},
+            .bindings = {{
+                                 .binding = 0,
+                                 .descriptorType = vk::DescriptorType::eStorageBuffer,
+                                 .descriptorCount = 1,
+                                 .stageFlags = vk::ShaderStageFlagBits::eCompute
+                         },{
+                                 .binding = 1,
+                                 .descriptorType = vk::DescriptorType::eStorageBuffer,
+                                 .descriptorCount = 1,
+                                 .stageFlags = vk::ShaderStageFlagBits::eCompute
+                         }},
+            PBF_DESC_DEBUG_NAME("Cell Output Descriptor Set 1 Layout")
+    });
+    auto cellOutputPipelineLayout = cache().fetch(
+            pbf::descriptors::PipelineLayout{
+                    .setLayouts = {{cellOutputLayoutSet0}, {cellOutputLayoutSet1}},
+                    PBF_DESC_DEBUG_NAME("cell output pipeline Layout")
+            });
+    auto cellOutputPipeline = cache().fetch(
+            pbf::descriptors::ComputePipeline{
+                    .flags = {},
+                    .shaderStage = pbf::descriptors::ShaderStage {
+                            .stage = vk::ShaderStageFlagBits::eCompute,
+                            .module = cache().fetch(
+                                    pbf::descriptors::ShaderModule{
+                                            .source = pbf::descriptors::ShaderModule::File{"shaders/unittestneighbours/celloutput.comp.spv"},
+                                            PBF_DESC_DEBUG_NAME("Neighbour Cell Output Unit Test Shader")
+                                    }),
+                            .entryPoint = "main",
+                            .specialization = {
+                                    pbf::Specialization<uint32_t>{.constantID = 0, .value = blockSize}
+                            }
+                    },
+                    .pipelineLayout = cellOutputPipelineLayout,
+                    PBF_DESC_DEBUG_NAME("cell output unit test pipeline")
+            }
+    );
+
+    pbf::Buffer<uint32_t> result(*this, numValues * numValues, vk::BufferUsageFlagBits::eStorageBuffer, pbf::MemoryType::DYNAMIC);
+
+    std::fill_n(result.data(), result.size(), 0u);
+
+    run([&](vk::CommandBuffer buf) {
+        buf.pipelineBarrier(vk::PipelineStageFlagBits::eHost, vk::PipelineStageFlagBits::eComputeShader, {}, {
+                vk::MemoryBarrier{
+                        .srcAccessMask = vk::AccessFlagBits::eHostWrite,
+                        .dstAccessMask = vk::AccessFlagBits::eShaderWrite|vk::AccessFlagBits::eShaderRead
+                }
+        }, {}, {});
+
+        neighbourCellFinder(buf, numValues, particleKeys.fullBufferInfo(), gridDataBuffer.fullBufferInfo());
+
+        bindPipeline(
+                buf,
+                cellOutputPipeline,
+                {
+                        {particleKeys.fullBufferInfo(), gridDataBuffer.fullBufferInfo()}, // set 0
+                        {neighbourCellFinder.gridBoundaryBuffer().fullBufferInfo(), result.fullBufferInfo()}, // set 1
+                }
+        );
+
+        buf.dispatch(numValues / blockSize, 1, 1);
+
+        buf.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eHost, {}, {
+                vk::MemoryBarrier{
+                        .srcAccessMask = vk::AccessFlagBits::eShaderWrite,
+                        .dstAccessMask = vk::AccessFlagBits::eHostRead|vk::AccessFlagBits::eMemoryRead
+                }
+        }, {}, {});
+
+
+    });
+
+    std::vector<size_t> neighbours(numValues*numValues);
+    for(size_t i = 0; i < numValues; ++i)
+        for(size_t j = 0; j < numValues; ++j)
+            if (i != j)
+                if (glm::distance(ptr[i].position, ptr[j].position) < 1.0f)
+                    neighbours[i * numValues + j]++;
+
+    std::span resultSpan(result.data(), result.size());
+    REQUIRE_THAT(resultSpan, EqualsRange(neighbours));
 }

@@ -81,8 +81,8 @@ ComputeShaderUnitTestContext::ComputeShaderUnitTestContext() {
 			.apiVersion = VK_API_VERSION_1_3
 		};
 		std::array enables = {
-			vk::ValidationFeatureEnableEXT::eGpuAssisted
-            //, vk::ValidationFeatureEnableEXT::eDebugPrintf
+			vk::ValidationFeatureEnableEXT::eGpuAssisted,
+            //vk::ValidationFeatureEnableEXT::eDebugPrintf,
 		};
 		vk::ValidationFeaturesEXT validationFeatures{
 			.enabledValidationFeatureCount = enables.size(),
@@ -127,7 +127,11 @@ ComputeShaderUnitTestContext::ComputeShaderUnitTestContext() {
 		.pQueuePriorities = &queuePriority
 	}};
 	vk::PhysicalDeviceFeatures features{};
+    vk::PhysicalDeviceMaintenance4Features maintenance4Features{
+            .maintenance4 = vk::True
+    };
 	_device = _physicalDevice.createDeviceUnique(vk::DeviceCreateInfo{
+        .pNext = &maintenance4Features,
 		.queueCreateInfoCount = 1,
 		.pQueueCreateInfos = &*queueCreateInfos.begin(),
 		.enabledLayerCount = static_cast<uint32_t>(layers.size()),

@@ -49,4 +49,7 @@ add_shader(simulation/updatevel.comp.spv simulation/updatevel.comp)
 add_radix_sort(particlesort particlesort)
 add_radix_sort(unittestsort unittestsort)
 
+add_shader(unittestneighbours/celloutput.comp.spv unittestneighbours/celloutput.comp)
+
+
 add_custom_target(shaders-target DEPENDS "${shaders_out}")

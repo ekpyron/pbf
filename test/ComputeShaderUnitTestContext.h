@@ -41,6 +41,9 @@ public:
 
 	template<typename Callable>
 	void run(Callable _callable) {
+        _queue.waitIdle();
+        _device->waitIdle();
+
 		_commandBuffer.reset();
 		_commandBuffer.begin(vk::CommandBufferBeginInfo{
 			.flags = vk::CommandBufferUsageFlagBits::eOneTimeSubmit
