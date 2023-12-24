@@ -505,9 +505,10 @@ void Simulation::copy(vk::CommandBuffer buf, vk::Buffer dst, size_t dstOffset)
             }
     });
 
-    buf.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eVertexShader, {}, {}, {vk::BufferMemoryBarrier{
+    // TODO: move outside of this function to usage sites
+    buf.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eVertexInput, {}, {}, {vk::BufferMemoryBarrier{
             .srcAccessMask = vk::AccessFlagBits::eTransferWrite,
-            .dstAccessMask = vk::AccessFlagBits::eShaderRead,
+            .dstAccessMask = vk::AccessFlagBits::eVertexAttributeRead,
             .srcQueueFamilyIndex = 0,
             .dstQueueFamilyIndex = 0,
             .buffer = dst,
