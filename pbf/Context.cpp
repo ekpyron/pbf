@@ -167,7 +167,7 @@ Context::Context() {
     {
         const auto &modes = _physicalDevice.getSurfacePresentModesKHR(*_surface);
 		for (auto [desiredPresentMode, label] : {
-            std::make_tuple(vk::PresentModeKHR::eMailbox, "Mailbox"),
+            //std::make_tuple(vk::PresentModeKHR::eMailbox, "Mailbox"),
             std::make_tuple(vk::PresentModeKHR::eFifoRelaxed, "FifoRelaxed"),
             std::make_tuple(vk::PresentModeKHR::eFifo, "Fifo")
         })

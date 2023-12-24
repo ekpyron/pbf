@@ -147,11 +147,15 @@ void Renderer::render(float timestep) {
 
 		if (_context.gui().runSPH())
 		{
-			_context.scene().simulation().run(*buffer, timestep);
-			// TODO: refactor to allow this:
-			// _context.scene().simulation().run(*buffer, timestep / 2.0f);
-			// _context.scene().simulation().run(*buffer, timestep / 2.0f);
+            static size_t numSimulationSteps = 4;
+            for(size_t i = 0; i < numSimulationSteps; ++i)
+			    _context.scene().simulation().run(*buffer, timestep / float(numSimulationSteps));
 		}
+        _context.scene().simulation().copy(
+                *buffer,
+                _context.scene().particleData().buffer(),
+                _context.scene().particleData().segmentDeviceSize() * _currentFrameSync
+        );
 
 		std::array<vk::ClearValue, 2> clearValues;
         clearValues[0].setColor({std::array<float, 4>{0.1f, 0.1f, 0.1f, 1.0f}});

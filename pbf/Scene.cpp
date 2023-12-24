@@ -18,78 +18,12 @@
 
 namespace pbf {
 
-void initializeParticleData(ParticleData* data, size_t numParticles)
-{
-	std::random_device rd;  //Will be used to obtain a seed for the random number engine
-	std::mt19937 gen(rd()); //Standard mersenne_twister_engine seeded with rd()
-	std::uniform_real_distribution<float> dist(-0.25f, 0.25f);
-    size_t id = 0;
-    auto edgeLength = std::ceil(std::cbrt(numParticles));
-	[&](){
-		for (int32_t x = 0; x < edgeLength; ++x)
-		{
-			for (int32_t y = 0; y < edgeLength; ++y)
-			{
-				for (int32_t z = 0; z < edgeLength; ++z, ++id)
-				{
-					if (id >= numParticles)
-						return;
-					data[id].position = glm::vec3(x - 32, -63 + y, z - 32);
-					data[id].position += glm::vec3(dist(gen), dist(gen), dist(gen));
-					data[id].position *= 0.8f;
-					data[id].velocity = glm::vec3(0,0,0);
-					data[id].type = id > (numParticles / 2);
-				}
-			}
-		}
-	}();
-	std::shuffle(data, data + numParticles, gen);
-}
 
 Scene::Scene(InitContext &initContext)
 : _context(initContext.context),
-_particleData([&](){
-	auto& context = initContext.context;
-	RingBuffer<ParticleData> particleData{
-		context,
-		_numParticles,
-		context.renderer().framePrerenderCount(),
-		// TODO: maybe remove transfer src
-		vk::BufferUsageFlagBits::eTransferSrc | vk::BufferUsageFlagBits::eTransferDst | vk::BufferUsageFlagBits::eStorageBuffer | vk::BufferUsageFlagBits::eVertexBuffer,
-		pbf::MemoryType::STATIC
-	};
-
-	auto& initBuffer = initContext.createInitData<Buffer<ParticleData>>(
-		context, _numParticles, vk::BufferUsageFlagBits::eTransferSrc, pbf::MemoryType::TRANSIENT
-	);
-
-	ParticleData* data = initBuffer.data();
-	initializeParticleData(data, _numParticles);
-	initBuffer.flush();
-
-	auto& initCmdBuf = *initContext.initCommandBuffer;
-	for (size_t i = 0; i < context.renderer().framePrerenderCount(); ++i)
-		initCmdBuf.copyBuffer(initBuffer.buffer(), particleData.buffer(), {
-			vk::BufferCopy {
-				.srcOffset = 0,
-				.dstOffset = sizeof(ParticleData) * _numParticles * i,
-				.size = initBuffer.deviceSize()
-			}
-		});
-
-	initCmdBuf.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eComputeShader, {}, {}, {vk::BufferMemoryBarrier{
-		.srcAccessMask = vk::AccessFlagBits::eTransferWrite,
-		.dstAccessMask = vk::AccessFlagBits::eShaderRead,
-		.srcQueueFamilyIndex = 0,
-		.dstQueueFamilyIndex = 0,
-		.buffer = particleData.buffer(),
-		.offset = 0,
-		.size = particleData.deviceSize(),
-	}}, {});
-	return particleData;
-}()),
+_particleData(initContext.context, _numParticles, initContext.context.renderer().framePrerenderCount(), vk::BufferUsageFlagBits::eTransferDst | vk::BufferUsageFlagBits::eStorageBuffer, pbf::MemoryType::STATIC),
 quad(initContext, *this),
-_simulation(initContext, _particleData)
+_simulation(initContext, _numParticles)
 {
 }
 
@@ -102,32 +36,7 @@ void Scene::resetParticles()
 void Scene::frame(vk::CommandBuffer &buf) {
 	if (_resetParticles)
 	{
-		auto& initBuffer = _context.renderer().createFrameData<Buffer<ParticleData>>(
-			_context, _numParticles, vk::BufferUsageFlagBits::eTransferSrc, pbf::MemoryType::TRANSIENT
-		);
-		ParticleData* data = initBuffer.data();
-
-		initializeParticleData(data, _numParticles);
-		initBuffer.flush();
-
-		for (size_t i = 0; i < _context.renderer().framePrerenderCount(); ++i)
-			buf.copyBuffer(initBuffer.buffer(), _particleData.buffer(), {
-				vk::BufferCopy {
-					.srcOffset = 0,
-					.dstOffset = sizeof(ParticleData) * _numParticles * i,
-					.size = initBuffer.deviceSize()
-				}
-			});
-
-		buf.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eComputeShader, {}, {}, {vk::BufferMemoryBarrier{
-			.srcAccessMask = vk::AccessFlagBits::eTransferWrite,
-			.dstAccessMask = vk::AccessFlagBits::eShaderRead,
-			.srcQueueFamilyIndex = 0,
-			.dstQueueFamilyIndex = 0,
-			.buffer = _particleData.buffer(),
-			.offset = 0,
-			.size = _particleData.deviceSize(),
-		}}, {});
+        simulation().reset(buf);
 		_resetParticles = false;
 	}
 

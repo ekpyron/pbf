@@ -31,25 +31,18 @@ public:
 		return result;
 	}
 
-	[[nodiscard]] auto framePrerenderCount() const {
-		return 3u;
-	}
-
-	[[nodiscard]] std::uint32_t currentFrameSync() const {
-		return _currentFrameSync;
-	}
-	[[nodiscard]] std::uint32_t previousFrameSync() const {
-		return (_currentFrameSync + framePrerenderCount() - 1) % framePrerenderCount();
-	}
-	[[nodiscard]] std::uint32_t nextFrameSync() const {
-		return (_currentFrameSync + framePrerenderCount() + 1) % framePrerenderCount();
-	}
-
 	Context& context() { return _context; }
 	[[nodiscard]] Context const& context() const { return _context; }
 
-private:
+    [[nodiscard]] auto framePrerenderCount() const {
+        return 3u;
+    }
 
+    [[nodiscard]] std::uint32_t currentFrameSync() const {
+        return _currentFrameSync;
+    }
+
+private:
     void reset();
 
     Context &_context;

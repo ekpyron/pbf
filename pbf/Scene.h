@@ -73,7 +73,7 @@ private:
 
     Context& _context;
 
-	uint32_t _numParticles = 64 * 64 * 32;
+	uint32_t const _numParticles = 64 * 64 * 32;
 
 	RingBuffer<ParticleData> _particleData;
 

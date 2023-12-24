@@ -18,12 +18,14 @@ class ParticleKey;
 class Simulation: public UIControlled
 {
 public:
-	Simulation(InitContext& context, RingBuffer<ParticleData>& particleData);
+	Simulation(InitContext& context, size_t numParticles);
 	uint32_t getNumParticles() const {
 		return _particleData.size();
 	}
+    void reset(vk::CommandBuffer& buf);
 	void resetKeys() { _resetKeys = true; }
 	void run(vk::CommandBuffer buf, float timestep);
+    void copy(vk::CommandBuffer buf, vk::Buffer dst, size_t dstOffset);
 protected:
 	void ui() override;
 	std::string uiCategory() const override;
@@ -42,7 +44,14 @@ private:
 	void initKeys(Context& context, vk::CommandBuffer buf);
 	bool _resetKeys = false;
 	Context& _context;
-	RingBuffer<ParticleData>& _particleData;
+    size_t ringBufferIndex = 0;
+    size_t nextRingBufferIndex() const {
+        return (ringBufferIndex + 1) % _particleData.segments();
+    }
+    size_t previousRingBufferIndex() const {
+        return (ringBufferIndex + (_particleData.segments() - 1)) % _particleData.segments();
+    }
+	RingBuffer<ParticleData> _particleData;
 	RingBuffer<ParticleKey> _particleKeys;
 
 	struct UnconstrainedPositionUpdatePushConstants {
