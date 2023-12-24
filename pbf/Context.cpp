@@ -55,17 +55,18 @@ Context::Context() {
                 .apiVersion = VK_API_VERSION_1_3
         };
 #ifndef NDEBUG
-		vk::ValidationFeatureEnableEXT enables[] = {
+        bool gpuAssistedValidation = false;
+		std::array enables = {
 			vk::ValidationFeatureEnableEXT::eGpuAssisted
 		};
 		vk::ValidationFeaturesEXT validationFeatures{
-			.enabledValidationFeatureCount = 1,
-			.pEnabledValidationFeatures = enables
+			.enabledValidationFeatureCount = enables.size(),
+			.pEnabledValidationFeatures = enables.data()
 		};
 #endif
         _instance = vk::createInstanceUnique(vk::InstanceCreateInfo{
 #ifndef NDEBUG
-			.pNext = &validationFeatures,
+			.pNext = gpuAssistedValidation ? &validationFeatures : nullptr,
 #endif
 			.pApplicationInfo = &appInfo,
 			.enabledLayerCount = static_cast<uint32_t>(layers.size()),
