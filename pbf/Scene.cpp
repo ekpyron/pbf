@@ -21,7 +21,7 @@ namespace pbf {
 
 Scene::Scene(InitContext &initContext)
 : _context(initContext.context),
-_particleData(initContext.context, _numParticles, initContext.context.renderer().framePrerenderCount(), vk::BufferUsageFlagBits::eTransferDst | vk::BufferUsageFlagBits::eStorageBuffer, pbf::MemoryType::STATIC),
+_particleData(initContext.context, _numParticles, initContext.context.renderer().framePrerenderCount(), vk::BufferUsageFlagBits::eTransferDst | vk::BufferUsageFlagBits::eVertexBuffer, pbf::MemoryType::STATIC),
 quad(initContext, *this),
 _simulation(initContext, _numParticles)
 {
