@@ -287,7 +287,7 @@ Context::debugUtilMessengerCallback(vk::DebugUtilsMessageSeverityFlagsEXT messag
     auto logger = spdlog::get("vulkan");
     std::string messageTypeString = "Unknown";
     std::map<std::string, std::string> nameMap;
-    std::string message = callbackData.pMessage;
+    std::string message = callbackData.pMessage ? callbackData.pMessage : "[null]";
     for (uint32_t i = 0; i < callbackData.objectCount; i++)
     {
         if (callbackData.pObjects[i].pObjectName)
