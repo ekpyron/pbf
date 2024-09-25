@@ -356,7 +356,7 @@ void Simulation::run(vk::CommandBuffer buf, float timestep)
 
 	static constexpr size_t numSteps = 3;
 	for (size_t step = 0; step < numSteps; ++step) {
-        // TODO: adjust neighbourCellFinderInputInfos according to expected sortResult
+        // TODO: adjust neighbourCellFinderInputInfos according to expected sortResult -> probably done
         auto sortResult = _radixSort.stage(
                 buf,
                 30,

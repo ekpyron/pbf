@@ -3,5 +3,3 @@ TODO:
 	Ping Pong input in neighbour list
 	
 	cutoff radii
-
-	Decouple framesync from simulation buffers (allow simulating twice per frame with half frame time time step)

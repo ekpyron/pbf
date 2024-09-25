@@ -10,9 +10,11 @@
 auto debugUtilMessengerCallback(vk::DebugUtilsMessageSeverityFlagsEXT messageSeverity,
     vk::DebugUtilsMessageTypeFlagsEXT messageType,
     const vk::DebugUtilsMessengerCallbackDataEXT &callbackData) {
-    std::string messageTypeString = "Unknown";
+	if (!(messageType & ~vk::DebugUtilsMessageTypeFlagBitsEXT::eDeviceAddressBinding) && !callbackData.pMessage)
+		return VK_FALSE;
+	std::string messageTypeString = "Unknown";
     std::map<std::string, std::string> nameMap;
-    std::string message = callbackData.pMessage;
+    std::string message = callbackData.pMessage ? callbackData.pMessage : "[null]";
     for (uint32_t i = 0; i < callbackData.objectCount; i++)
     {
         if (callbackData.pObjects[i].pObjectName)
@@ -80,8 +82,8 @@ ComputeShaderUnitTestContext::ComputeShaderUnitTestContext() {
 			.engineVersion = VK_MAKE_VERSION(0, 0, 0),
 			.apiVersion = VK_API_VERSION_1_3
 		};
-		std::array enables = {
-			vk::ValidationFeatureEnableEXT::eGpuAssisted,
+		std::array<vk::ValidationFeatureEnableEXT, 0> enables = {
+			//vk::ValidationFeatureEnableEXT::eGpuAssisted,
             //vk::ValidationFeatureEnableEXT::eDebugPrintf,
 		};
 		vk::ValidationFeaturesEXT validationFeatures{

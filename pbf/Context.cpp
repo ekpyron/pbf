@@ -46,6 +46,7 @@ Context::Context() {
 #ifndef NDEBUG
         extensions.push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
         layers.push_back("VK_LAYER_KHRONOS_validation");
+    	//layers.push_back("VK_LAYER_DEV_self_validation");
 #endif
         vk::ApplicationInfo appInfo{
                 .pApplicationName = "PBF",
@@ -284,7 +285,9 @@ VkBool32
 Context::debugUtilMessengerCallback(vk::DebugUtilsMessageSeverityFlagsEXT messageSeverity,
     vk::DebugUtilsMessageTypeFlagsEXT messageType,
     const vk::DebugUtilsMessengerCallbackDataEXT &callbackData) const {
-    auto logger = spdlog::get("vulkan");
+	if (!(messageType & ~vk::DebugUtilsMessageTypeFlagBitsEXT::eDeviceAddressBinding) && !callbackData.pMessage)
+		return VK_FALSE;
+	auto logger = spdlog::get("vulkan");
     std::string messageTypeString = "Unknown";
     std::map<std::string, std::string> nameMap;
     std::string message = callbackData.pMessage ? callbackData.pMessage : "[null]";
