@@ -3,5 +3,24 @@ TODO:
 	Ping Pong input in neighbour list
 	
 	cutoff radii
-	
+
 https://github.com/Twinklebear/vulkan-marching-cubes
+
+Plan:
+    - every particle emits its voxel position (i.e. voxel cube vertex positions, i.e. voxel positions shifted by half a side length of the voxel cube)
+      into a num_particle-sized buffer voxelbuf
+    - sort voxelbuf <- expensive
+    - for each i : voxelbuf:
+        voxellistindex[i] = (voxelbuf[i] != voxelbuf[i - 1]) ? 0 : 1
+     - scan voxellistindex <- expensive
+     - num_voxels = voxellistindex[-1]
+     - voxellistindex[i] is continuous index for voxels
+
+
+    - for each i : voxelbuf:
+        if (voxelbuf[i] != voxelbuf[i - 1])
+        {
+            // roughly; TODO: race condition?
+            voxelcontent[voxellistindex[i]].start = i;
+            voxelcontent[voxellistindex[i - 1]].emd = i;
+        }
