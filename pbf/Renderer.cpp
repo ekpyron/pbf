@@ -15,17 +15,129 @@ static constexpr std::uint64_t TIMEOUT = std::numeric_limits<std::uint64_t>::max
 
 namespace pbf {
 
+Renderer::OffscreenData::OffscreenData(InitContext& _context, vk::RenderPass _renderPass):
+	depthImage(
+		_context.context,
+		vk::Format::eD32Sfloat,
+		vk::ImageUsageFlagBits::eDepthStencilAttachment|vk::ImageUsageFlagBits::eInputAttachment,
+		extent3D()
+	),
+	thicknessImage(
+	_context.context,
+		vk::Format::eR8G8B8A8Unorm,
+		vk::ImageUsageFlagBits::eColorAttachment|vk::ImageUsageFlagBits::eInputAttachment|vk::ImageUsageFlagBits::eTransferSrc, // TODO: remove transfer src
+		extent3D()
+	)
+
+{
+	depthView = _context.context.device().createImageViewUnique(vk::ImageViewCreateInfo{
+		.flags = {},
+		.image = depthImage.image(),
+		.viewType = vk::ImageViewType::e2D,
+		.format = vk::Format::eD32Sfloat,
+		.components = vk::ComponentMapping{},
+		.subresourceRange = vk::ImageSubresourceRange{
+			.aspectMask = vk::ImageAspectFlagBits::eDepth,
+			.baseMipLevel = 0,
+			.levelCount = 1,
+			.baseArrayLayer = 0,
+			.layerCount = 1,
+		}
+	});
+	thicknessView = _context.context.device().createImageViewUnique(vk::ImageViewCreateInfo{
+		.flags = {},
+		.image = thicknessImage.image(),
+		.viewType = vk::ImageViewType::e2D,
+		.format = vk::Format::eR8G8B8A8Unorm,
+		.components = vk::ComponentMapping{},
+		.subresourceRange = vk::ImageSubresourceRange{
+			.aspectMask = vk::ImageAspectFlagBits::eColor,
+			.baseMipLevel = 0,
+			.levelCount = 1,
+			.baseArrayLayer = 0,
+			.layerCount = 1,
+		}
+	});
+	std::array attachments = {
+		*thicknessView,
+		*depthView
+	};
+	frameBuffer = _context.context.device().createFramebufferUnique(vk::FramebufferCreateInfo{
+		.flags = {},
+		.renderPass = _renderPass,
+		.attachmentCount = attachments.size(),
+		.pAttachments = attachments.data(),
+		.width = extent2D().width,
+		.height = extent2D().height,
+		.layers = 1,
+	});
+
+
+}
+
+
 Renderer::Renderer(InitContext &initContext) : _context(initContext.context) {
-    _frameSync.reserve(framePrerenderCount());
+    {
+        _offscreenRenderPass = _context.cache().fetch(descriptors::RenderPass{
+                .attachments = {
+                        vk::AttachmentDescription{
+                                {},
+                                vk::Format::eR8G8B8A8Unorm,
+                                vk::SampleCountFlagBits::e1,
+                                vk::AttachmentLoadOp::eClear,
+                                vk::AttachmentStoreOp::eStore,
+                                vk::AttachmentLoadOp::eDontCare,
+                                vk::AttachmentStoreOp::eDontCare,
+                                vk::ImageLayout::eUndefined,
+                                vk::ImageLayout::eTransferSrcOptimal
+                        },
+					vk::AttachmentDescription{
+						{},
+						vk::Format::eD32Sfloat,
+						vk::SampleCountFlagBits::e1,
+						vk::AttachmentLoadOp::eClear,
+						vk::AttachmentStoreOp::eDontCare,
+						vk::AttachmentLoadOp::eDontCare,
+						vk::AttachmentStoreOp::eDontCare,
+						vk::ImageLayout::eUndefined,
+						vk::ImageLayout::eDepthStencilAttachmentOptimal
+					}
+                },
+                .subpasses = {
+                        {
+                                .flags = {},
+                                .pipelineBindPoint = vk::PipelineBindPoint::eGraphics,
+                                .inputAttachments = {},
+                                .colorAttachments = {{0, vk::ImageLayout::eColorAttachmentOptimal}},
+                                .resolveAttachments = {},
+                                .depthStencilAttachment = {{1, vk::ImageLayout::eDepthStencilAttachmentOptimal}},
+                                .preserveAttachments = {}
+                        }
+                },
+                .subpassDependencies = {
+                        vk::SubpassDependency{
+                                VK_SUBPASS_EXTERNAL,
+                                0,
+                                vk::PipelineStageFlagBits::eColorAttachmentOutput|vk::PipelineStageFlagBits::eEarlyFragmentTests,
+                                vk::PipelineStageFlagBits::eColorAttachmentOutput|vk::PipelineStageFlagBits::eEarlyFragmentTests,
+                                {}, vk::AccessFlagBits::eColorAttachmentWrite|vk::AccessFlagBits::eDepthStencilAttachmentWrite, {}
+                        }
+                },
+                PBF_DESC_DEBUG_NAME("Offscreen Renderer RenderPass")
+        });
+    }
+
+	_frameSync.reserve(framePrerenderCount());
     for (size_t i = 0; i < framePrerenderCount(); i++) {
         _frameSync.emplace_back(FrameSync{
-                _context.device().createSemaphoreUnique({}),
-				_context.device().createSemaphoreUnique({}),
-                _context.device().createSemaphoreUnique({}),
-                _context.device().createFenceUnique(vk::FenceCreateInfo {
-					.flags = vk::FenceCreateFlagBits::eSignaled
-				})
-        });
+			OffscreenData{initContext, *_offscreenRenderPass},
+			_context.device().createSemaphoreUnique({}),
+			_context.device().createSemaphoreUnique({}),
+			_context.device().createSemaphoreUnique({}),
+			_context.device().createFenceUnique(vk::FenceCreateInfo {
+				.flags = vk::FenceCreateFlagBits::eSignaled
+			}),
+	});
         PBF_DEBUG_SET_OBJECT_NAME(_context, *_frameSync.back().imageAvailableSemaphore,
                                   fmt::format("Image Available Semaphore #{}", i));
         PBF_DEBUG_SET_OBJECT_NAME(_context, *_frameSync.back().renderFinishedSemaphore,
@@ -42,11 +154,11 @@ Renderer::Renderer(InitContext &initContext) : _context(initContext.context) {
                                 {},
                                 _context.surfaceFormat().format,
                                 vk::SampleCountFlagBits::e1,
-                                vk::AttachmentLoadOp::eClear,
+                                vk::AttachmentLoadOp::eLoad,
                                 vk::AttachmentStoreOp::eStore,
                                 vk::AttachmentLoadOp::eDontCare,
                                 vk::AttachmentStoreOp::eDontCare,
-                                vk::ImageLayout::eUndefined,
+                                vk::ImageLayout::eTransferDstOptimal,
                                 vk::ImageLayout::ePresentSrcKHR
                         },
 					vk::AttachmentDescription{
@@ -160,6 +272,85 @@ void Renderer::render(float timestep) {
 		std::array<vk::ClearValue, 2> clearValues;
         clearValues[0].setColor({std::array<float, 4>{0.1f, 0.1f, 0.1f, 1.0f}});
 		clearValues[1].setDepthStencil(vk::ClearDepthStencilValue{.depth = 1.0f, .stencil = 0});
+
+
+    	buffer->setViewport(0, {
+			vk::Viewport{
+				0, 0, float(currentFrameSync.offscreenData.extent2D().width), float(currentFrameSync.offscreenData.extent2D().height), 0.0f, 1.0f
+			}
+		});
+    	buffer->setScissor(0, {vk::Rect2D{vk::Offset2D(), currentFrameSync.offscreenData.extent2D()}});
+    	buffer->beginRenderPass(vk::RenderPassBeginInfo{
+			.renderPass = *_offscreenRenderPass,
+			.framebuffer = *currentFrameSync.offscreenData.frameBuffer,
+			.renderArea = vk::Rect2D{{},currentFrameSync.offscreenData.extent2D()},
+			.clearValueCount = clearValues.size(),
+			.pClearValues = clearValues.data()
+		}, vk::SubpassContents::eInline);
+
+    	_context.scene().enqueueCommands(*buffer);
+
+    	buffer->endRenderPass();
+
+    	vk::ImageBlit blit{
+    		.srcSubresource = {
+    			.aspectMask = vk::ImageAspectFlagBits::eColor,
+				.mipLevel = 0,
+				.baseArrayLayer = 0,
+				.layerCount = 1,
+			},
+			.srcOffsets = std::array{vk::Offset3D{
+				.x = 0, .y = 0, .z = 0
+			}, vk::Offset3D{
+				currentFrameSync.offscreenData.extent2D().width,
+				currentFrameSync.offscreenData.extent2D().height,
+				1
+			}},
+			.dstSubresource = {
+    			.aspectMask = vk::ImageAspectFlagBits::eColor,
+				.mipLevel = 0,
+				.baseArrayLayer = 0,
+				.layerCount = 1,
+			},
+			.dstOffsets = std::array{vk::Offset3D{
+				.x = 0, .y = 0, .z = 0
+			}, vk::Offset3D{
+				_swapchain->extent().width,
+				_swapchain->extent().height,
+				1
+			}}
+    	};
+
+
+    	buffer->pipelineBarrier(
+			vk::PipelineStageFlagBits::eTransfer,
+			vk::PipelineStageFlagBits::eComputeShader, {}, {}, {}, {
+				vk::ImageMemoryBarrier{
+					.srcAccessMask = {},
+					.dstAccessMask = {},
+					.oldLayout = vk::ImageLayout::eUndefined,
+					.newLayout = vk::ImageLayout::eTransferDstOptimal,
+					.image = _swapchain->images()[imageIndex],
+					.subresourceRange = {
+						.aspectMask = vk::ImageAspectFlagBits::eColor,
+						.baseMipLevel = 0,
+						.levelCount = 1,
+						.baseArrayLayer = 0,
+						.layerCount = 1
+					}
+				}
+			});
+
+    	buffer->blitImage(
+			currentFrameSync.offscreenData.thicknessImage.image(),
+			vk::ImageLayout::eTransferSrcOptimal,
+			_swapchain->images()[imageIndex],
+			vk::ImageLayout::eTransferDstOptimal,
+			1,
+			&blit,
+			vk::Filter::eLinear
+		);
+
 		buffer->setViewport(0, {
             vk::Viewport{
                 0, 0, float(_swapchain->extent().width), float(_swapchain->extent().height), 0.0f, 1.0f
@@ -173,15 +364,10 @@ void Renderer::render(float timestep) {
 			.clearValueCount = clearValues.size(),
 			.pClearValues = clearValues.data()
         }, vk::SubpassContents::eInline);
-        /*buffer->bindPipeline(vk::PipelineBindPoint::eGraphics, *_graphicsPipeline);
-        buffer->draw(3, 1, 0, 0);*/
-
-		_context.scene().enqueueCommands(*buffer);
-
-		_context.gui().render(*buffer);
-
+    	_context.gui().render(*buffer);
         buffer->endRenderPass();
-        buffer->end();
+
+    	buffer->end();
     }
 
 

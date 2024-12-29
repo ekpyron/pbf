@@ -41,7 +41,7 @@ Swapchain::Swapchain(Context &context, const vk::RenderPass& renderPass, vk::Swa
                 .setImageColorSpace(context.surfaceFormat().colorSpace)
                 .setImageExtent(_extent)
                 .setImageArrayLayers(1)
-                .setImageUsage(vk::ImageUsageFlagBits::eColorAttachment)
+                .setImageUsage(vk::ImageUsageFlagBits::eColorAttachment|vk::ImageUsageFlagBits::eTransferDst)
                 .setPreTransform(surfaceCapabilities.currentTransform)
                 .setCompositeAlpha(vk::CompositeAlphaFlagBitsKHR::eOpaque)
                 .setPresentMode(context.presentMode())

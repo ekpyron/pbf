@@ -22,6 +22,9 @@ public:
     [[nodiscard]] CacheReference<descriptors::RenderPass> renderPass() const {
         return _renderPass;
     }
+	[[nodiscard]] CacheReference<descriptors::RenderPass> offscreenRenderPass() const {
+    	return _offscreenRenderPass;
+    }
 
 	template<typename T, typename... Args>
 	T& createFrameData(Args&&... args) {
@@ -48,13 +51,33 @@ private:
     Context &_context;
     std::unique_ptr<Swapchain> _swapchain;
 	vk::UniqueCommandBuffer initCommandBuffer;
+	struct OffscreenData
+	{
+		OffscreenData(InitContext& context, vk::RenderPass renderPass);
+		constexpr static vk::Extent2D extent2D()
+		{
+			return vk::Extent2D{1024, 1024};
+		}
+		constexpr static vk::Extent3D extent3D()
+		{
+			return vk::Extent3D{extent2D().width, extent2D().height, 1};
+		}
+		Image depthImage;
+		Image thicknessImage;
+		vk::UniqueImageView depthView{};
+		vk::UniqueImageView thicknessView{};
+		vk::UniqueFramebuffer frameBuffer{};
+	};
     struct FrameSync {
-        vk::UniqueSemaphore imageAvailableSemaphore;
+    	OffscreenData offscreenData;
+
+    	vk::UniqueSemaphore imageAvailableSemaphore;
         vk::UniqueSemaphore renderFinishedSemaphore;
 		vk::UniqueSemaphore computeFinishedSemaphore;
         vk::UniqueFence fence;
         vk::UniqueCommandBuffer commandBuffer{};
 		vk::UniqueCommandBuffer computeCommandBuffer{};
+
 		std::vector<std::unique_ptr<FrameDataBase>> frameData{};
 
         void reset() {
@@ -66,6 +89,7 @@ private:
     std::size_t _currentFrameSync = 0;
     std::vector<vk::UniqueCommandBuffer> _commandBuffers;
 
+	CacheReference<descriptors::RenderPass> _offscreenRenderPass;
 	CacheReference<descriptors::RenderPass> _renderPass;
     //CacheReference<descriptors::GraphicsPipeline> _graphicsPipeline;
 };

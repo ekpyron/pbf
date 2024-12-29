@@ -102,7 +102,7 @@ Quad::Quad(InitContext& initContext, pbf::Scene& scene) : scene(scene) {
                     vk::PipelineColorBlendAttachmentState().setColorWriteMask(
                             vk::ColorComponentFlagBits::eR | vk::ColorComponentFlagBits::eG |
                             vk::ColorComponentFlagBits::eB | vk::ColorComponentFlagBits::eA
-                    )
+                    ).setBlendEnable(false)
             },
             .dynamicStates = {vk::DynamicState::eViewport, vk::DynamicState::eScissor},
             .pipelineLayout = scene.context().cache().fetch(
@@ -112,7 +112,7 @@ Quad::Quad(InitContext& initContext, pbf::Scene& scene) : scene(scene) {
                                    }},
                     PBF_DESC_DEBUG_NAME("Dummy Pipeline Layout")
             }),
-            .renderPass = scene.context().renderer().renderPass(),
+            .renderPass = scene.context().renderer().offscreenRenderPass(),
             PBF_DESC_DEBUG_NAME("Main Renderer Graphics Pipeline")
     });
 
