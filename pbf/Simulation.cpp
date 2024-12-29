@@ -29,6 +29,7 @@ void initializeParticleData(ParticleData* data, size_t numParticles)
                     data[id].position = glm::vec3(x - 32, -63 + y, z - 32);
                     data[id].position += glm::vec3(dist(gen), dist(gen), dist(gen));
                     data[id].position *= 0.8f;
+                	data[id].aux = (id % 256 == 0) ? -1u : 0;
                     data[id].velocity = glm::vec3(0,0,0);
                     data[id].type = id > (numParticles / 2);
                 }
@@ -317,7 +318,7 @@ void Simulation::run(vk::CommandBuffer buf, float timestep)
 	});
 	static constexpr float Gabs = 9.81f;
 	UnconstrainedPositionUpdatePushConstants pushConstants{
-		.externalAccell = glm::vec3(0.0f, -Gabs, 0.0f),
+		.externalAccell = glm::vec3(0.0f, -0.1f*Gabs, 0.0f),
 		.lastTimestep = _lastTimestep,
 		.timestep = timestep
 	};

@@ -33,6 +33,9 @@ void main (void)
     float masses[2] = { 16.0f, 32.0f };
 
     velocity += masses[type] * externalAccel * timestep;
+    float r = length(particleKeys[gid].position);
+    vec3 gravityDir = -particleKeys[gid].position / r;
+    velocity += masses[type] * 4 * (timestep * gravityDir);
     particleKeys[gid].position += timestep * velocity;
     particles[key.index].velocity = velocity;
 }

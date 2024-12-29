@@ -40,12 +40,19 @@ void main(void)
 
     vec3 gradVorticity = vec3(0,0,0);
 
+    bool neighbourIsSelected = false;
+
     FOR_EACH_NEIGHBOUR(gid, j)
     {
         vec3 position_j = particleKeys[j].position;
         vec3 p_ij = position - position_j;
         vec3 grad = gradWspiky(p_ij);
         gradVorticity += vorticities[j].w * grad;
+
+        if (particles[particleKeys[j].index].aux == -1u) {
+            neighbourIsSelected = true;
+        }
+
     }
     END_FOR_EACH_NEIGHBOUR()
 
@@ -57,4 +64,13 @@ void main(void)
     velocity += timestep * vorticity_epsilon * cross(gradVorticity, vorticities[gid].xyz);
 
     outputParticles[key.index].velocity = velocity;
+    if (particles[key.index].aux != -1u) {
+        if (neighbourIsSelected) {
+            outputParticles[key.index].aux = 1u;
+        } else {
+            outputParticles[key.index].aux = 0u;
+        }
+    } else {
+        outputParticles[key.index].aux = -1u;
+    }
 }
