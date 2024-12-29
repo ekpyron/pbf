@@ -19,12 +19,12 @@ struct GridBoundaries {
 for (int _x = -1; _x <= 1; ++_x) { \
 for (int _y = -1; _y <= 1; ++_y) { \
 for (int _z = -1; _z <= 1; ++_z) { \
-vec3 _position = particleKeys[gid].position + vec3(_x,_y,_z); \
-if (!(any(lessThan(_position, vec3(GRID_MIN)))) && all(lessThan(_position, vec3(GRID_MAX)))) { \
+vec3 _position = particleKeys[gid].position + cellSize * vec3(_x,_y,_z); \
+if (!(any(lessThan(_position / cellSize, vec3(GRID_MIN)))) && all(lessThan(_position / cellSize, vec3(GRID_MAX)))) { \
 GridBoundaries _gridCell = grid[GetGridIndex(_position)]; \
 for (uint idx = _gridCell.startIndex; idx < _gridCell.endIndex; ++idx) { \
 if (idx != gid) { \
-if (distance(particleKeys[idx].position, particleKeys[gid].position) < 1.0) {
+if (distance(particleKeys[idx].position, particleKeys[gid].position) < h) {
 
 #define END_FOR_EACH_NEIGHBOUR() }}}}}}}
 
@@ -32,6 +32,7 @@ layout(std140, binding = 1, set = 0) uniform GridData {
     ivec3 GRID_MAX;
     ivec3 GRID_MIN;
     ivec3 GRID_HASHWEIGHTS;
+    float cellSize;
 };
 
 layout(std430, binding = 0, set = 1) readonly buffer GridBoundaryBuffer
@@ -40,7 +41,7 @@ layout(std430, binding = 0, set = 1) readonly buffer GridBoundaryBuffer
 };
 
 uint GetGridIndex(vec3 position) {
-    ivec3 gridPositive = ivec3(floor(position)) - GRID_MIN;
+    ivec3 gridPositive = ivec3(floor(position / cellSize)) - GRID_MIN;
     return uint(gridPositive.x * GRID_HASHWEIGHTS.x + gridPositive.y * GRID_HASHWEIGHTS.y + gridPositive.z * GRID_HASHWEIGHTS.z);
 }
 

@@ -12,6 +12,7 @@ layout(std140, binding = 1, set = 1) uniform GridData {
     ivec3 GRID_MAX;
     ivec3 GRID_MIN;
     ivec3 GRID_HASHWEIGHTS;
+    float cellSize;
 };
 
 layout(std430, binding = 2, set = 1) writeonly buffer SortedParticles
@@ -20,7 +21,7 @@ layout(std430, binding = 2, set = 1) writeonly buffer SortedParticles
 };
 
 uint getHash(uint id) {
-    highp ivec3 grid = ivec3(floor(clamp (particleKeys[id].position, GRID_MIN, GRID_MAX) - GRID_MIN));
+    highp ivec3 grid = ivec3(floor(clamp (particleKeys[id].position / cellSize, GRID_MIN, GRID_MAX) - GRID_MIN));
     return uint (dot (grid, GRID_HASHWEIGHTS));
 }
 

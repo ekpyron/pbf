@@ -14,7 +14,8 @@ public:
     struct GridData {
         glm::ivec4 max = glm::ivec4(127, 127, 127, 0);
         glm::ivec4 min = glm::ivec4(-128, -128, -128, 0);
-        glm::ivec4 hashweights = glm::ivec4(1, (max.x - min.x + 1), (max.x - min.x + 1) * (max.y - min.y + 1), 0);
+        glm::ivec3 hashweights = glm::ivec3(1, (max.x - min.x + 1), (max.x - min.x + 1) * (max.y - min.y + 1));
+    	float cellSize = glm::sqrt(3.0f);
         [[nodiscard]] inline size_t numCells() const {
             glm::ivec3 gridExtents = glm::ivec3(max) - glm::ivec3(min);
             return (gridExtents.x + 1) * (gridExtents.y + 1) * (gridExtents.z + 1);
