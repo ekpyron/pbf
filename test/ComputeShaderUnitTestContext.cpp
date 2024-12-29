@@ -100,7 +100,7 @@ ComputeShaderUnitTestContext::ComputeShaderUnitTestContext() {
 		}, nullptr, _dls);
 	}
 
-	_dldi = std::make_unique<vk::DispatchLoaderDynamic>(*_instance, vkGetInstanceProcAddr);
+	_dldi = std::make_unique<vk::detail::DispatchLoaderDynamic>(*_instance, vkGetInstanceProcAddr);
 	_debugUtilsMessenger = _instance->createDebugUtilsMessengerEXTUnique(
 		vk::DebugUtilsMessengerCreateInfoEXT {
 			.messageSeverity = ~vk::DebugUtilsMessageSeverityFlagBitsEXT(),

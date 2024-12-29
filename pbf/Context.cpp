@@ -77,7 +77,7 @@ Context::Context() {
 		 }, nullptr, dls);
     }
 #ifndef NDEBUG
-    dldi = std::make_unique<vk::DispatchLoaderDynamic>(*_instance, ::vkGetInstanceProcAddr);
+    dldi = std::make_unique<vk::detail::DispatchLoaderDynamic>(*_instance, ::vkGetInstanceProcAddr);
     _debugUtilsMessenger = _instance->createDebugUtilsMessengerEXTUnique(
             vk::DebugUtilsMessengerCreateInfoEXT {
 				.messageSeverity = ~vk::DebugUtilsMessageSeverityFlagBitsEXT(),
@@ -169,7 +169,7 @@ Context::Context() {
     {
         const auto &modes = _physicalDevice.getSurfacePresentModesKHR(*_surface);
 		for (auto [desiredPresentMode, label] : {
-            //std::make_tuple(vk::PresentModeKHR::eMailbox, "Mailbox"),
+            std::make_tuple(vk::PresentModeKHR::eMailbox, "Mailbox"),
             std::make_tuple(vk::PresentModeKHR::eFifoRelaxed, "FifoRelaxed"),
             std::make_tuple(vk::PresentModeKHR::eFifo, "Fifo")
         })

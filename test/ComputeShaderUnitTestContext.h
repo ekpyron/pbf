@@ -67,10 +67,10 @@ public:
 	}
 
 private:
-	vk::DispatchLoaderStatic _dls;
+	vk::detail::DispatchLoaderStatic _dls;
 	vk::UniqueInstance _instance;
-	std::unique_ptr<vk::DispatchLoaderDynamic> _dldi;
-	vk::UniqueHandle<vk::DebugUtilsMessengerEXT, vk::DispatchLoaderDynamic> _debugUtilsMessenger;
+	std::unique_ptr<vk::detail::DispatchLoaderDynamic> _dldi;
+	vk::UniqueHandle<vk::DebugUtilsMessengerEXT, vk::detail::DispatchLoaderDynamic> _debugUtilsMessenger;
 	vk::PhysicalDevice _physicalDevice;
 	std::uint32_t _queueFamilyIndex = -1u;
 	vk::UniqueDevice _device;

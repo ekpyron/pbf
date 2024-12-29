@@ -131,15 +131,15 @@ private:
     glfw::GLFW _glfw;
     std::unique_ptr<glfw::Window> _window;
 
-    vk::DispatchLoaderStatic dls;
+    vk::detail::DispatchLoaderStatic dls;
     vk::UniqueInstance _instance;
 #ifndef NDEBUG
-    std::unique_ptr<vk::DispatchLoaderDynamic> dldi;
+    std::unique_ptr<vk::detail::DispatchLoaderDynamic> dldi;
     VkBool32 debugUtilMessengerCallback(vk::DebugUtilsMessageSeverityFlagsEXT messageSeverity,
             vk::DebugUtilsMessageTypeFlagsEXT messageType,
             const vk::DebugUtilsMessengerCallbackDataEXT &callbackData) const;
 
-    vk::UniqueHandle<vk::DebugUtilsMessengerEXT, vk::DispatchLoaderDynamic> _debugUtilsMessenger;
+    vk::UniqueHandle<vk::DebugUtilsMessengerEXT, vk::detail::DispatchLoaderDynamic> _debugUtilsMessenger;
 #endif
     vk::PhysicalDevice _physicalDevice;
 
