@@ -18,6 +18,13 @@ layout(binding = 0, std140) uniform GlobalUniformBuffer {
     mat3 viewRot;
 } ubo;
 
+float linearizeDepth (in float d)
+{
+	const float f = 1000.0f;
+	const float n = 1.0f;
+	return (2 * n) / (f + n - d * (f - n));
+}
+
 void main() {
     float r = length(fCoords);
     if (r > 1.0) {

@@ -237,4 +237,7 @@ struct Order<T> : PBFMemberComparator<&T::stageFlags, &T::offset, &T::size> {};
 template<identity_concept<vk::DescriptorBufferInfo> T>
 struct Order<T> : PBFMemberComparator<&T::buffer, &T::offset, &T::range> {};
 
+template<identity_concept<vk::DescriptorImageInfo> T>
+struct Order<T> : PBFMemberComparator<&T::sampler, &T::imageView, &T::imageLayout> {};
+
 }

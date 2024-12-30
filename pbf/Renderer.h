@@ -11,6 +11,8 @@
 #include <pbf/common.h>
 #include <pbf/Swapchain.h>
 
+#include "SurfaceReconstruction.h"
+
 namespace pbf {
 
 class Renderer {
@@ -44,30 +46,41 @@ public:
     [[nodiscard]] std::uint32_t currentFrameSync() const {
         return _currentFrameSync;
     }
+	struct OffscreenData
+    {
+    	OffscreenData(InitContext& context, vk::RenderPass renderPass);
+    	constexpr static vk::Extent2D extent2D()
+    	{
+    		return vk::Extent2D{1024, 1024};
+    	}
+    	constexpr static vk::Extent3D extent3D()
+    	{
+    		return vk::Extent3D{extent2D().width, extent2D().height, 1};
+    	}
+    	Image depthImage;
+    	Image blurredDepthImage;
+    	Image thicknessImage;
+    	vk::UniqueImageView depthView{};
+    	vk::UniqueImageView blurredDepthView{};
+    	vk::UniqueImageView thicknessView{};
+    	vk::UniqueFramebuffer frameBuffer{};
+    };
 
+	OffscreenData& currentOffscreenData()
+	{
+		return _frameSync.at(currentFrameSync()).offscreenData;
+	}
+	OffscreenData& offscreenData(size_t _i)
+	{
+		return _frameSync.at(_i).offscreenData;
+	}
 private:
     void reset();
 
     Context &_context;
     std::unique_ptr<Swapchain> _swapchain;
 	vk::UniqueCommandBuffer initCommandBuffer;
-	struct OffscreenData
-	{
-		OffscreenData(InitContext& context, vk::RenderPass renderPass);
-		constexpr static vk::Extent2D extent2D()
-		{
-			return vk::Extent2D{1024, 1024};
-		}
-		constexpr static vk::Extent3D extent3D()
-		{
-			return vk::Extent3D{extent2D().width, extent2D().height, 1};
-		}
-		Image depthImage;
-		Image thicknessImage;
-		vk::UniqueImageView depthView{};
-		vk::UniqueImageView thicknessView{};
-		vk::UniqueFramebuffer frameBuffer{};
-	};
+
     struct FrameSync {
     	OffscreenData offscreenData;
 
@@ -87,6 +100,9 @@ private:
     };
     std::vector<FrameSync> _frameSync;
     std::size_t _currentFrameSync = 0;
+
+	std::unique_ptr<SurfaceReconstruction> _surfaceReconstruction;
+
     std::vector<vk::UniqueCommandBuffer> _commandBuffers;
 
 	CacheReference<descriptors::RenderPass> _offscreenRenderPass;

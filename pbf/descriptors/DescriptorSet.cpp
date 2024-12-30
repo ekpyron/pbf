@@ -20,6 +20,7 @@ vk::UniqueDescriptorSet DescriptorSet::realize(ContextInterface &context) const 
 	std::vector<vk::WriteDescriptorSet> writes;
 
 	for(uint32_t i = 0; i < size32(bindings); ++i) {
+
 		std::visit(
 			LambdaVisitor{
 				[&](vk::DescriptorBufferInfo const& bufferInfo) {
@@ -33,8 +34,8 @@ vk::UniqueDescriptorSet DescriptorSet::realize(ContextInterface &context) const 
 						.pBufferInfo = &bufferInfo,
 						.pTexelBufferView = nullptr
 					});
-				}
-				// TODO: other cases.
+				},
+				// TODO: other cases
 			},
 			bindings[i]
 		);

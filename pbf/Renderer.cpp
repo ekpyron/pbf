@@ -19,13 +19,19 @@ Renderer::OffscreenData::OffscreenData(InitContext& _context, vk::RenderPass _re
 	depthImage(
 		_context.context,
 		vk::Format::eD32Sfloat,
-		vk::ImageUsageFlagBits::eDepthStencilAttachment|vk::ImageUsageFlagBits::eInputAttachment,
+		vk::ImageUsageFlagBits::eDepthStencilAttachment|vk::ImageUsageFlagBits::eSampled,
+		extent3D()
+	),
+	blurredDepthImage(
+		_context.context,
+		vk::Format::eR32Sfloat,
+		vk::ImageUsageFlagBits::eStorage|vk::ImageUsageFlagBits::eInputAttachment|vk::ImageUsageFlagBits::eTransferSrc,
 		extent3D()
 	),
 	thicknessImage(
 	_context.context,
 		vk::Format::eR8G8B8A8Unorm,
-		vk::ImageUsageFlagBits::eColorAttachment|vk::ImageUsageFlagBits::eInputAttachment|vk::ImageUsageFlagBits::eTransferSrc, // TODO: remove transfer src
+		vk::ImageUsageFlagBits::eColorAttachment|vk::ImageUsageFlagBits::eInputAttachment, // TODO: remove transfer src
 		extent3D()
 	)
 
@@ -38,6 +44,20 @@ Renderer::OffscreenData::OffscreenData(InitContext& _context, vk::RenderPass _re
 		.components = vk::ComponentMapping{},
 		.subresourceRange = vk::ImageSubresourceRange{
 			.aspectMask = vk::ImageAspectFlagBits::eDepth,
+			.baseMipLevel = 0,
+			.levelCount = 1,
+			.baseArrayLayer = 0,
+			.layerCount = 1,
+		}
+	});
+	blurredDepthView = _context.context.device().createImageViewUnique(vk::ImageViewCreateInfo{
+		.flags = {},
+		.image = blurredDepthImage.image(),
+		.viewType = vk::ImageViewType::e2D,
+		.format = vk::Format::eR32Sfloat,
+		.components = vk::ComponentMapping{},
+		.subresourceRange = vk::ImageSubresourceRange{
+			.aspectMask = vk::ImageAspectFlagBits::eColor,
 			.baseMipLevel = 0,
 			.levelCount = 1,
 			.baseArrayLayer = 0,
@@ -72,6 +92,24 @@ Renderer::OffscreenData::OffscreenData(InitContext& _context, vk::RenderPass _re
 		.layers = 1,
 	});
 
+	_context.initCommandBuffer->pipelineBarrier(
+		vk::PipelineStageFlagBits::eTransfer,
+		vk::PipelineStageFlagBits::eComputeShader, {}, {}, {}, {
+			vk::ImageMemoryBarrier{
+				.srcAccessMask = {},
+				.dstAccessMask = {},
+				.oldLayout = vk::ImageLayout::eUndefined,
+				.newLayout = vk::ImageLayout::eGeneral,
+				.image = blurredDepthImage.image(),
+				.subresourceRange = {
+					.aspectMask = vk::ImageAspectFlagBits::eColor,
+					.baseMipLevel = 0,
+					.levelCount = 1,
+					.baseArrayLayer = 0,
+					.layerCount = 1
+				}
+			}
+		});
 
 }
 
@@ -89,7 +127,7 @@ Renderer::Renderer(InitContext &initContext) : _context(initContext.context) {
                                 vk::AttachmentLoadOp::eDontCare,
                                 vk::AttachmentStoreOp::eDontCare,
                                 vk::ImageLayout::eUndefined,
-                                vk::ImageLayout::eTransferSrcOptimal
+                                vk::ImageLayout::eGeneral
                         },
 					vk::AttachmentDescription{
 						{},
@@ -161,6 +199,7 @@ Renderer::Renderer(InitContext &initContext) : _context(initContext.context) {
                                 vk::ImageLayout::eTransferDstOptimal,
                                 vk::ImageLayout::ePresentSrcKHR
                         },
+                	// TODO: remove depth buffer here.
 					vk::AttachmentDescription{
 						{},
 						_context.depthFormat(),
@@ -200,6 +239,10 @@ Renderer::Renderer(InitContext &initContext) : _context(initContext.context) {
 }
 
 void Renderer::render(float timestep) {
+
+	if (!_surfaceReconstruction)
+		_surfaceReconstruction = std::make_unique<SurfaceReconstruction>(_context);
+
     const auto &device = _context.device();
 
     auto &currentFrameSync = _frameSync[_currentFrameSync];
@@ -292,6 +335,8 @@ void Renderer::render(float timestep) {
 
     	buffer->endRenderPass();
 
+    	_surfaceReconstruction->run(*buffer);
+
     	vk::ImageBlit blit{
     		.srcSubresource = {
     			.aspectMask = vk::ImageAspectFlagBits::eColor,
@@ -342,8 +387,8 @@ void Renderer::render(float timestep) {
 			});
 
     	buffer->blitImage(
-			currentFrameSync.offscreenData.thicknessImage.image(),
-			vk::ImageLayout::eTransferSrcOptimal,
+			currentFrameSync.offscreenData.blurredDepthImage.image(),
+			vk::ImageLayout::eGeneral,
 			_swapchain->images()[imageIndex],
 			vk::ImageLayout::eTransferDstOptimal,
 			1,

@@ -46,6 +46,8 @@ add_shader(simulation/updatepos.comp.spv simulation/updatepos.comp)
 add_shader(simulation/calcvorticity.comp.spv simulation/calcvorticity.comp)
 add_shader(simulation/updatevel.comp.spv simulation/updatevel.comp)
 
+add_shader(surface/depthblur.comp.spv surface/depthblur.comp)
+
 add_radix_sort(particlesort particlesort)
 add_radix_sort(unittestsort unittestsort)
 
