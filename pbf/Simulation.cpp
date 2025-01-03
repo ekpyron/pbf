@@ -1,5 +1,5 @@
 #include "Simulation.h"
-#include "Context.h"
+#include "VulkanContext.h"
 #include "Renderer.h"
 #include "Scene.h"
 #include <pbf/descriptors/DescriptorSet.h>
@@ -63,8 +63,9 @@ constexpr auto radixSortDescriptorSetLayoutDescriptors() {
 }
 }
 
-Simulation::Simulation(InitContext &initContext, size_t numParticles):
-UIControlled(initContext.context.gui()),
+Simulation::Simulation(InitContext &initContext, Renderer& renderer, GUI& gui, size_t numParticles):
+UIControlled(gui),
+renderer(renderer),
 _context(initContext.context),
 _particleData([&]() {
     auto& context = initContext.context;
@@ -172,7 +173,7 @@ _tempBuffer(_context, _particleData.size(), 2, vk::BufferUsageFlagBits::eStorage
 }
 
 void Simulation::reset(vk::CommandBuffer &buf) {
-    auto& initBuffer = _context.renderer().createFrameData<Buffer<ParticleData>>(
+    auto& initBuffer = renderer.createFrameData<Buffer<ParticleData>>(
             _context, _particleData.size(), vk::BufferUsageFlagBits::eTransferSrc, pbf::MemoryType::TRANSIENT
     );
     ParticleData* data = initBuffer.data();
@@ -241,7 +242,7 @@ descriptors::ShaderStage::SpecializationInfo Simulation::makeSpecializationInfo(
 }
 
 
-void Simulation::initKeys(Context& context, vk::CommandBuffer buf)
+void Simulation::initKeys(VulkanContext& context, vk::CommandBuffer buf)
 {
 	Cache& cache = context.cache();
 	{

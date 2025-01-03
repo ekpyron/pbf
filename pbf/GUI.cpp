@@ -1,5 +1,5 @@
 #include <pbf/GUI.h>
-#include <pbf/Context.h>
+#include <pbf/VulkanContext.h>
 #include <pbf/Renderer.h>
 #include <pbf/Cache.h>
 #include <pbf/descriptors/RenderPass.h>
@@ -8,7 +8,7 @@
 
 namespace pbf {
 
-GUI::GUI(pbf::InitContext &initContext): _context(initContext.context), _selection(initContext)
+GUI::GUI(pbf::InitContext &initContext, Renderer& renderer, GlobalAppData& globalAppData): _context(initContext.context), renderer(renderer), _selection(initContext, renderer, globalAppData)
 {
 	// TODO: error handling
 	_imguiContext = ImGui::CreateContext();
@@ -22,14 +22,14 @@ GUI::GUI(pbf::InitContext &initContext): _context(initContext.context), _selecti
 	init_info.PipelineCache = VK_NULL_HANDLE;
 	init_info.DescriptorPool = _context.descriptorPool();
 	init_info.Subpass = 0;
-	init_info.MinImageCount = _context.renderer().framePrerenderCount();
-	init_info.ImageCount = _context.renderer().framePrerenderCount();
+	init_info.MinImageCount = renderer.framePrerenderCount();
+	init_info.ImageCount = renderer.framePrerenderCount();
 	init_info.MSAASamples = VK_SAMPLE_COUNT_1_BIT;
 	init_info.Allocator = nullptr;
 	init_info.CheckVkResultFn = [](VkResult result) {
 		// TODO
 	};
-	ImGui_ImplVulkan_Init(&init_info, *_context.renderer().renderPass());
+	ImGui_ImplVulkan_Init(&init_info, *renderer.renderPass());
 
 	ImGui_ImplVulkan_CreateFontsTexture(*initContext.initCommandBuffer);
 }
@@ -49,7 +49,7 @@ void GUI::postInitCleanup()
 	ImGui_ImplVulkan_DestroyFontUploadObjects();
 }
 
-void GUI::render(vk::CommandBuffer buf)
+void GUI::render(Scene& scene, vk::CommandBuffer buf)
 {
 	std::lock_guard guard(_imguiMutex);
 
@@ -63,7 +63,7 @@ void GUI::render(vk::CommandBuffer buf)
 	if (ImGui::IsKeyDown(ImGuiKey_H) && ImGui::IsMouseClicked(ImGuiMouseButton_Left, false))
 	{
 		auto [xpos, ypos] = _context.window().getCursorPos();
-		if (auto index = _selection(_context.scene().particleData(), xpos, ypos))
+		if (auto index = _selection(scene.particleData(), xpos, ypos))
 		{
 			spdlog::get("console")->debug("Clicked on particle {}", *index);
 
@@ -74,9 +74,9 @@ void GUI::render(vk::CommandBuffer buf)
 			}).front());
 
 			cmdBuffer->begin(vk::CommandBufferBeginInfo{});
-			for (size_t i = 0; i <= _context.renderer().framePrerenderCount(); ++i)
+			for (size_t i = 0; i <= renderer.framePrerenderCount(); ++i)
 			{
-				auto segment = _context.scene().particleData().segment(i);
+				auto segment = scene.particleData().segment(i);
 				cmdBuffer->fillBuffer(
 					segment.buffer,
 					segment.offset + sizeof(ParticleData) * *index + offsetof(ParticleData, aux),
@@ -113,7 +113,7 @@ void GUI::render(vk::CommandBuffer buf)
 		if (ImGui::Button("Reset"))
 		{
 			_runSPH = false;
-			_context.scene().resetParticles();
+			scene.resetParticles();
 		}
 
 

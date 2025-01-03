@@ -8,7 +8,7 @@
  */
 #include "ComputePipeline.h"
 
-#include <pbf/Context.h>
+#include <pbf/VulkanContext.h>
 
 using namespace pbf::descriptors;
 

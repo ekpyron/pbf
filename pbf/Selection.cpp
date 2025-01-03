@@ -1,13 +1,17 @@
 #include <pbf/Selection.h>
 #include <pbf/descriptors/RenderPass.h>
+
+#include "App.h"
 #include "pbf/descriptors/ShaderModule.h"
 #include "Scene.h"
 #include "Renderer.h"
 
 namespace pbf {
 
-Selection::Selection(InitContext& initContext):
+Selection::Selection(InitContext& initContext, Renderer& renderer, GlobalAppData& globalData):
 _context(initContext.context),
+m_globalData(globalData),
+m_renderer(renderer),
 _depthBuffer(initContext.context, initContext.context.depthFormat(), vk::ImageUsageFlagBits::eDepthStencilAttachment, vk::Extent3D{.width = 1, .height = 1, .depth = 1}),
 _selectionImage(initContext.context, vk::Format::eR32Uint, vk::ImageUsageFlagBits::eColorAttachment|vk::ImageUsageFlagBits::eTransferSrc, vk::Extent3D{.width = 1, .height = 1, .depth = 1}),
 _selectionBuffer(initContext.context, 1, vk::BufferUsageFlagBits::eTransferDst, MemoryType::DYNAMIC),
@@ -161,7 +165,7 @@ _indexBuffer(initContext.context, 6, vk::BufferUsageFlagBits::eTransferDst | vk:
 				.pipelineLayout = _context.cache().fetch(
 					pbf::descriptors::PipelineLayout{
 						.setLayouts = {{
-							_context.globalDescriptorSetLayout()
+							m_globalData.globalDescriptorSetLayout()
 						}},
 						PBF_DESC_DEBUG_NAME("Selection Renderer Pipeline Layout")
 					}),
@@ -267,9 +271,9 @@ std::optional<uint32_t> Selection::operator()(RingBuffer<ParticleData>& particle
 	}, vk::SubpassContents::eInline);
 
 	cmdBuf->bindPipeline(vk::PipelineBindPoint::eGraphics, *_graphicsPipeline);
-	cmdBuf->bindDescriptorSets(vk::PipelineBindPoint::eGraphics, *(_graphicsPipeline.descriptor().pipelineLayout), 0, { _context.globalDescriptorSet()}, {});
+	cmdBuf->bindDescriptorSets(vk::PipelineBindPoint::eGraphics, *(_graphicsPipeline.descriptor().pipelineLayout), 0, { m_globalData.globalDescriptorSet()}, {});
 	cmdBuf->bindIndexBuffer(_indexBuffer.buffer(), 0, vk::IndexType::eUint16);
-	cmdBuf->bindVertexBuffers(0, {particleData.buffer()}, {particleData.segment(_context.renderer().currentFrameSync()).offset});
+	cmdBuf->bindVertexBuffers(0, {particleData.buffer()}, {particleData.segment(m_renderer.currentFrameSync()).offset});
 
 	cmdBuf->drawIndexed(6, particleData.size(), 0, 0, 0);
 

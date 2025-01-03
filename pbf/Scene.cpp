@@ -8,7 +8,7 @@
  */
 #include <cstdint>
 #include <random>
-
+#include "App.h"
 #include "Scene.h"
 #include "Renderer.h"
 #include "Simulation.h"
@@ -19,11 +19,11 @@
 namespace pbf {
 
 
-Scene::Scene(InitContext &initContext)
-: _context(initContext.context),
-_particleData(initContext.context, _numParticles, initContext.context.renderer().framePrerenderCount(), vk::BufferUsageFlagBits::eTransferDst | vk::BufferUsageFlagBits::eVertexBuffer, pbf::MemoryType::STATIC),
-quad(initContext, *this),
-_simulation(initContext, _numParticles)
+Scene::Scene(InitContext &initContext, GUI& gui, Renderer& renderer, GlobalAppData& globalData)
+: _context(initContext.context), globalData(globalData),
+_particleData(initContext.context, _numParticles, renderer.framePrerenderCount(), vk::BufferUsageFlagBits::eTransferDst | vk::BufferUsageFlagBits::eVertexBuffer, pbf::MemoryType::STATIC),
+quad(initContext, *this, renderer, globalData),
+_simulation(initContext, renderer, gui, _numParticles)
 {
 }
 
@@ -51,7 +51,7 @@ void Scene::enqueueCommands(vk::CommandBuffer &buf) {
     for (auto& [graphicsPipeline, innerMap] : indirectDrawCalls)
     {
         buf.bindPipeline(vk::PipelineBindPoint::eGraphics, *graphicsPipeline);
-        buf.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, *(graphicsPipeline.descriptor().pipelineLayout), 0, { _context.globalDescriptorSet()}, {});
+        buf.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, *(graphicsPipeline.descriptor().pipelineLayout), 0, { globalData.globalDescriptorSet()}, {});
 
 		for (auto& [pushConstantData, innerMap] : innerMap)
 		{

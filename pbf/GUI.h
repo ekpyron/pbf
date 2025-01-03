@@ -14,12 +14,12 @@ class UIControlled;
 class GUI
 {
 public:
-	GUI(InitContext& _initContext);
+	GUI(InitContext& _initContext, Renderer& renderer, GlobalAppData& globalAppData);
 	GUI(const GUI&) = delete;
 	GUI& operator=(const GUI&) = delete;
 	~GUI();
 	void postInitCleanup();
-	void render(vk::CommandBuffer buf);
+	void render(Scene& scene, vk::CommandBuffer buf);
 	bool runSPH() const { return _runSPH; }
 
 private:
@@ -32,7 +32,8 @@ private:
 	}
 
 	std::vector<UIControlled*> _uiControlled;
-	Context& _context;
+	VulkanContext& _context;
+	Renderer& renderer;
 	Selection _selection;
 	bool _runSPH = false;
 	std::mutex _imguiMutex;

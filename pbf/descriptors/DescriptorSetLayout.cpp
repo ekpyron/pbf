@@ -7,7 +7,7 @@
  * @date 2/8/19
  */
 #include "DescriptorSetLayout.h"
-#include "../Context.h"
+#include "../VulkanContext.h"
 namespace pbf::descriptors {
 
 vk::UniqueDescriptorSetLayout DescriptorSetLayout::realize(ContextInterface &context) const {

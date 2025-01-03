@@ -7,7 +7,7 @@
  * @date 10/10/18
  */
 #include "PipelineLayout.h"
-#include <pbf/Context.h>
+#include <pbf/VulkanContext.h>
 
 using namespace pbf::descriptors;
 

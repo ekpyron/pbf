@@ -12,7 +12,7 @@
 
 namespace pbf {
 
-Swapchain::Swapchain(Context &context, const vk::RenderPass& renderPass, vk::SwapchainKHR oldSwapChain) {
+Swapchain::Swapchain(VulkanContext &context, const vk::RenderPass& renderPass, vk::SwapchainKHR oldSwapChain) {
     const auto &device = context.device();
     const auto &physicalDevice = context.physicalDevice();
     const auto &surfaceCapabilities = physicalDevice.getSurfaceCapabilitiesKHR(context.surface());

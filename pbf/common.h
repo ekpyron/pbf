@@ -24,7 +24,7 @@
 
 namespace pbf {
 class ContextInterface;
-class Context;
+class VulkanContext;
 class InitContext;
 class Renderer;
 class MemoryManager;

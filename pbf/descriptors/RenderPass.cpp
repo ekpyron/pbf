@@ -8,7 +8,7 @@
  */
 
 #include "RenderPass.h"
-#include "../Context.h"
+#include "../VulkanContext.h"
 
 using namespace pbf::descriptors;
 

@@ -9,7 +9,7 @@
 #include <map>
 #include <crampl/MultiKeyMap.h>
 #include <list>
-#include "Context.h"
+#include "VulkanContext.h"
 #include "Buffer.h"
 #include "Quad.h"
 
@@ -20,14 +20,14 @@ class IndirectCommandsBuffer
 {
     using CommandBuffer = pbf::Buffer<vk::DrawIndirectCommand>;
 public:
-	IndirectCommandsBuffer(Context &context);
+	IndirectCommandsBuffer(VulkanContext &context);
 	void clear();
 	void push_back(const vk::DrawIndirectCommand &cmd);
 	[[nodiscard]] const auto &buffers() const { return _buffers; }
 	[[nodiscard]] std::uint32_t elementsInLastBuffer() const { return _elementsInLastBuffer; }
 	static constexpr std::uint32_t bufferSize = 128;
 private:
-	pbf::Context &context;
+	pbf::VulkanContext &context;
 	std::list<CommandBuffer> _buffers;
 	std::list<CommandBuffer>::iterator _currentBuffer;
 	std::uint32_t _elementsInLastBuffer {bufferSize};

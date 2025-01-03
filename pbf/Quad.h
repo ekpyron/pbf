@@ -8,7 +8,7 @@
 #include <map>
 #include <crampl/MultiKeyMap.h>
 #include <list>
-#include "Context.h"
+#include "VulkanContext.h"
 #include "Buffer.h"
 #include "descriptors/GraphicsPipeline.h"
 
@@ -17,10 +17,11 @@ namespace pbf {
 
 class Scene;
 class IndirectCommandsBuffer;
+struct GlobalAppData;
 
 class Quad {
 public:
-    Quad(InitContext& initContext, Scene& scene);
+    Quad(InitContext& initContext, Scene& scene, Renderer& renderer, GlobalAppData& _data);
 
     void frame(uint32_t instanceCount);
 
@@ -29,6 +30,7 @@ public:
     };
 private:
     Scene& scene;
+    Renderer& renderer;
     bool active = true;
     Buffer<VertexData> buffer;
     Buffer<std::uint16_t> indexBuffer;

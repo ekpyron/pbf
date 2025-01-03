@@ -4,6 +4,8 @@
 #include <pbf/Image.h>
 #include <pbf/Buffer.h>
 
+#include "App.h"
+
 namespace pbf {
 
 struct ParticleData;
@@ -11,12 +13,14 @@ struct ParticleData;
 class Selection
 {
 public:
-	Selection(InitContext& initContext);
+	Selection(InitContext& initContext, Renderer& renderer, GlobalAppData& globalData);
 
 	std::optional<uint32_t> operator()(RingBuffer<ParticleData>& particleData, uint32_t x, uint32_t y);
 
 private:
-	Context& _context;
+	Renderer& m_renderer;
+	GlobalAppData& m_globalData;
+	VulkanContext& _context;
 	Image _depthBuffer;
 	Image _selectionImage;
 	Buffer<std::uint16_t> _indexBuffer;

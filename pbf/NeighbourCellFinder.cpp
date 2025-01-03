@@ -1,5 +1,5 @@
 #include <pbf/NeighbourCellFinder.h>
-#include <pbf/Context.h>
+#include <pbf/VulkanContext.h>
 #include <pbf/Buffer.h>
 
 namespace pbf {

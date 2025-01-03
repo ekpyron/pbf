@@ -7,7 +7,7 @@
  * @date 1/23/19
  */
 #include "Buffer.h"
-#include "Context.h"
+#include "VulkanContext.h"
 
 std::tuple<vk::Buffer, pbf::DeviceMemory> pbf::detail::allocateBuffer(
         pbf::ContextInterface &context, std::size_t size, vk::BufferUsageFlags usageFlags, MemoryType memoryType,

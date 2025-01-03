@@ -10,7 +10,7 @@
 
 namespace pbf {
 
-class Context;
+class VulkanContext;
 class InitContext;
 class ParticleData;
 class ParticleKey;
@@ -18,7 +18,7 @@ class ParticleKey;
 class Simulation: public UIControlled
 {
 public:
-	Simulation(InitContext& context, size_t numParticles);
+	Simulation(InitContext& context, Renderer& renderer, GUI& gui, size_t numParticles);
 	uint32_t getNumParticles() const {
 		return _particleData.size();
 	}
@@ -41,9 +41,10 @@ private:
 	float vorticity_epsilon = 5.0f;
 
 	float _lastTimestep = 1.0 / 60.0;
-	void initKeys(Context& context, vk::CommandBuffer buf);
+	void initKeys(VulkanContext& context, vk::CommandBuffer buf);
 	bool _resetKeys = false;
-	Context& _context;
+	VulkanContext& _context;
+	Renderer& renderer;
     size_t ringBufferIndex = 0;
     size_t nextRingBufferIndex() const {
         return (ringBufferIndex + 1) % _particleData.segments();

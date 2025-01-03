@@ -8,7 +8,7 @@
  */
 #include "GraphicsPipeline.h"
 
-#include <pbf/Context.h>
+#include <pbf/VulkanContext.h>
 #include <ranges>
 
 #include <crampl/RangeConversion.h>

@@ -11,7 +11,7 @@ namespace pbf {
 class Camera: public UIControlled
 {
 public:
-	Camera(Context& _context);
+	Camera(VulkanContext& _context, GUI& _gui);
     /** Generate a view matrix.
      * Generates and returns a view matrix for the current camera position and orientation.
      * \returns the generated view matrix
@@ -55,7 +55,7 @@ public:
 protected:
 	void ui() override;
 private:
-	Context& context;
+	VulkanContext& context;
     /** Current position of the camera.
      */
     glm::vec3 pos;

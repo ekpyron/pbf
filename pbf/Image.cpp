@@ -6,7 +6,7 @@
 
 namespace pbf {
 
-Image::Image(Context& context, vk::Format format, vk::ImageUsageFlags usageFlags, vk::Extent3D const& _extents): _context(context)
+Image::Image(VulkanContext& context, vk::Format format, vk::ImageUsageFlags usageFlags, vk::Extent3D const& _extents): _context(context)
 {
 	uint32_t queueFamily = context.graphicsQueueFamily();
 	_image = context.device().createImageUnique(vk::ImageCreateInfo{

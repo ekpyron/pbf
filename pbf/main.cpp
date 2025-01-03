@@ -8,7 +8,7 @@
  */
 
 #include <iostream>
-#include "Context.h"
+#include "App.h"
 #include "spdlog/sinks/stdout_color_sinks.h"
 
 void print_exception(const std::exception &e, int level = 0)
@@ -36,8 +36,8 @@ int main() {
 #endif
 
         {
-            Context context;
-            context.run();
+            App app;
+            app.run();
         }
         loggerConsole->debug("Context destroyed. Returning from \"main\".");
 

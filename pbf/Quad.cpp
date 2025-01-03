@@ -5,6 +5,7 @@
 #include <cstdint>
 #include <numeric>
 
+#include "App.h"
 #include "Renderer.h"
 #include "Scene.h"
 #include "Quad.h"
@@ -14,7 +15,7 @@
 
 namespace pbf {
 
-Quad::Quad(InitContext& initContext, pbf::Scene& scene) : scene(scene) {
+Quad::Quad(InitContext& initContext, Scene& scene, Renderer& _renderer, GlobalAppData& globalData) : scene(scene), renderer(_renderer) {
 
     buffer = {scene.context(), 4,
               vk::BufferUsageFlagBits::eTransferDst | vk::BufferUsageFlagBits::eVertexBuffer, pbf::MemoryType::STATIC};
@@ -108,11 +109,11 @@ Quad::Quad(InitContext& initContext, pbf::Scene& scene) : scene(scene) {
             .pipelineLayout = scene.context().cache().fetch(
 				pbf::descriptors::PipelineLayout{
                     .setLayouts = {{
-                                           scene.context().globalDescriptorSetLayout()
+                                           globalData.globalDescriptorSetLayout()
                                    }},
                     PBF_DESC_DEBUG_NAME("Dummy Pipeline Layout")
             }),
-            .renderPass = scene.context().renderer().offscreenRenderPass(),
+            .renderPass = _renderer.offscreenRenderPass(),
             PBF_DESC_DEBUG_NAME("Main Renderer Graphics Pipeline")
     });
 
@@ -185,7 +186,7 @@ void Quad::frame(uint32_t instanceCount) {
 				BufferRef<VertexData>{&buffer},
 				BufferRef<VertexData>{
 					.buffer = scene.particleData().as<VertexData>(),
-					.offset = sizeof(ParticleData) * scene.getNumParticles() * scene.context().renderer().currentFrameSync()
+					.offset = sizeof(ParticleData) * scene.getNumParticles() * renderer.currentFrameSync()
 				}
 			}
 		);

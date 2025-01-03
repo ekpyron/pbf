@@ -9,6 +9,8 @@
 #include <pbf/descriptors/ComputePipeline.h>
 
 #include "Buffer.h"
+#include "Image.h"
+#include "FrameSyncData.h"
 
 namespace pbf
 {
@@ -16,26 +18,60 @@ namespace pbf
 class SurfaceReconstruction
 {
 public:
-    SurfaceReconstruction(Context& _context);
+    SurfaceReconstruction(InitContext& _context, Renderer& renderer);
     ~SurfaceReconstruction() = default;
 
     void run(vk::CommandBuffer& _cmdBuffer);
 
-    void initDescriptorSets();
+    struct FrameData
+    {
+        FrameData(InitContext& context, Renderer& renderer, SurfaceReconstruction& _parent);
+        constexpr static vk::Extent2D extent2D()
+        {
+            return vk::Extent2D{1024, 1024};
+        }
+        constexpr static vk::Extent3D extent3D()
+        {
+            return vk::Extent3D{extent2D().width, extent2D().height, 1};
+        }
+        Image depthPingImage;
+        Image depthPongImage;
+        Image thicknessImage;
+        vk::UniqueImageView depthPingView{};
+        vk::UniqueImageView depthPongView{};
+        vk::UniqueImageView thicknessView{};
+        vk::UniqueFramebuffer frameBuffer{};
+
+        struct DescriptorSets
+        {
+            vk::UniqueDescriptorSet inputSampler;
+            vk::UniqueDescriptorSet outputStorageImage;
+            vk::UniqueDescriptorSet blurDirUniformBuffer;
+            std::vector<vk::DescriptorSet> all() const
+            {
+                return {*inputSampler, *outputStorageImage, *blurDirUniformBuffer};
+            }
+        };
+        DescriptorSets descriptorSets;
+    };
+
+    FrameData& frameData() { return frameSyncData.getCurrent(); }
 
 private:
+
     struct BlurDir
     {
         glm::vec2 direction{};
     };
 
-    Context& context;
+    VulkanContext& context;
+
+    FrameSyncData<FrameData> frameSyncData;
+
     vk::UniqueSampler depthSampler;
     Buffer<BlurDir> blurDirBuffer;
     CacheReference<descriptors::ComputePipeline> _depthBlurPipeline;
     std::vector<CacheReference<descriptors::DescriptorSetLayout>> descriptorSetCacheReferences;
-    std::vector<vk::UniqueDescriptorSet> _descriptorSets;
-
 };
 
 }

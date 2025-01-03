@@ -8,7 +8,7 @@
  */
 #include "MemoryManager.h"
 
-#include "Context.h"
+#include "VulkanContext.h"
 
 namespace pbf {
 

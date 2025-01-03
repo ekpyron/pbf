@@ -16,105 +16,6 @@ static constexpr std::uint64_t TIMEOUT = std::numeric_limits<std::uint64_t>::max
 
 namespace pbf {
 
-Renderer::OffscreenData::OffscreenData(InitContext& _context, vk::RenderPass _renderPass):
-	depthPingImage(
-		_context.context,
-		vk::Format::eD32Sfloat,
-		vk::ImageUsageFlagBits::eDepthStencilAttachment|vk::ImageUsageFlagBits::eSampled,
-		extent3D()
-	),
-	depthPongImage(
-		_context.context,
-		vk::Format::eR32Sfloat,
-		vk::ImageUsageFlagBits::eStorage|vk::ImageUsageFlagBits::eInputAttachment|vk::ImageUsageFlagBits::eTransferSrc,
-		extent3D()
-	),
-	thicknessImage(
-	_context.context,
-		vk::Format::eR8G8B8A8Unorm,
-		vk::ImageUsageFlagBits::eColorAttachment|vk::ImageUsageFlagBits::eInputAttachment, // TODO: remove transfer src
-		extent3D()
-	)
-
-{
-	depthPingView = _context.context.device().createImageViewUnique(vk::ImageViewCreateInfo{
-		.flags = {},
-		.image = depthPingImage.image(),
-		.viewType = vk::ImageViewType::e2D,
-		.format = vk::Format::eD32Sfloat,
-		.components = vk::ComponentMapping{},
-		.subresourceRange = vk::ImageSubresourceRange{
-			.aspectMask = vk::ImageAspectFlagBits::eDepth,
-			.baseMipLevel = 0,
-			.levelCount = 1,
-			.baseArrayLayer = 0,
-			.layerCount = 1,
-		}
-	});
-	depthPongView = _context.context.device().createImageViewUnique(vk::ImageViewCreateInfo{
-		.flags = {},
-		.image = depthPongImage.image(),
-		.viewType = vk::ImageViewType::e2D,
-		.format = vk::Format::eR32Sfloat,
-		.components = vk::ComponentMapping{},
-		.subresourceRange = vk::ImageSubresourceRange{
-			.aspectMask = vk::ImageAspectFlagBits::eColor,
-			.baseMipLevel = 0,
-			.levelCount = 1,
-			.baseArrayLayer = 0,
-			.layerCount = 1,
-		}
-	});
-	thicknessView = _context.context.device().createImageViewUnique(vk::ImageViewCreateInfo{
-		.flags = {},
-		.image = thicknessImage.image(),
-		.viewType = vk::ImageViewType::e2D,
-		.format = vk::Format::eR8G8B8A8Unorm,
-		.components = vk::ComponentMapping{},
-		.subresourceRange = vk::ImageSubresourceRange{
-			.aspectMask = vk::ImageAspectFlagBits::eColor,
-			.baseMipLevel = 0,
-			.levelCount = 1,
-			.baseArrayLayer = 0,
-			.layerCount = 1,
-		}
-	});
-	std::array attachments = {
-		*thicknessView,
-		*depthPingView
-	};
-	frameBuffer = _context.context.device().createFramebufferUnique(vk::FramebufferCreateInfo{
-		.flags = {},
-		.renderPass = _renderPass,
-		.attachmentCount = attachments.size(),
-		.pAttachments = attachments.data(),
-		.width = extent2D().width,
-		.height = extent2D().height,
-		.layers = 1,
-	});
-
-	_context.initCommandBuffer->pipelineBarrier(
-		vk::PipelineStageFlagBits::eTransfer,
-		vk::PipelineStageFlagBits::eComputeShader, {}, {}, {}, {
-			vk::ImageMemoryBarrier{
-				.srcAccessMask = {},
-				.dstAccessMask = {},
-				.oldLayout = vk::ImageLayout::eUndefined,
-				.newLayout = vk::ImageLayout::eGeneral,
-				.image = depthPongImage.image(),
-				.subresourceRange = {
-					.aspectMask = vk::ImageAspectFlagBits::eColor,
-					.baseMipLevel = 0,
-					.levelCount = 1,
-					.baseArrayLayer = 0,
-					.layerCount = 1
-				}
-			}
-		});
-
-}
-
-
 Renderer::Renderer(InitContext &initContext) : _context(initContext.context) {
     {
         _offscreenRenderPass = _context.cache().fetch(descriptors::RenderPass{
@@ -169,7 +70,6 @@ Renderer::Renderer(InitContext &initContext) : _context(initContext.context) {
 	_frameSync.reserve(framePrerenderCount());
     for (size_t i = 0; i < framePrerenderCount(); i++) {
         _frameSync.emplace_back(FrameSync{
-			OffscreenData{initContext, *_offscreenRenderPass},
 			_context.device().createSemaphoreUnique({}),
 			_context.device().createSemaphoreUnique({}),
 			_context.device().createSemaphoreUnique({}),
@@ -236,14 +136,12 @@ Renderer::Renderer(InitContext &initContext) : _context(initContext.context) {
                 PBF_DESC_DEBUG_NAME("Main Renderer RenderPass")
         });
     }
-    reset();
+
+	reset();
+	_surfaceReconstruction = std::make_unique<SurfaceReconstruction>(initContext, *this);
 }
 
-void Renderer::render(float timestep) {
-
-	if (!_surfaceReconstruction)
-		_surfaceReconstruction = std::make_unique<SurfaceReconstruction>(_context);
-
+void Renderer::render(Scene& scene, GUI& gui, float timestep) {
     const auto &device = _context.device();
 
     auto &currentFrameSync = _frameSync[_currentFrameSync];
@@ -299,18 +197,18 @@ void Renderer::render(float timestep) {
 		});
 
 
-        _context.scene().frame(*buffer);
+        scene.frame(*buffer);
 
-		if (_context.gui().runSPH())
+		if (gui.runSPH())
 		{
             static size_t numSimulationSteps = 4;
             for(size_t i = 0; i < numSimulationSteps; ++i)
-			    _context.scene().simulation().run(*buffer, timestep / float(numSimulationSteps));
+			    scene.simulation().run(*buffer, timestep / float(numSimulationSteps));
 		}
-        _context.scene().simulation().copy(
+        scene.simulation().copy(
                 *buffer,
-                _context.scene().particleData().buffer(),
-                _context.scene().particleData().segmentDeviceSize() * _currentFrameSync
+                scene.particleData().buffer(),
+                scene.particleData().segmentDeviceSize() * _currentFrameSync
         );
 
 		std::array<vk::ClearValue, 2> clearValues;
@@ -318,21 +216,22 @@ void Renderer::render(float timestep) {
 		clearValues[1].setDepthStencil(vk::ClearDepthStencilValue{.depth = 1.0f, .stencil = 0});
 
 
+    	auto& offscreenData = _surfaceReconstruction->frameData();
     	buffer->setViewport(0, {
 			vk::Viewport{
-				0, 0, float(currentFrameSync.offscreenData.extent2D().width), float(currentFrameSync.offscreenData.extent2D().height), 0.0f, 1.0f
+				0, 0, float(offscreenData.extent2D().width), float(offscreenData.extent2D().height), 0.0f, 1.0f
 			}
 		});
-    	buffer->setScissor(0, {vk::Rect2D{vk::Offset2D(), currentFrameSync.offscreenData.extent2D()}});
+    	buffer->setScissor(0, {vk::Rect2D{vk::Offset2D(), offscreenData.extent2D()}});
     	buffer->beginRenderPass(vk::RenderPassBeginInfo{
 			.renderPass = *_offscreenRenderPass,
-			.framebuffer = *currentFrameSync.offscreenData.frameBuffer,
-			.renderArea = vk::Rect2D{{},currentFrameSync.offscreenData.extent2D()},
+			.framebuffer = *offscreenData.frameBuffer,
+			.renderArea = vk::Rect2D{{},offscreenData.extent2D()},
 			.clearValueCount = clearValues.size(),
 			.pClearValues = clearValues.data()
 		}, vk::SubpassContents::eInline);
 
-    	_context.scene().enqueueCommands(*buffer);
+    	scene.enqueueCommands(*buffer);
 
     	buffer->endRenderPass();
 
@@ -348,8 +247,8 @@ void Renderer::render(float timestep) {
 			.srcOffsets = std::array{vk::Offset3D{
 				.x = 0, .y = 0, .z = 0
 			}, vk::Offset3D{
-				currentFrameSync.offscreenData.extent2D().width,
-				currentFrameSync.offscreenData.extent2D().height,
+				offscreenData.extent2D().width,
+				offscreenData.extent2D().height,
 				1
 			}},
 			.dstSubresource = {
@@ -388,7 +287,7 @@ void Renderer::render(float timestep) {
 			});
 
     	buffer->blitImage(
-			currentFrameSync.offscreenData.depthPongImage.image(),
+			offscreenData.depthPongImage.image(),
 			vk::ImageLayout::eGeneral,
 			_swapchain->images()[imageIndex],
 			vk::ImageLayout::eTransferDstOptimal,
@@ -410,7 +309,7 @@ void Renderer::render(float timestep) {
 			.clearValueCount = clearValues.size(),
 			.pClearValues = clearValues.data()
         }, vk::SubpassContents::eInline);
-    	_context.gui().render(*buffer);
+    	gui.render(scene, *buffer);
         buffer->endRenderPass();
 
     	buffer->end();

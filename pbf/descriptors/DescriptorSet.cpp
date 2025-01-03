@@ -1,6 +1,6 @@
 #include "DescriptorSet.h"
 #include "DescriptorSetLayout.h"
-#include "../Context.h"
+#include "../VulkanContext.h"
 namespace pbf::descriptors {
 
 // TODO: deduplicate

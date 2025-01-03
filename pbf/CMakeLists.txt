@@ -13,11 +13,12 @@ add_library(pbf_common STATIC
 target_include_directories(pbf_common PUBLIC ${CMAKE_CURRENT_LIST_DIR}/..)
 target_link_libraries(pbf_common PUBLIC fmt Vulkan::Vulkan spdlog_header_only glm crampl Threads::Threads)
 
-set(SOURCES main.cpp glfw.h Context.cpp Context.h common.h Swapchain.cpp Swapchain.h Renderer.cpp Renderer.h
+set(SOURCES main.cpp glfw.h VulkanContext.cpp VulkanContext.h App.cpp App.h Swapchain.cpp Swapchain.h Renderer.cpp Renderer.h
         Scene.cpp Scene.h Camera.cpp Camera.h IndirectCommandsBuffer.h IndirectCommandsBuffer.cpp Quad.cpp Quad.h
         Simulation.cpp Simulation.h Image.cpp Image.h GUI.cpp GUI.h UIControlled.cpp UIControlled.h
         SurfaceReconstruction.cpp
-        SurfaceReconstruction.h)
+        SurfaceReconstruction.h
+        FrameSyncData.h)
 
 add_executable(${PROJECT_NAME} ${SOURCES})
 target_link_libraries(${PROJECT_NAME} PUBLIC glfw pbf_common imgui)

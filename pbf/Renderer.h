@@ -19,7 +19,7 @@ class Renderer {
 public:
     explicit Renderer(InitContext& context);
 
-    void render(float timestep);
+    void render(Scene& scene, GUI& gui, float timestep);
 
     [[nodiscard]] CacheReference<descriptors::RenderPass> renderPass() const {
         return _renderPass;
@@ -36,8 +36,8 @@ public:
 		return result;
 	}
 
-	Context& context() { return _context; }
-	[[nodiscard]] Context const& context() const { return _context; }
+	VulkanContext& context() { return _context; }
+	[[nodiscard]] VulkanContext const& context() const { return _context; }
 
     [[nodiscard]] static auto constexpr framePrerenderCount() {
         return 3u;
@@ -46,44 +46,14 @@ public:
     [[nodiscard]] std::uint32_t currentFrameSync() const {
         return _currentFrameSync;
     }
-	struct OffscreenData
-    {
-    	OffscreenData(InitContext& context, vk::RenderPass renderPass);
-    	constexpr static vk::Extent2D extent2D()
-    	{
-    		return vk::Extent2D{1024, 1024};
-    	}
-    	constexpr static vk::Extent3D extent3D()
-    	{
-    		return vk::Extent3D{extent2D().width, extent2D().height, 1};
-    	}
-    	Image depthPingImage;
-    	Image depthPongImage;
-    	Image thicknessImage;
-    	vk::UniqueImageView depthPingView{};
-    	vk::UniqueImageView depthPongView{};
-    	vk::UniqueImageView thicknessView{};
-    	vk::UniqueFramebuffer frameBuffer{};
-    };
-
-	OffscreenData& currentOffscreenData()
-	{
-		return _frameSync.at(currentFrameSync()).offscreenData;
-	}
-	OffscreenData& offscreenData(size_t _i)
-	{
-		return _frameSync.at(_i).offscreenData;
-	}
 private:
     void reset();
 
-    Context &_context;
+    VulkanContext &_context;
     std::unique_ptr<Swapchain> _swapchain;
 	vk::UniqueCommandBuffer initCommandBuffer;
 
     struct FrameSync {
-    	OffscreenData offscreenData;
-
     	vk::UniqueSemaphore imageAvailableSemaphore;
         vk::UniqueSemaphore renderFinishedSemaphore;
 		vk::UniqueSemaphore computeFinishedSemaphore;

@@ -13,21 +13,20 @@ namespace pbf {
 
 class GUI;
 
-class Context : public ContextInterface {
+class VulkanContext : public ContextInterface {
 public:
-    Context();
-    virtual ~Context();
+    VulkanContext();
+    virtual ~VulkanContext();
 
-    Context(const Context&) = delete;
-    Context& operator=(const Context&) = delete;
-
-    void run();
+    VulkanContext(const VulkanContext&) = delete;
+    VulkanContext& operator=(const VulkanContext&) = delete;
 
 	vk::Instance instance() const { return *_instance; }
     const vk::Device &device() const override { return *_device; }
     const vk::PhysicalDevice &physicalDevice() const override { return _physicalDevice; }
     const vk::SurfaceKHR &surface() const { return *_surface; }
     const glfw::Window &window() const { return *_window; }
+	void pollEvents();
     const vk::SurfaceFormatKHR &surfaceFormat() const { return _surfaceFormat; }
     const vk::PresentModeKHR &presentMode() const { return _presentMode; }
     const auto &families() const { return _families; }
@@ -35,23 +34,12 @@ public:
     const vk::Queue &presentQueue() const { return _presentQueue; }
     const vk::CommandPool &commandPool(bool transient) const { return *(transient ? _commandPoolTransient : _commandPool); }
     Cache &cache() override { return _cache; }
-    const Renderer &renderer() const { return *_renderer; }
-    Renderer &renderer() { return *_renderer; }
-    Scene &scene() { return *_scene; }
     MemoryManager &memoryManager() override { return *_memoryManager; }
 	vk::Format depthFormat() const;
-
-	GUI& gui() { return *_gui; }
-	Camera& camera() { return *_camera; }
 
 	uint32_t graphicsQueueFamily() const {
 		return _families.graphics;
 	}
-
-    CacheReference<descriptors::DescriptorSetLayout> globalDescriptorSetLayout() const {
-        return _globalDescriptorSetLayout;
-    };
-    const vk::DescriptorSet &globalDescriptorSet() const { return _globalDescriptorSet; }
 
 	vk::DescriptorPool descriptorPool() const override { return *_descriptorPool; };
 
@@ -172,37 +160,17 @@ private:
         return sizes;
     }
 
-    static constexpr std::uint32_t numGlobalDescriptorSets = 1;
     vk::UniqueDescriptorPool _descriptorPool;
-
-    CacheReference<descriptors::DescriptorSetLayout> _globalDescriptorSetLayout;
-    vk::DescriptorSet _globalDescriptorSet;
 
     vk::UniqueCommandPool _commandPool;
     vk::UniqueCommandPool _commandPoolTransient;
 
     std::unique_ptr<MemoryManager> _memoryManager;
-    struct GlobalUniformData {
-        glm::mat4 mvpmatrix;
-		glm::mat4 invviewmat;
-		glm::mat4 viewmat;
-		glm::mat3x4 viewrot;
-    };
-    std::unique_ptr<Buffer<GlobalUniformData>> _globalUniformBuffer;
-    GlobalUniformData *globalUniformData;
     Cache _cache { *this, 100 };
-
-    std::unique_ptr<Renderer> _renderer;
-
-	std::unique_ptr<GUI> _gui;
-
-    std::unique_ptr<Scene> _scene;
-
-	std::unique_ptr<Camera> _camera;
 };
 
 struct InitContext {
-	InitContext(Context& context): context(context) {
+	InitContext(VulkanContext& context): context(context) {
 		initCommandBuffer = std::move(context.device().allocateCommandBuffersUnique(vk::CommandBufferAllocateInfo{
 			.commandPool = context.commandPool(true),
 			.level = vk::CommandBufferLevel::ePrimary,
@@ -218,10 +186,17 @@ struct InitContext {
 		return result;
 	}
 
-	Context& context;
+	VulkanContext& context;
 	vk::UniqueCommandBuffer initCommandBuffer;
 	std::vector<std::unique_ptr<FrameDataBase>> initData{};
 
+};
+
+template<typename T>
+struct InitWrapper
+{
+	InitContext& context;
+	T& t;
 };
 
 }

@@ -8,7 +8,7 @@
  */
 #include "ShaderModule.h"
 
-#include <pbf/Context.h>
+#include <pbf/VulkanContext.h>
 #include <fstream>
 
 using namespace pbf::descriptors;

@@ -13,7 +13,7 @@
 
 #include <crampl/MultiKeyMap.h>
 
-#include "Context.h"
+#include "VulkanContext.h"
 #include "Buffer.h"
 #include "Quad.h"
 #include "IndirectCommandsBuffer.h"
@@ -36,7 +36,7 @@ struct ParticleKey {
 class Scene {
 public:
 
-    Scene(InitContext& context);
+    Scene(InitContext& context, GUI& gui, Renderer& renderer, GlobalAppData& globalData);
 
     void frame(vk::CommandBuffer &buf);
 
@@ -44,7 +44,7 @@ public:
 
 	void resetParticles();
 
-    Context& context() {
+    VulkanContext& context() {
         return _context;
     }
 
@@ -71,7 +71,8 @@ public:
 private:
 	bool _resetParticles = false;
 
-    Context& _context;
+    VulkanContext& _context;
+	GlobalAppData& globalData;
 
 	uint32_t const _numParticles = 64 * 64 * 32;
 

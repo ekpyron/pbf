@@ -1,10 +1,10 @@
 #include "Camera.h"
-#include "Context.h"
+#include "VulkanContext.h"
 #include <imgui.h>
 
 namespace pbf {
 
-Camera::Camera(Context& context): UIControlled(context.gui()), context(context)
+Camera::Camera(VulkanContext& context, GUI& _gui): UIControlled(_gui), context(context)
 {
 }
 
@@ -22,16 +22,16 @@ void Camera::ui()
 
 		if (ImGui::IsKeyDown(ImGuiKey_LeftCtrl))
 		{
-			context.camera().Zoom(dragDelta.x + dragDelta.y);
+			Zoom(dragDelta.x + dragDelta.y);
 		}
 		else if (ImGui::IsKeyDown(ImGuiKey_LeftShift))
 		{
-			context.camera().MoveX (dragDelta.x);
-			context.camera().MoveY (dragDelta.y);
+			MoveX (dragDelta.x);
+			MoveY (dragDelta.y);
 		}
 		else
 		{
-			context.camera().Rotate (dragDelta.y, -dragDelta.x);
+			Rotate (dragDelta.y, -dragDelta.x);
 		}
 	}
 }

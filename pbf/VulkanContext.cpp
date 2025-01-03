@@ -11,7 +11,7 @@
 #include <pbf/descriptors/RenderPass.h>
 #include <pbf/descriptors/DescriptorSetLayout.h>
 #include <contrib/crampl/crampl/ContainerContainer.h>
-#include "Context.h"
+#include "VulkanContext.h"
 #include "Renderer.h"
 #include "SurfaceReconstruction.h"
 #include "Scene.h"
@@ -25,7 +25,7 @@
 namespace pbf {
 
 
-Context::Context() {
+VulkanContext::VulkanContext() {
     if (!_glfw.vulkanSupported()) {
         throw std::runtime_error("Vulkan not supported");
     }
@@ -89,7 +89,7 @@ Context::Context() {
                        VkDebugUtilsMessageTypeFlagsEXT                  messageType,
                        const VkDebugUtilsMessengerCallbackDataEXT*      pCallbackData,
                        void*                                            pUserData) -> VkBool32 {
-                        return static_cast<Context *>(pUserData)->debugUtilMessengerCallback(
+                        return static_cast<VulkanContext *>(pUserData)->debugUtilMessengerCallback(
                                 vk::DebugUtilsMessageSeverityFlagBitsEXT(messageSeverity),
                                 vk::DebugUtilsMessageTypeFlagBitsEXT(messageType),
                                 *reinterpret_cast<const vk::DebugUtilsMessengerCallbackDataEXT*>(pCallbackData)
@@ -193,34 +193,6 @@ Context::Context() {
 		.pPoolSizes = globalDescriptorPoolSizes().data()
 	});
 
-    {
-        _globalDescriptorSetLayout = cache().fetch(descriptors::DescriptorSetLayout{
-                .createFlags = {},
-                .bindings = {{
-                                     .binding = 0,
-                                     .descriptorType = vk::DescriptorType::eUniformBuffer,
-                                     .descriptorCount = 1,
-                                     .stageFlags = vk::ShaderStageFlagBits::eAll
-                             }},
-			PBF_DESC_DEBUG_NAME("Global Descriptor Set Layout")
-        });
-/*
-        for(auto [setLayout, descriptor] : crampl::ContainerContainer(_globalDescriptorSetLayouts,
-                                                                      setLayoutDescriptors)) {
-            setLayout = descriptor.realize(this);
-        }
-
-        std::array<vk::DescriptorSetLayout, numGlobalDescriptorSets> globalDescriptorSetLayouts;
-        std::transform(_globalDescriptorSetLayouts.begin(), _globalDescriptorSetLayouts.end(),
-                globalDescriptorSetLayouts.begin(), [](const auto& f) {return *f;});*/
-        _globalDescriptorSet = _device->allocateDescriptorSets(vk::DescriptorSetAllocateInfo{
-			.descriptorPool = *_descriptorPool,
-			.descriptorSetCount = numGlobalDescriptorSets,
-			.pSetLayouts = &*_globalDescriptorSetLayout,
-		}).front();
-
-    }
-
     _memoryManager = std::make_unique<MemoryManager>(*this);
 
     _commandPool = _device->createCommandPoolUnique(vk::CommandPoolCreateInfo{.queueFamilyIndex = _families.graphics});
@@ -229,63 +201,21 @@ Context::Context() {
         .queueFamilyIndex = _families.graphics
 	});
     PBF_DEBUG_SET_OBJECT_NAME(*this, *_commandPool, "Main Command Pool");
-
-	InitContext initContext(*this);
-
-	initContext.initCommandBuffer->begin(vk::CommandBufferBeginInfo{
-		.flags = vk::CommandBufferUsageFlagBits::eOneTimeSubmit,
-		.pInheritanceInfo = nullptr
-	});
-
-    _renderer = std::make_unique<Renderer>(initContext);
-	_gui = std::make_unique<GUI>(initContext);
-	_camera = std::make_unique<Camera>(*this);
-    _scene = std::make_unique<Scene>(initContext);
-
-	initContext.initCommandBuffer->end();
-
-
-	{
-		_globalUniformBuffer = std::make_unique<Buffer<GlobalUniformData>>(*this, 1, vk::BufferUsageFlagBits::eUniformBuffer, MemoryType::DYNAMIC);
-		vk::DescriptorBufferInfo uniformBufferDescriptorInfo {
-			_globalUniformBuffer->buffer(), 0, sizeof(GlobalUniformData)
-		};
-		globalUniformData = _globalUniformBuffer->data();
-		_device->updateDescriptorSets({vk::WriteDescriptorSet{
-			.dstSet = _globalDescriptorSet,
-			.dstBinding = 0,
-			.dstArrayElement = 0,
-			.descriptorCount = 1,
-			.descriptorType = vk::DescriptorType::eUniformBuffer,
-			.pImageInfo = nullptr,
-			.pBufferInfo = &uniformBufferDescriptorInfo,
-			.pTexelBufferView = nullptr
-		}}, {});
-	}
-
-	_graphicsQueue.submit({
-							  vk::SubmitInfo{
-								  .waitSemaphoreCount = 0,
-								  .pWaitSemaphores = nullptr,
-								  .pWaitDstStageMask = {},
-								  .commandBufferCount = 1,
-								  .pCommandBuffers = &*initContext.initCommandBuffer,
-								  .signalSemaphoreCount = 0, // TODO: replace waitIdle below with a semaphore
-								  .pSignalSemaphores = nullptr
-							  }
-	});
-	_graphicsQueue.waitIdle();
-
-	_gui->postInitCleanup();
 }
 
-Context::~Context()
+VulkanContext::~VulkanContext()
 {
 }
 
+void VulkanContext::pollEvents()
+{
+	_glfw.pollEvents();
+}
+
+
 #ifndef NDEBUG
 VkBool32
-Context::debugUtilMessengerCallback(vk::DebugUtilsMessageSeverityFlagsEXT messageSeverity,
+VulkanContext::debugUtilMessengerCallback(vk::DebugUtilsMessageSeverityFlagsEXT messageSeverity,
     vk::DebugUtilsMessageTypeFlagsEXT messageType,
     const vk::DebugUtilsMessengerCallbackDataEXT &callbackData) const {
 	if (!(messageType & ~vk::DebugUtilsMessageTypeFlagBitsEXT::eDeviceAddressBinding) && !callbackData.pMessage)
@@ -320,7 +250,7 @@ Context::debugUtilMessengerCallback(vk::DebugUtilsMessageSeverityFlagsEXT messag
     return VK_FALSE;
 }
 
-void Context::setGenericObjectName(vk::ObjectType type, uint64_t obj, const std::string &name) const {
+void VulkanContext::setGenericObjectName(vk::ObjectType type, uint64_t obj, const std::string &name) const {
     //spdlog::get("vulkan")->info("Assign name [{}] = object {:#x}", name, obj);
     _device->setDebugUtilsObjectNameEXT(vk::DebugUtilsObjectNameInfoEXT {
 		.objectType = type,
@@ -330,38 +260,7 @@ void Context::setGenericObjectName(vk::ObjectType type, uint64_t obj, const std:
 }
 #endif
 
-void Context::run() {
-    spdlog::get("console")->debug("Entering main loop.");
-	float rot = 0.0f;
-	double lastTime = glfwGetTime();
-	_camera->SetPosition(glm::vec3 (0, 0, -100));
-    while (!_window->shouldClose()) {
-		double now = glfwGetTime();
-		double timePassed = now - lastTime;
-		lastTime = now;
-        _glfw.pollEvents();
-		auto [width, height] = window().framebufferSize();
-		glm::mat4x4 clip = glm::mat4x4( 1.0f,  0.0f, 0.0f, 0.0f,
-									    0.0f, -1.0f, 0.0f, 0.0f,
-									    0.0f,  0.0f, 0.5f, 0.0f,
-									    0.0f,  0.0f, 0.5f, 1.0f);
-		glm::mat4 projmat = glm::perspective(glm::radians(60.0f), float(width) / float(height), 0.1f, 1000.0f);
-		glm::mat4 mvmat = _camera->GetViewMatrix(); // glm::rotate(glm::translate(glm::mat4(1), glm::vec3(0,0,-3)), rot, glm::vec3(0,0,1));
-		rot += 1.0f * timePassed;
-		globalUniformData->mvpmatrix = clip * projmat * mvmat;
-		globalUniformData->viewrot = _camera->GetViewRot();
-		globalUniformData->invviewmat = glm::inverse(mvmat);
-		globalUniformData->viewmat = mvmat;
-        _globalDescriptorSetLayout.keepAlive();
-        _renderer->render(glm::clamp(timePassed, 1.0 / 1000.0, 1.0 / 20.0));
-        _cache.frame();
-    }
-    spdlog::get("console")->debug("Exiting main loop. Waiting for idle device.");
-    _device->waitIdle();
-    spdlog::get("console")->debug("Returning from main loop.");
-}
-
-vk::Format Context::depthFormat() const
+vk::Format VulkanContext::depthFormat() const
 {
 	// TODO
 	return vk::Format::eD32Sfloat;
