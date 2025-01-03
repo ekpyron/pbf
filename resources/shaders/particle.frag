@@ -28,17 +28,17 @@ float linearizeDepth(in float d)
 }
 
 void main() {
-    float r = length(fCoords);
-    if (r > 1.0) {
+    float r_squared = dot(fCoords,fCoords);
+    if (r_squared > 1.0) {
         discard;
     }
 
-    vec3 normal = normalize(vec3(fCoords, -sqrt(1 - r)));
+    vec3 normal = normalize(vec3(fCoords, -sqrt(1 - r_squared)));
 
-    vec4 fPos = vec4(fPosition - 0.3 * normal, 1.0);
+    vec4 fPos = vec4(fPosition - 0.6 * normal, 1.0);
     vec4 clipPos = ubo.projmat * fPos;
     float d = clipPos.z / clipPos.w;
-    gl_FragDepth = d*2.0-1.0;
+    gl_FragDepth = d;
 
 //    vec3 lightdir = vec3(32,32,32) - (ubo.invviewmat * fPos).xyz;
     vec3 lightdir = vec3(ubo.invviewmat *  vec4(normalize(vec3(1,1,1)),0)).xyz;
