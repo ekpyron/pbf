@@ -48,7 +48,7 @@ VulkanContext::VulkanContext() {
         auto extensions = _glfw.getRequiredInstanceExtensions();
 #ifndef NDEBUG
         extensions.push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
-        //layers.push_back("VK_LAYER_KHRONOS_validation");
+        layers.push_back("VK_LAYER_KHRONOS_validation");
     	//layers.push_back("VK_LAYER_DEV_self_validation");
 #endif
         vk::ApplicationInfo appInfo{

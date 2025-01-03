@@ -34,7 +34,7 @@ highp vec3 getpos (in highp vec3 p)
 {
     highp vec4 clip = vec4 (p.xy * 2 - 1, p.z, 1);
     highp vec4 view = ubo.invprojmat * clip;
-    view.xyzw /= -view.w;
+    view /= view.w;
 
     return view.xyz;
     /*highp vec4 world = ubo.invviewmat * view;

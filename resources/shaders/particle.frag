@@ -35,7 +35,7 @@ void main() {
 
     vec3 normal = normalize(vec3(fCoords, -sqrt(1 - r)));
 
-    vec4 fPos = vec4(fPosition - 0.6 * normal, 1.0);
+    vec4 fPos = vec4(fPosition - 0.3 * normal, 1.0);
     vec4 clipPos = ubo.projmat * fPos;
     float d = clipPos.z / clipPos.w;
     gl_FragDepth = d*2.0-1.0;

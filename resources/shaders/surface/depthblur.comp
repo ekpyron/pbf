@@ -11,7 +11,7 @@ layout(std140, binding = 0, set = 2) uniform Test {
     vec2 blurDir;
 };
 
-const int numWeights = 4;
+const int numWeights = 8;
 
 highp float linearizeDepth(in highp float d)
 {
@@ -34,14 +34,15 @@ void main (void)
         return;
     }
 
+
     highp float z_i_linear = linearizeDepth(z_i);
 
-    result = z_i;
+    result = 0.0;
 
     const float delta = 0.99;
     const float mu = 0.01f;
 
-    const float falloff = 1000.0f;
+    const float falloff = 0.01f;
 
     for(int dx = -numWeights; dx < numWeights; dx++)
     {
@@ -55,10 +56,10 @@ void main (void)
 
 
             highp float r_1 = (z_i_linear - z_j_linear) * falloff;
-            highp float w_1 = 1.0;//exp(-r_1 * r_1);
+            highp float w_1 = exp(-r_1 * r_1);
 
             highp float r_2 = (z_i_linear - z_k_linear) * falloff;
-            highp float w_2 = 1.0;//exp(-r_2 * r_2);
+            highp float w_2 = exp(-r_2 * r_2);
 
             vec2 d = vec2(dx, dy) / vec2(numWeights, numWeights);
             highp float dist = length(d);
