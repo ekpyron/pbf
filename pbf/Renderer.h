@@ -11,9 +11,9 @@
 #include <pbf/common.h>
 #include <pbf/Swapchain.h>
 
-#include "SurfaceReconstruction.h"
-
 namespace pbf {
+
+class SurfaceReconstruction;
 
 class Renderer {
 public:
@@ -39,7 +39,7 @@ public:
 	Context& context() { return _context; }
 	[[nodiscard]] Context const& context() const { return _context; }
 
-    [[nodiscard]] auto framePrerenderCount() const {
+    [[nodiscard]] static auto constexpr framePrerenderCount() {
         return 3u;
     }
 
@@ -57,11 +57,11 @@ public:
     	{
     		return vk::Extent3D{extent2D().width, extent2D().height, 1};
     	}
-    	Image depthImage;
-    	Image blurredDepthImage;
+    	Image depthPingImage;
+    	Image depthPongImage;
     	Image thicknessImage;
-    	vk::UniqueImageView depthView{};
-    	vk::UniqueImageView blurredDepthView{};
+    	vk::UniqueImageView depthPingView{};
+    	vk::UniqueImageView depthPongView{};
     	vk::UniqueImageView thicknessView{};
     	vk::UniqueFramebuffer frameBuffer{};
     };

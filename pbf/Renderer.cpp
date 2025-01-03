@@ -9,6 +9,7 @@
 #include <pbf/descriptors/GraphicsPipeline.h>
 #include "Renderer.h"
 #include "Scene.h"
+#include "SurfaceReconstruction.h"
 #include <pbf/GUI.h>
 
 static constexpr std::uint64_t TIMEOUT = std::numeric_limits<std::uint64_t>::max();
@@ -16,13 +17,13 @@ static constexpr std::uint64_t TIMEOUT = std::numeric_limits<std::uint64_t>::max
 namespace pbf {
 
 Renderer::OffscreenData::OffscreenData(InitContext& _context, vk::RenderPass _renderPass):
-	depthImage(
+	depthPingImage(
 		_context.context,
 		vk::Format::eD32Sfloat,
 		vk::ImageUsageFlagBits::eDepthStencilAttachment|vk::ImageUsageFlagBits::eSampled,
 		extent3D()
 	),
-	blurredDepthImage(
+	depthPongImage(
 		_context.context,
 		vk::Format::eR32Sfloat,
 		vk::ImageUsageFlagBits::eStorage|vk::ImageUsageFlagBits::eInputAttachment|vk::ImageUsageFlagBits::eTransferSrc,
@@ -36,9 +37,9 @@ Renderer::OffscreenData::OffscreenData(InitContext& _context, vk::RenderPass _re
 	)
 
 {
-	depthView = _context.context.device().createImageViewUnique(vk::ImageViewCreateInfo{
+	depthPingView = _context.context.device().createImageViewUnique(vk::ImageViewCreateInfo{
 		.flags = {},
-		.image = depthImage.image(),
+		.image = depthPingImage.image(),
 		.viewType = vk::ImageViewType::e2D,
 		.format = vk::Format::eD32Sfloat,
 		.components = vk::ComponentMapping{},
@@ -50,9 +51,9 @@ Renderer::OffscreenData::OffscreenData(InitContext& _context, vk::RenderPass _re
 			.layerCount = 1,
 		}
 	});
-	blurredDepthView = _context.context.device().createImageViewUnique(vk::ImageViewCreateInfo{
+	depthPongView = _context.context.device().createImageViewUnique(vk::ImageViewCreateInfo{
 		.flags = {},
-		.image = blurredDepthImage.image(),
+		.image = depthPongImage.image(),
 		.viewType = vk::ImageViewType::e2D,
 		.format = vk::Format::eR32Sfloat,
 		.components = vk::ComponentMapping{},
@@ -80,7 +81,7 @@ Renderer::OffscreenData::OffscreenData(InitContext& _context, vk::RenderPass _re
 	});
 	std::array attachments = {
 		*thicknessView,
-		*depthView
+		*depthPingView
 	};
 	frameBuffer = _context.context.device().createFramebufferUnique(vk::FramebufferCreateInfo{
 		.flags = {},
@@ -100,7 +101,7 @@ Renderer::OffscreenData::OffscreenData(InitContext& _context, vk::RenderPass _re
 				.dstAccessMask = {},
 				.oldLayout = vk::ImageLayout::eUndefined,
 				.newLayout = vk::ImageLayout::eGeneral,
-				.image = blurredDepthImage.image(),
+				.image = depthPongImage.image(),
 				.subresourceRange = {
 					.aspectMask = vk::ImageAspectFlagBits::eColor,
 					.baseMipLevel = 0,
@@ -387,7 +388,7 @@ void Renderer::render(float timestep) {
 			});
 
     	buffer->blitImage(
-			currentFrameSync.offscreenData.blurredDepthImage.image(),
+			currentFrameSync.offscreenData.depthPongImage.image(),
 			vk::ImageLayout::eGeneral,
 			_swapchain->images()[imageIndex],
 			vk::ImageLayout::eTransferDstOptimal,

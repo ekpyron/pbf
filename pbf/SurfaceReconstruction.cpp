@@ -140,12 +140,12 @@ void SurfaceReconstruction::initDescriptorSets()
     {
         vk::DescriptorImageInfo& inputImageInfo = imageInfos.emplace_back(vk::DescriptorImageInfo{
             .sampler = *depthSampler,
-            .imageView = *context.renderer().offscreenData(frameSyncI).depthView,
+            .imageView = *context.renderer().offscreenData(frameSyncI).depthPingView,
             .imageLayout = vk::ImageLayout::eGeneral // TODO: choose optimal layout
         });
         vk::DescriptorImageInfo& outputImageInfo = imageInfos.emplace_back(vk::DescriptorImageInfo{
             .sampler = *depthSampler,
-            .imageView = *context.renderer().offscreenData(frameSyncI).blurredDepthView,
+            .imageView = *context.renderer().offscreenData(frameSyncI).depthPongView,
             .imageLayout = vk::ImageLayout::eGeneral
         });
         descriptorWrites.emplace_back(
@@ -202,7 +202,7 @@ void SurfaceReconstruction::run(vk::CommandBuffer& _buf)
                 .dstAccessMask = {},
                 .oldLayout = vk::ImageLayout::eDepthStencilAttachmentOptimal,
                 .newLayout = vk::ImageLayout::eGeneral,
-                .image = context.renderer().currentOffscreenData().depthImage.image(),
+                .image = context.renderer().currentOffscreenData().depthPingImage.image(),
                 .subresourceRange = {
                     .aspectMask = vk::ImageAspectFlagBits::eDepth,
                     .baseMipLevel = 0,

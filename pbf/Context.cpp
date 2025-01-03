@@ -13,6 +13,7 @@
 #include <contrib/crampl/crampl/ContainerContainer.h>
 #include "Context.h"
 #include "Renderer.h"
+#include "SurfaceReconstruction.h"
 #include "Scene.h"
 #include "Selection.h"
 #include "GUI.h"
@@ -29,15 +30,17 @@ Context::Context() {
         throw std::runtime_error("Vulkan not supported");
     }
     _glfw.windowHint(GLFW_CLIENT_API, GLFW_NO_API);
-	/*
-	auto* monitor = glfwGetPrimaryMonitor();
+	_glfw.windowHint(GLFW_SCALE_TO_MONITOR, GLFW_TRUE);
+	/*int count = 0;
+	auto monitors = glfwGetMonitors(&count);
+	//auto* monitor = glfwGetPrimaryMonitor();
+	auto* monitor = monitors[1];
 	auto* mode = glfwGetVideoMode(monitor);
 	_glfw.windowHint(GLFW_RED_BITS, mode->redBits);
 	_glfw.windowHint(GLFW_GREEN_BITS, mode->greenBits);
 	_glfw.windowHint(GLFW_BLUE_BITS, mode->blueBits);
 	_glfw.windowHint(GLFW_REFRESH_RATE, mode->refreshRate);
-    _window = std::make_unique<glfw::Window>(mode->width, mode->height, "PBF", monitor, nullptr);
-	*/
+    _window = std::make_unique<glfw::Window>(mode->width, mode->height, "PBF", monitor, nullptr);*/
 	_window = std::make_unique<glfw::Window>(768*2, 768, "PBF", nullptr, nullptr);
 
     {
