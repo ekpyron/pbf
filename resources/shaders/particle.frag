@@ -15,14 +15,16 @@ layout(binding = 0, std140) uniform GlobalUniformBuffer {
     mat4 mat;
     mat4 invviewmat;
     mat4 viewmat;
+    mat4 invprojmat;
+    mat4 projmat;
     mat3 viewRot;
 } ubo;
 
-float linearizeDepth (in float d)
+float linearizeDepth(in float d)
 {
 	const float f = 1000.0f;
-	const float n = 1.0f;
-	return (2 * n) / (f + n - d * (f - n));
+	const float n = 0.1f;
+	return (n * f) / (f + d * (n - f));
 }
 
 void main() {
@@ -33,10 +35,10 @@ void main() {
 
     vec3 normal = normalize(vec3(fCoords, -sqrt(1 - r)));
 
-    vec4 fPos = vec4(fPosition - 0.1 * normal, 1.0);
-    /*vec4 clipPos = projmat * fPos;
-    fload d = clipPos.z / clipPos.w;
-    gl_FragDepth = d;*/
+    vec4 fPos = vec4(fPosition - 0.6 * normal, 1.0);
+    vec4 clipPos = ubo.projmat * fPos;
+    float d = clipPos.z / clipPos.w;
+    gl_FragDepth = d*2.0-1.0;
 
 //    vec3 lightdir = vec3(32,32,32) - (ubo.invviewmat * fPos).xyz;
     vec3 lightdir = vec3(ubo.invviewmat *  vec4(normalize(vec3(1,1,1)),0)).xyz;

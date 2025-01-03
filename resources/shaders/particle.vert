@@ -9,6 +9,8 @@ layout(binding = 0, std140) uniform GlobalUniformBuffer {
     mat4 mat;
     mat4 invviewmat;
     mat4 viewmat;
+    highp mat4 invprojmat;
+    highp mat4 projmat;
     mat3 viewRot;
 } ubo;
 
@@ -27,7 +29,7 @@ layout(location = 4) in uint vType;
 
 
 void main() {
-    vec3 pos = 0.3 * ubo.viewRot * vec3(vPosition, 0.0) + vParticlePosition;
+    vec3 pos = 0.6 * ubo.viewRot * vec3(vPosition, 0.0) + vParticlePosition;
     gl_Position = ubo.mat * vec4(pos, 1);
 
 //    fGrid = mod(vParticlePosition, vec3(4.0f,4.0f,4.0f)) / 4.0f;

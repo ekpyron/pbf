@@ -54,7 +54,7 @@ App::App(): globalAppData(vulkanContext)
         .pInheritanceInfo = nullptr
     });
 
-    _renderer = std::make_unique<Renderer>(initContext);
+    _renderer = std::make_unique<Renderer>(initContext, globalAppData);
     _gui = std::make_unique<GUI>(initContext, *_renderer, globalAppData);
     _scene = std::make_unique<Scene>(initContext, *_gui, *_renderer, globalAppData);
     _camera = std::make_unique<Camera>(vulkanContext, *_gui);
@@ -112,6 +112,7 @@ void App::run()
         lastTime = now;
         vulkanContext.pollEvents();
         auto [width, height] = vulkanContext.window().framebufferSize();
+
         glm::mat4x4 clip = glm::mat4x4( 1.0f,  0.0f, 0.0f, 0.0f,
                                         0.0f, -1.0f, 0.0f, 0.0f,
                                         0.0f,  0.0f, 0.5f, 0.0f,
@@ -123,6 +124,8 @@ void App::run()
         globalUniformData->viewrot = _camera->GetViewRot();
         globalUniformData->invviewmat = glm::inverse(mvmat);
         globalUniformData->viewmat = mvmat;
+        globalUniformData->invprojmat = glm::inverse(clip * projmat);
+        globalUniformData->projmat = clip * projmat;
         globalAppData.globalDescriptorSetLayout().keepAlive();
         _renderer->render(*_scene, *_gui, glm::clamp(timePassed, 1.0 / 1000.0, 1.0 / 20.0));
         vulkanContext.cache().frame();

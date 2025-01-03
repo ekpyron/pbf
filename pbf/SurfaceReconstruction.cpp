@@ -9,10 +9,12 @@
 #include "descriptors/DescriptorSet.h"
 #include <list>
 
+#include "App.h"
+
 namespace pbf
 {
 
-SurfaceReconstruction::FrameData::FrameData(InitContext& _initContext, Renderer& _renderer, SurfaceReconstruction& _parent):
+SurfaceReconstruction::FrameData::FrameData(InitContext& _initContext, Renderer& _renderer, GlobalAppData& globalAppData, SurfaceReconstruction& _parent):
 	depthPingImage(
 		_initContext.context,
 		vk::Format::eD32Sfloat,
@@ -22,13 +24,13 @@ SurfaceReconstruction::FrameData::FrameData(InitContext& _initContext, Renderer&
 	depthPongImage(
 		_initContext.context,
 		vk::Format::eR32Sfloat,
-		vk::ImageUsageFlagBits::eStorage|vk::ImageUsageFlagBits::eInputAttachment|vk::ImageUsageFlagBits::eTransferSrc,
+		vk::ImageUsageFlagBits::eStorage|vk::ImageUsageFlagBits::eInputAttachment|vk::ImageUsageFlagBits::eTransferSrc|vk::ImageUsageFlagBits::eSampled,
 		extent3D()
 	),
 	thicknessImage(
 	_initContext.context,
 		vk::Format::eR8G8B8A8Unorm,
-		vk::ImageUsageFlagBits::eColorAttachment|vk::ImageUsageFlagBits::eInputAttachment, // TODO: remove transfer src
+		vk::ImageUsageFlagBits::eStorage|vk::ImageUsageFlagBits::eTransferSrc|vk::ImageUsageFlagBits::eColorAttachment|vk::ImageUsageFlagBits::eInputAttachment, // TODO: remove transfer src
 		extent3D()
 	)
 
@@ -113,22 +115,27 @@ SurfaceReconstruction::FrameData::FrameData(InitContext& _initContext, Renderer&
 			}
 		});
 
-	std::vector<vk::DescriptorSetLayout> setLayouts;
-	for (auto& layout: _parent._depthBlurPipeline.descriptor().pipelineLayout.descriptor().setLayouts)
-		setLayouts.emplace_back(*layout);
 
 	{
+		std::vector<vk::DescriptorSetLayout> setLayouts;
+		for (auto& layout: _parent._depthBlurPipeline.descriptor().pipelineLayout.descriptor().setLayouts)
+			setLayouts.emplace_back(*layout);
+		for (auto& layout: _parent._reconstructNormalsPipeline.descriptor().pipelineLayout.descriptor().setLayouts)
+			setLayouts.emplace_back(*layout);
 		{
 			auto allocatedDescriptorSets = context.device().allocateDescriptorSetsUnique(
 				vk::DescriptorSetAllocateInfo{
 					.descriptorPool = context.descriptorPool(),
-					.descriptorSetCount = 3,
+					.descriptorSetCount = 5,
 					.pSetLayouts = setLayouts.data()
 				}
 			);
-			descriptorSets.inputSampler = std::move(allocatedDescriptorSets.at(0));
-			descriptorSets.outputStorageImage = std::move(allocatedDescriptorSets.at(1));
-			descriptorSets.blurDirUniformBuffer = std::move(allocatedDescriptorSets.at(2));
+			depthBlurDescriptorSets.inputSampler = std::move(allocatedDescriptorSets.at(0));
+			depthBlurDescriptorSets.outputStorageImage = std::move(allocatedDescriptorSets.at(1));
+			depthBlurDescriptorSets.blurDirUniformBuffer = std::move(allocatedDescriptorSets.at(2));
+			reconstructNormalDescriptorSets.inputSampler = std::move(allocatedDescriptorSets.at(3));
+			reconstructNormalDescriptorSets.outputStorageImage = std::move(allocatedDescriptorSets.at(4));
+			//reconstructNormalDescriptorSets.uniformBuffer = std::move(allocatedDescriptorSets.at(5));
 		}
 
 
@@ -146,48 +153,97 @@ SurfaceReconstruction::FrameData::FrameData(InitContext& _initContext, Renderer&
 	        .imageView = *depthPongView,
 	        .imageLayout = vk::ImageLayout::eGeneral
 	    });
-	    descriptorWrites.emplace_back(
-	        vk::WriteDescriptorSet{
-	            .dstSet = *descriptorSets.inputSampler,
-	            .dstBinding = 0,
-	            .dstArrayElement = 0,
-	            .descriptorCount = 1,
-	            .descriptorType = vk::DescriptorType::eCombinedImageSampler,
-	            .pImageInfo = &inputImageInfo,
-	            .pBufferInfo = nullptr,
-	            .pTexelBufferView = nullptr
-	        }
-	    );
-	    descriptorWrites.emplace_back(
-	        vk::WriteDescriptorSet{
-	            .dstSet = *descriptorSets.outputStorageImage,
-	            .dstBinding = 0,
-	            .dstArrayElement = 0,
-	            .descriptorCount = 1,
-	            .descriptorType = vk::DescriptorType::eStorageImage,
-	            .pImageInfo = &outputImageInfo,
-	            .pBufferInfo = nullptr,
-	            .pTexelBufferView = nullptr
-	        }
-	    );
-	    descriptorWrites.emplace_back(
-	        vk::WriteDescriptorSet{
-	            .dstSet = *descriptorSets.blurDirUniformBuffer,
-	            .dstBinding = 0,
-	            .dstArrayElement = 0,
-	            .descriptorCount = 1,
-	            .descriptorType = vk::DescriptorType::eUniformBuffer,
-	            .pImageInfo = nullptr,
-	            .pBufferInfo = &blurDirBufferInfo,
-	            .pTexelBufferView = nullptr
-	        }
-	    );
+		vk::DescriptorImageInfo& thicknessImageInfo = imageInfos.emplace_back(vk::DescriptorImageInfo{
+			.imageView = *thicknessView,
+			.imageLayout = vk::ImageLayout::eGeneral
+		});
+		// depth blur descriptor writes
+		{
+			descriptorWrites.emplace_back(
+				vk::WriteDescriptorSet{
+					.dstSet = *depthBlurDescriptorSets.inputSampler,
+					.dstBinding = 0,
+					.dstArrayElement = 0,
+					.descriptorCount = 1,
+					.descriptorType = vk::DescriptorType::eCombinedImageSampler,
+					.pImageInfo = &inputImageInfo,
+					.pBufferInfo = nullptr,
+					.pTexelBufferView = nullptr
+				}
+			);
+			descriptorWrites.emplace_back(
+				vk::WriteDescriptorSet{
+					.dstSet = *depthBlurDescriptorSets.outputStorageImage,
+					.dstBinding = 0,
+					.dstArrayElement = 0,
+					.descriptorCount = 1,
+					.descriptorType = vk::DescriptorType::eStorageImage,
+					.pImageInfo = &outputImageInfo,
+					.pBufferInfo = nullptr,
+					.pTexelBufferView = nullptr
+				}
+			);
+			descriptorWrites.emplace_back(
+				vk::WriteDescriptorSet{
+					.dstSet = *depthBlurDescriptorSets.blurDirUniformBuffer,
+					.dstBinding = 0,
+					.dstArrayElement = 0,
+					.descriptorCount = 1,
+					.descriptorType = vk::DescriptorType::eUniformBuffer,
+					.pImageInfo = nullptr,
+					.pBufferInfo = &blurDirBufferInfo,
+					.pTexelBufferView = nullptr
+				}
+			);
+		}
+		// reconstruct normal descriptor writes
+		{
+			descriptorWrites.emplace_back(
+				vk::WriteDescriptorSet{
+					.dstSet = *reconstructNormalDescriptorSets.inputSampler,
+					.dstBinding = 0,
+					.dstArrayElement = 0,
+					.descriptorCount = 1,
+					.descriptorType = vk::DescriptorType::eCombinedImageSampler,
+					.pImageInfo = &outputImageInfo,
+					.pBufferInfo = nullptr,
+					.pTexelBufferView = nullptr
+				}
+			);
+			descriptorWrites.emplace_back(
+				vk::WriteDescriptorSet{
+					.dstSet = *reconstructNormalDescriptorSets.outputStorageImage,
+					.dstBinding = 0,
+					.dstArrayElement = 0,
+					.descriptorCount = 1,
+					.descriptorType = vk::DescriptorType::eStorageImage,
+					.pImageInfo = &thicknessImageInfo,
+					.pBufferInfo = nullptr,
+					.pTexelBufferView = nullptr
+				}
+			);
+			/*
+			descriptorWrites.emplace_back(
+				vk::WriteDescriptorSet{
+					.dstSet = *reconstructNormalDescriptorSets.uniformBuffer,
+					.dstBinding = 0,
+					.dstArrayElement = 0,
+					.descriptorCount = 1,
+					.descriptorType = vk::DescriptorType::eUniformBuffer,
+					.pImageInfo = nullptr,
+					.pBufferInfo = &blurDirBufferInfo,
+					.pTexelBufferView = nullptr
+				}
+			);*/
+			reconstructNormalDescriptorSets.uniformBuffer = globalAppData.globalDescriptorSet();
+
+		}
 	    context.device().updateDescriptorSets(descriptorWrites, {});
 	}
 
 }
 
-SurfaceReconstruction::SurfaceReconstruction(InitContext& _initContext, Renderer& _renderer):
+SurfaceReconstruction::SurfaceReconstruction(InitContext& _initContext, Renderer& _renderer, GlobalAppData& globalAppData):
 context(_initContext.context),
 frameSyncData(_renderer)
 {
@@ -196,8 +252,8 @@ frameSyncData(_renderer)
 
     depthSampler = context.device().createSamplerUnique(
         vk::SamplerCreateInfo{
-            .magFilter = vk::Filter::eLinear,
-            .minFilter = vk::Filter::eLinear,
+            .magFilter = vk::Filter::eNearest,
+            .minFilter = vk::Filter::eNearest,
             .mipmapMode = vk::SamplerMipmapMode::eNearest,
             .addressModeU = vk::SamplerAddressMode::eClampToEdge,
             .addressModeV = vk::SamplerAddressMode::eClampToEdge,
@@ -291,8 +347,32 @@ frameSyncData(_renderer)
             }
         );
 
-    	frameSyncData.create(_initContext, _renderer, *this);
+    	auto reconstructNormalPipelineLayout = cache.fetch(
+				descriptors::PipelineLayout{
+					.setLayouts = {depthInputSetLayout, blurredDepthOutputSetLayout, globalAppData.globalDescriptorSetLayout()},
+					.pushConstants = {},
+					PBF_DESC_DEBUG_NAME("ReconstructNormal blur pipeline layout")
+				});
+    	_reconstructNormalsPipeline = cache.fetch(
+			descriptors::ComputePipeline{
+				.flags = {},
+				.shaderStage = descriptors::ShaderStage {
+					.stage = vk::ShaderStageFlagBits::eCompute,
+					.module = cache.fetch(
+					descriptors::ShaderModule{
+						.source = descriptors::ShaderModule::File{"shaders/surface/reconstruct_normals.comp.spv"},
+						PBF_DESC_DEBUG_NAME("SurfaceReconstruction: reconstruct normals shader module")
+					}),
+					.entryPoint = "main",
+					.specialization = {}
+				},
+				.pipelineLayout = reconstructNormalPipelineLayout,
+				PBF_DESC_DEBUG_NAME("SurfaceReconstruction: reconstruct normals shader pipeline")
+			}
+		);
     }
+
+    frameSyncData.create(_initContext, _renderer, globalAppData, *this);
 }
 
 void SurfaceReconstruction::run(vk::CommandBuffer& _buf)
@@ -327,10 +407,60 @@ void SurfaceReconstruction::run(vk::CommandBuffer& _buf)
         vk::PipelineBindPoint::eCompute,
         *_depthBlurPipeline.descriptor().pipelineLayout,
         0,
-        frameData.descriptorSets.all(),
+        frameData.depthBlurDescriptorSets.all(),
         {}
     );
     _buf.dispatch(1024 / 256,  1024, 1);
+
+	_buf.pipelineBarrier(
+	vk::PipelineStageFlagBits::eComputeShader,
+	vk::PipelineStageFlagBits::eComputeShader, {}, {}, {}, {
+		vk::ImageMemoryBarrier{
+			.srcAccessMask = {},
+			.dstAccessMask = {},
+			.oldLayout = vk::ImageLayout::eGeneral,
+			.newLayout = vk::ImageLayout::eGeneral,
+			.image = frameData.depthPongImage.image(),
+			.subresourceRange = {
+				.aspectMask = vk::ImageAspectFlagBits::eColor,
+				.baseMipLevel = 0,
+				.levelCount = 1,
+				.baseArrayLayer = 0,
+				.layerCount = 1
+			}
+		}
+	});
+
+	_buf.bindPipeline(vk::PipelineBindPoint::eCompute, *_reconstructNormalsPipeline);
+
+	_buf.bindDescriptorSets(
+		vk::PipelineBindPoint::eCompute,
+		*_reconstructNormalsPipeline.descriptor().pipelineLayout,
+		0,
+		frameData.reconstructNormalDescriptorSets.all(),
+		{}
+	);
+	_buf.dispatch(1024 / 256,  1024, 1);
+
+	_buf.pipelineBarrier(
+vk::PipelineStageFlagBits::eComputeShader,
+vk::PipelineStageFlagBits::eComputeShader, {}, {}, {}, {
+	vk::ImageMemoryBarrier{
+		.srcAccessMask = {},
+		.dstAccessMask = {},
+		.oldLayout = vk::ImageLayout::eGeneral,
+		.newLayout = vk::ImageLayout::eGeneral,
+		.image = frameData.thicknessImage.image(),
+		.subresourceRange = {
+			.aspectMask = vk::ImageAspectFlagBits::eColor,
+			.baseMipLevel = 0,
+			.levelCount = 1,
+			.baseArrayLayer = 0,
+			.layerCount = 1
+		}
+	}
+});
+
 }
 
 

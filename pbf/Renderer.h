@@ -14,10 +14,11 @@
 namespace pbf {
 
 class SurfaceReconstruction;
+struct GlobalAppData;
 
 class Renderer {
 public:
-    explicit Renderer(InitContext& context);
+    explicit Renderer(InitContext& context, GlobalAppData& globalAppData);
 
     void render(Scene& scene, GUI& gui, float timestep);
 

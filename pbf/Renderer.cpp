@@ -16,7 +16,7 @@ static constexpr std::uint64_t TIMEOUT = std::numeric_limits<std::uint64_t>::max
 
 namespace pbf {
 
-Renderer::Renderer(InitContext &initContext) : _context(initContext.context) {
+Renderer::Renderer(InitContext &initContext, GlobalAppData &globalAppData) : _context(initContext.context) {
     {
         _offscreenRenderPass = _context.cache().fetch(descriptors::RenderPass{
                 .attachments = {
@@ -138,7 +138,7 @@ Renderer::Renderer(InitContext &initContext) : _context(initContext.context) {
     }
 
 	reset();
-	_surfaceReconstruction = std::make_unique<SurfaceReconstruction>(initContext, *this);
+	_surfaceReconstruction = std::make_unique<SurfaceReconstruction>(initContext, *this, globalAppData);
 }
 
 void Renderer::render(Scene& scene, GUI& gui, float timestep) {
@@ -287,7 +287,7 @@ void Renderer::render(Scene& scene, GUI& gui, float timestep) {
 			});
 
     	buffer->blitImage(
-			offscreenData.depthPongImage.image(),
+			offscreenData.thicknessImage.image(),
 			vk::ImageLayout::eGeneral,
 			_swapchain->images()[imageIndex],
 			vk::ImageLayout::eTransferDstOptimal,

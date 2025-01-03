@@ -43,6 +43,8 @@ private:
         glm::mat4 mvpmatrix;
         glm::mat4 invviewmat;
         glm::mat4 viewmat;
+        glm::mat4 invprojmat;
+        glm::mat4 projmat;
         glm::mat3x4 viewrot;
     };
     std::unique_ptr<Buffer<GlobalUniformData>> _globalUniformBuffer;

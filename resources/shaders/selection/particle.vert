@@ -9,6 +9,8 @@ layout(binding = 0) uniform GlobalUniformBuffer {
     mat4 mat;
     mat4 invviewmat;
     mat4 viewmat;
+    mat4 invprojmat;
+    mat4 projmat;
     mat3 viewRot;
 } ubo;
 

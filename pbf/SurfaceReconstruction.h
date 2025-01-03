@@ -14,18 +14,19 @@
 
 namespace pbf
 {
+struct GlobalAppData;
 
 class SurfaceReconstruction
 {
 public:
-    SurfaceReconstruction(InitContext& _context, Renderer& renderer);
+    SurfaceReconstruction(InitContext& _context, Renderer& renderer, GlobalAppData& globalAppData);
     ~SurfaceReconstruction() = default;
 
     void run(vk::CommandBuffer& _cmdBuffer);
 
     struct FrameData
     {
-        FrameData(InitContext& context, Renderer& renderer, SurfaceReconstruction& _parent);
+        FrameData(InitContext& context, Renderer& renderer, GlobalAppData& globalAppData, SurfaceReconstruction& _parent);
         constexpr static vk::Extent2D extent2D()
         {
             return vk::Extent2D{1024, 1024};
@@ -42,7 +43,7 @@ public:
         vk::UniqueImageView thicknessView{};
         vk::UniqueFramebuffer frameBuffer{};
 
-        struct DescriptorSets
+        struct DepthBlurDescriptorSets
         {
             vk::UniqueDescriptorSet inputSampler;
             vk::UniqueDescriptorSet outputStorageImage;
@@ -52,7 +53,18 @@ public:
                 return {*inputSampler, *outputStorageImage, *blurDirUniformBuffer};
             }
         };
-        DescriptorSets descriptorSets;
+        DepthBlurDescriptorSets depthBlurDescriptorSets;
+        struct ReconstructNormalDescriptorSets
+        {
+            vk::UniqueDescriptorSet inputSampler;
+            vk::UniqueDescriptorSet outputStorageImage;
+            vk::DescriptorSet uniformBuffer;
+            std::vector<vk::DescriptorSet> all() const
+            {
+                return {*inputSampler, *outputStorageImage, uniformBuffer};
+            }
+        };
+        ReconstructNormalDescriptorSets reconstructNormalDescriptorSets;
     };
 
     FrameData& frameData() { return frameSyncData.getCurrent(); }
@@ -71,6 +83,7 @@ private:
     vk::UniqueSampler depthSampler;
     Buffer<BlurDir> blurDirBuffer;
     CacheReference<descriptors::ComputePipeline> _depthBlurPipeline;
+    CacheReference<descriptors::ComputePipeline> _reconstructNormalsPipeline;
     std::vector<CacheReference<descriptors::DescriptorSetLayout>> descriptorSetCacheReferences;
 };
 
