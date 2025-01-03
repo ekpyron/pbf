@@ -4,9 +4,27 @@ TODO:
 	
 	cutoff radii
 
-https://github.com/Twinklebear/vulkan-marching-cubes
+"Other":
+    -   Counting particules in grid cells (3D?)
+        https://sites.icmc.usp.br/apneto/pub/count-sib22.pdf
+    -   Raytracing (?)
+        https://diglib.eg.org/bitstream/handle/10.2312/hpg.20141099.105-116/105-116.pdf
 
-Plan:
+Screen Space:
+    -   multiphase flows: https://doi.org/10.1016/j.simpat.2024.103008
+    -   Minimizing Curvature Flow instead of Gaussian Blur:
+        https://www.researchgate.net/publication/220792184_Screen_space_fluid_rendering_with_curvature_flow
+
+
+Marching Cube:
+
+    - https://github.com/Twinklebear/vulkan-marching-cubes
+
+    -   Only reconstruct surface around a thin area at the surface:
+        https://cg.informatik.uni-freiburg.de/publications/2012_CGF_surfaceReconstructionSPH.pdf
+        https://freidok.uni-freiburg.de/files/9490/CRuYUw9tvG3KF94d/gizemakinci_phd_final.pdf
+
+Plan (marching cube):
     - every particle emits its voxel position (i.e. voxel cube vertex positions, i.e. voxel positions shifted by half a side length of the voxel cube)
       into a num_particle-sized buffer voxelbuf
     - sort voxelbuf <- expensive
