@@ -11,13 +11,13 @@ layout(std140, binding = 0, set = 2) uniform Test {
     vec2 blurDir;
 };
 
-const int numWeights = 8;
+const int numWeights = 2;
 
 highp float linearizeDepth(in highp float d)
 {
-	const highp float f = 1000.0f;
+	const highp float f = 1.0f;
 	const highp float n = 0.1f;
-	return (n * f) / (f + d * (n - f));
+	return (n * f) / (f - d * (n - f));
 }
 
 void main (void)
@@ -34,23 +34,21 @@ void main (void)
         return;
     }
 
-
     highp float z_i_linear = linearizeDepth(z_i);
 
     result = 0.0;
 
-    const float delta = 0.99;
-    const float mu = 0.01f;
+    const highp float delta = 0.001;
+    const highp float mu = 0.01f;
 
-    const float falloff = 0.01f;
+    const highp float falloff = 500000.0f;
 
-    for(int dx = -numWeights; dx < numWeights; dx++)
+    for(int dx = -numWeights; dx <= numWeights; dx++)
     {
-        for(int dy = -numWeights; dy < numWeights; dy++)
+        for(int dy = -numWeights; dy <= numWeights; dy++)
         {
             highp float z_j = texture(depthInput, coord + ivec2(dx,dy)).x;
             highp float z_j_linear = linearizeDepth(z_j);
-
             highp float z_k = texture(depthInput, coord - ivec2(dx,dy)).x;
             highp float z_k_linear = linearizeDepth(z_k);
 
@@ -61,34 +59,13 @@ void main (void)
             highp float r_2 = (z_i_linear - z_k_linear) * falloff;
             highp float w_2 = exp(-r_2 * r_2);
 
-            vec2 d = vec2(dx, dy) / vec2(numWeights, numWeights);
+            highp vec2 d = vec2(dx, dy) / vec2(numWeights, numWeights);
             highp float dist = length(d);
             highp float w_ij = exp(-dist * dist);
 
+
             weights += w_ij * w_1 + w_ij * w_2;
             result += w_ij * w_1 * z_j + w_ij * w_2 * z_k;
-
-
-            /*
-
-
-            if (!(z_j == 1.0 || z_k == 1.0 || z_j_linear > z_i_linear + delta || z_k_linear > z_i_linear + delta))
-            {
-                vec2 d = vec2(dx, dy) / vec2(numWeights, numWeights);
-                float dist = length(d);
-                float w_ij = exp(-dist * dist);
-
-                float f_ij = z_j;
-                if (z_j > z_i - delta)
-                    f_ij = z_i - mu;
-
-                result += w_ij * f_ij;
-
-                weights += w_ij;
-            }
-
-            */
-
         }
     }
     result /= weights;

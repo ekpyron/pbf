@@ -29,13 +29,13 @@ float linearizeDepth(in float d)
 
 void main() {
     float r_squared = dot(fCoords,fCoords);
-    if (r_squared > 1.0) {
+    if (r_squared >= 1.0) {
         discard;
     }
 
     vec3 normal = normalize(vec3(fCoords, -sqrt(1 - r_squared)));
 
-    vec4 fPos = vec4(fPosition - 0.6 * normal, 1.0);
+    vec4 fPos = vec4(fPosition - 0.3 * normal, 1.0);
     vec4 clipPos = ubo.projmat * fPos;
     float d = clipPos.z / clipPos.w;
     gl_FragDepth = d;

@@ -58,18 +58,25 @@ void main (void)
 
     vec3 pos = getpos(vec3(normcoords, depth));
 
-    vec2 normcoords_x = normcoords + vec2(1.0f / width, 0);
-    vec3 ddx = getpos(vec3(normcoords_x, texture(depthInput, coord + vec2(1, 0)).x)) - pos;
-    vec2 normcoords_y = normcoords + vec2(0, 1.0f / height);
-    vec3 ddy = getpos(vec3(normcoords_y, texture(depthInput, coord + vec2(0, 1)).x)) - pos;
+    vec2 normcoords_x = normcoords + vec2(1.0f / width, 0.0f);
+    vec3 ddx = getpos(vec3(normcoords_x, texture(depthInput, coord + vec2(1.0f, 0.0f)).x)) - pos;
+    vec2 normcoords_x2 = normcoords - vec2(1.0f / width, 0.0f);
+    vec3 ddx2 = pos - getpos(vec3(normcoords_x2, texture(depthInput, coord - vec2(1.0f, 0.0f)).x));
+	if (abs (ddx.z) > abs (ddx2.z)) ddx = ddx2;
+
+    vec2 normcoords_y = normcoords + vec2(0.0f, 1.0f / height);
+    vec3 ddy = getpos(vec3(normcoords_y, texture(depthInput, coord + vec2(0.0f, 1.0f)).x)) - pos;
+    vec2 normcoords_y2 = normcoords - vec2(0.0f, 1.0f / height);
+    vec3 ddy2 = pos - getpos(vec3(normcoords_y2, texture(depthInput, coord - vec2(0.0f, 1.0f)).x));
+	if (abs (ddy.z) < abs (ddy2.z)) ddy = ddy2;
 
     vec3 normal = normalize(cross(ddx, ddy));
 
     vec3 lightdir = normalize(vec3(-1, 0, -1));
 
-    float NdotL = dot(lightdir, normal);
+    float NdotL = max(dot(lightdir, normal) * 0.5 + 0.5, 0);
 
-    vec4 fOut = vec4(NdotL, NdotL, NdotL, 0);
+    vec4 fOut = vec4(0.005*NdotL, 0.4*NdotL, NdotL, 0);
 
     imageStore(outputImage, ivec2(gl_GlobalInvocationID.xy), fOut);
 }

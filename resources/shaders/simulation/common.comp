@@ -56,7 +56,7 @@ layout (constant_id = 7) const float tensile_instability_scale = 0.0f;
 float Wpoly6(float r)
 {
     if (r > h)
-    return 0;
+        return 0;
     float tmp = h * h - r * r;
     return 1.56668147106 * tmp * tmp * tmp / (h*h*h*h*h*h*h*h*h);
 }
@@ -64,7 +64,7 @@ float Wpoly6(float r)
 float Wspiky(float r)
 {
     if (r > h)
-    return 0;
+        return 0;
     float tmp = h - r;
     return 4.774648292756860 * tmp * tmp * tmp / (h*h*h*h*h*h);
 }
@@ -75,7 +75,8 @@ vec3 gradWspiky(vec3 r)
     if (l > h)
     return vec3 (0, 0, 0);
     // TODO: carefully re-evaluate.
-    if (l < 0.01) l = 0.01;
+    if (l < 0.01)
+        l = 0.01;
     float tmp = h - l;
     return (-3 * 4.774648292756860 * tmp * tmp) * r / (l * h*h*h*h*h*h);
 }

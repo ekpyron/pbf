@@ -18,12 +18,12 @@ SurfaceReconstruction::FrameData::FrameData(InitContext& _initContext, Renderer&
 	depthPingImage(
 		_initContext.context,
 		vk::Format::eD32Sfloat,
-		vk::ImageUsageFlagBits::eDepthStencilAttachment|vk::ImageUsageFlagBits::eSampled,
+		vk::ImageUsageFlagBits::eDepthStencilAttachment|vk::ImageUsageFlagBits::eSampled|vk::ImageUsageFlagBits::eStorage|vk::ImageUsageFlagBits::eInputAttachment|vk::ImageUsageFlagBits::eTransferSrc,
 		extent3D()
 	),
 	depthPongImage(
 		_initContext.context,
-		vk::Format::eR32Sfloat,
+		vk::Format::eD32Sfloat,
 		vk::ImageUsageFlagBits::eStorage|vk::ImageUsageFlagBits::eInputAttachment|vk::ImageUsageFlagBits::eTransferSrc|vk::ImageUsageFlagBits::eSampled,
 		extent3D()
 	),
@@ -54,10 +54,10 @@ SurfaceReconstruction::FrameData::FrameData(InitContext& _initContext, Renderer&
 		.flags = {},
 		.image = depthPongImage.image(),
 		.viewType = vk::ImageViewType::e2D,
-		.format = vk::Format::eR32Sfloat,
+		.format = vk::Format::eD32Sfloat,
 		.components = vk::ComponentMapping{},
 		.subresourceRange = vk::ImageSubresourceRange{
-			.aspectMask = vk::ImageAspectFlagBits::eColor,
+			.aspectMask = vk::ImageAspectFlagBits::eDepth,
 			.baseMipLevel = 0,
 			.levelCount = 1,
 			.baseArrayLayer = 0,
@@ -106,7 +106,7 @@ SurfaceReconstruction::FrameData::FrameData(InitContext& _initContext, Renderer&
 				.newLayout = vk::ImageLayout::eGeneral,
 				.image = depthPongImage.image(),
 				.subresourceRange = {
-					.aspectMask = vk::ImageAspectFlagBits::eColor,
+					.aspectMask = vk::ImageAspectFlagBits::eDepth,
 					.baseMipLevel = 0,
 					.levelCount = 1,
 					.baseArrayLayer = 0,
@@ -120,21 +120,26 @@ SurfaceReconstruction::FrameData::FrameData(InitContext& _initContext, Renderer&
 		std::vector<vk::DescriptorSetLayout> setLayouts;
 		for (auto& layout: _parent._depthBlurPipeline.descriptor().pipelineLayout.descriptor().setLayouts)
 			setLayouts.emplace_back(*layout);
+		for (auto& layout: _parent._depthBlurPipeline.descriptor().pipelineLayout.descriptor().setLayouts)
+			setLayouts.emplace_back(*layout);
 		for (auto& layout: _parent._reconstructNormalsPipeline.descriptor().pipelineLayout.descriptor().setLayouts)
 			setLayouts.emplace_back(*layout);
 		{
 			auto allocatedDescriptorSets = context.device().allocateDescriptorSetsUnique(
 				vk::DescriptorSetAllocateInfo{
 					.descriptorPool = context.descriptorPool(),
-					.descriptorSetCount = 5,
+					.descriptorSetCount = 8,
 					.pSetLayouts = setLayouts.data()
 				}
 			);
 			depthBlurDescriptorSets.inputSampler = std::move(allocatedDescriptorSets.at(0));
 			depthBlurDescriptorSets.outputStorageImage = std::move(allocatedDescriptorSets.at(1));
 			depthBlurDescriptorSets.blurDirUniformBuffer = std::move(allocatedDescriptorSets.at(2));
-			reconstructNormalDescriptorSets.inputSampler = std::move(allocatedDescriptorSets.at(3));
-			reconstructNormalDescriptorSets.outputStorageImage = std::move(allocatedDescriptorSets.at(4));
+			depthBlurPongDescriptorSets.inputSampler = std::move(allocatedDescriptorSets.at(3));
+			depthBlurPongDescriptorSets.outputStorageImage = std::move(allocatedDescriptorSets.at(4));
+			depthBlurPongDescriptorSets.blurDirUniformBuffer = std::move(allocatedDescriptorSets.at(5));
+			reconstructNormalDescriptorSets.inputSampler = std::move(allocatedDescriptorSets.at(6));
+			reconstructNormalDescriptorSets.outputStorageImage = std::move(allocatedDescriptorSets.at(7));
 			//reconstructNormalDescriptorSets.uniformBuffer = std::move(allocatedDescriptorSets.at(5));
 		}
 
@@ -196,7 +201,45 @@ SurfaceReconstruction::FrameData::FrameData(InitContext& _initContext, Renderer&
 				}
 			);
 		}
-		// reconstruct normal descriptor writes
+		// depth blur pong descriptor writes
+		{
+			descriptorWrites.emplace_back(
+				vk::WriteDescriptorSet{
+					.dstSet = *depthBlurPongDescriptorSets.inputSampler,
+					.dstBinding = 0,
+					.dstArrayElement = 0,
+					.descriptorCount = 1,
+					.descriptorType = vk::DescriptorType::eCombinedImageSampler,
+					.pImageInfo = &outputImageInfo,
+					.pBufferInfo = nullptr,
+					.pTexelBufferView = nullptr
+				}
+			);
+			descriptorWrites.emplace_back(
+				vk::WriteDescriptorSet{
+					.dstSet = *depthBlurPongDescriptorSets.outputStorageImage,
+					.dstBinding = 0,
+					.dstArrayElement = 0,
+					.descriptorCount = 1,
+					.descriptorType = vk::DescriptorType::eStorageImage,
+					.pImageInfo = &inputImageInfo,
+					.pBufferInfo = nullptr,
+					.pTexelBufferView = nullptr
+				}
+			);
+			descriptorWrites.emplace_back(
+				vk::WriteDescriptorSet{
+					.dstSet = *depthBlurPongDescriptorSets.blurDirUniformBuffer,
+					.dstBinding = 0,
+					.dstArrayElement = 0,
+					.descriptorCount = 1,
+					.descriptorType = vk::DescriptorType::eUniformBuffer,
+					.pImageInfo = nullptr,
+					.pBufferInfo = &blurDirBufferInfo,
+					.pTexelBufferView = nullptr
+				}
+			);
+		}		// reconstruct normal descriptor writes
 		{
 			descriptorWrites.emplace_back(
 				vk::WriteDescriptorSet{
@@ -401,6 +444,9 @@ void SurfaceReconstruction::run(vk::CommandBuffer& _buf)
             }
         });
 
+	for (int i = 0; i < 8; i++)
+	{
+
     _buf.bindPipeline(vk::PipelineBindPoint::eCompute, *_depthBlurPipeline);
 
     _buf.bindDescriptorSets(
@@ -422,7 +468,7 @@ void SurfaceReconstruction::run(vk::CommandBuffer& _buf)
 			.newLayout = vk::ImageLayout::eGeneral,
 			.image = frameData.depthPongImage.image(),
 			.subresourceRange = {
-				.aspectMask = vk::ImageAspectFlagBits::eColor,
+				.aspectMask = vk::ImageAspectFlagBits::eDepth,
 				.baseMipLevel = 0,
 				.levelCount = 1,
 				.baseArrayLayer = 0,
@@ -430,6 +476,65 @@ void SurfaceReconstruction::run(vk::CommandBuffer& _buf)
 			}
 		}
 	});
+
+	_buf.bindDescriptorSets(
+	vk::PipelineBindPoint::eCompute,
+	*_depthBlurPipeline.descriptor().pipelineLayout,
+	0,
+	frameData.depthBlurPongDescriptorSets.all(),
+	{}
+);
+	_buf.dispatch(1024 / 256,  1024, 1);
+
+	_buf.pipelineBarrier(
+	vk::PipelineStageFlagBits::eComputeShader,
+	vk::PipelineStageFlagBits::eComputeShader, {}, {}, {}, {
+		vk::ImageMemoryBarrier{
+			.srcAccessMask = {},
+			.dstAccessMask = {},
+			.oldLayout = vk::ImageLayout::eGeneral,
+			.newLayout = vk::ImageLayout::eGeneral,
+			.image = frameData.depthPingImage.image(),
+			.subresourceRange = {
+				.aspectMask = vk::ImageAspectFlagBits::eDepth,
+				.baseMipLevel = 0,
+				.levelCount = 1,
+				.baseArrayLayer = 0,
+				.layerCount = 1
+			}
+		}
+	});
+
+	_buf.bindDescriptorSets(
+		vk::PipelineBindPoint::eCompute,
+		*_depthBlurPipeline.descriptor().pipelineLayout,
+		0,
+		frameData.depthBlurDescriptorSets.all(),
+		{}
+	);
+	_buf.dispatch(1024 / 256,  1024, 1);
+
+	_buf.pipelineBarrier(
+	vk::PipelineStageFlagBits::eComputeShader,
+	vk::PipelineStageFlagBits::eComputeShader, {}, {}, {}, {
+		vk::ImageMemoryBarrier{
+			.srcAccessMask = {},
+			.dstAccessMask = {},
+			.oldLayout = vk::ImageLayout::eGeneral,
+			.newLayout = vk::ImageLayout::eGeneral,
+			.image = frameData.depthPongImage.image(),
+			.subresourceRange = {
+				.aspectMask = vk::ImageAspectFlagBits::eDepth,
+				.baseMipLevel = 0,
+				.levelCount = 1,
+				.baseArrayLayer = 0,
+				.layerCount = 1
+			}
+		}
+	});
+	}
+
+
 
 	_buf.bindPipeline(vk::PipelineBindPoint::eCompute, *_reconstructNormalsPipeline);
 

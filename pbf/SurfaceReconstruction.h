@@ -54,6 +54,7 @@ public:
             }
         };
         DepthBlurDescriptorSets depthBlurDescriptorSets;
+        DepthBlurDescriptorSets depthBlurPongDescriptorSets;
         struct ReconstructNormalDescriptorSets
         {
             vk::UniqueDescriptorSet inputSampler;
