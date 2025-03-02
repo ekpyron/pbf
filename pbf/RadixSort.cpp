@@ -131,8 +131,6 @@ RadixSort::Result RadixSort::stage(
 		pushConstants.bit = bit;
 
 		auto& prescanBlockSum = blockSums.front();
-		for (auto& i : prescanPipeline->pipelineLayout.descriptor().setLayouts)
-			i.descriptor().log();
 		context.bindPipeline(
 			buf,
 			prescanPipeline,

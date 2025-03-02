@@ -58,18 +58,6 @@ struct DescriptorSetLayout {
         return result;
     }
 
-    void log() const
-    {
-        spdlog::get("console")->debug("Create Flags: {}", static_cast<uint32_t>(createFlags));
-#ifndef NDEBUG
-        spdlog::get("console")->debug("Debug Name: {}", debugName);
-#endif
-        for (auto& binding : bindings)
-        {
-        spdlog::get("console")->debug("Binding: {} {} {} {}", binding.binding, static_cast<uint32_t>(binding.descriptorType), binding.descriptorCount, static_cast<uint32_t>(binding.stageFlags));
-        }
-    }
-
     vk::DescriptorSetLayoutCreateFlags createFlags;
     std::vector<Binding> bindings;
 #ifndef NDEBUG

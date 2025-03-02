@@ -9,8 +9,8 @@ struct Pipeline
 {
     vk::UniquePipeline pipeline;
     CacheReference<descriptors::PipelineLayout> pipelineLayout;
-    explicit operator bool() const { return !!pipelineLayout; }
-    bool operator!() const { return !pipelineLayout; }
+    explicit operator bool() const { return !!pipeline; }
+    bool operator!() const { return !pipeline; }
     Pipeline const& operator*() const { return *this; }
     void reset() { pipeline.reset(); }
 
