@@ -112,22 +112,18 @@ _indexBuffer(initContext.context, 6, vk::BufferUsageFlagBits::eTransferDst | vk:
 			pbf::descriptors::GraphicsPipeline{
 				.shaderStages = {
 					{
-						.stage = vk::ShaderStageFlagBits::eVertex,
 						.module = _context.cache().fetch(
 							descriptors::ShaderModule{
 								.source = descriptors::ShaderModule::File{"shaders/selection/particle.vert.spv"},
 								PBF_DESC_DEBUG_NAME("shaders/selection/particle.vert.spv Vertex Shader")
 							}),
-						.entryPoint = "main"
 					},
 					{
-						.stage = vk::ShaderStageFlagBits::eFragment,
 						.module = _context.cache().fetch(
 							descriptors::ShaderModule{
 								.source = descriptors::ShaderModule::File{"shaders/selection/particle.frag.spv"},
 								PBF_DESC_DEBUG_NAME("shaders/selection/particle.frag.spv Fragment Shader")
 							}),
-						.entryPoint = "main"
 					}
 				},
 				.vertexBindingDescriptions = {

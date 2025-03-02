@@ -12,6 +12,9 @@
 #include <pbf/VulkanContext.h>
 #include <fstream>
 
+#include "DescriptorSetLayout.h"
+#include "PipelineLayout.h"
+
 using namespace pbf::descriptors;
 
 template<typename... Args> struct LambdaVisitor : Args... { using Args::operator()...; };
@@ -43,19 +46,58 @@ pbf::ShaderModulePtr ShaderModule::realize(ContextInterface &context) const {
 		}
 	}, source);
 
-	SpvReflectShaderModule module = {};
-	SpvReflectResult result = spvReflectCreateShaderModule2(SPV_REFLECT_MODULE_FLAG_NO_COPY, spirvCode.size() * sizeof(uint32_t), spirvCode.data(), &module);
-	assert(result == SPV_REFLECT_RESULT_SUCCESS);
+	static constexpr auto check = [](auto _result) { assert(_result == SPV_REFLECT_RESULT_SUCCESS); };
+
+	spv_reflect::ShaderModule module{spirvCode, SpvReflectModuleFlagBits::SPV_REFLECT_MODULE_FLAG_NO_COPY};
+	check(module.GetResult());
 
 	uint32_t count = 0;
-	result = spvReflectEnumerateDescriptorSets(&module, &count, NULL);
-	assert(result == SPV_REFLECT_RESULT_SUCCESS);
+	check(module.EnumerateDescriptorSets(&count, NULL));
 
 	std::vector<SpvReflectDescriptorSet*> sets(count);
-	result = spvReflectEnumerateDescriptorSets(&module, &count, sets.data());
-	assert(result == SPV_REFLECT_RESULT_SUCCESS);
+	check(module.EnumerateDescriptorSets(&count, sets.data()));
 
-	spvReflectDestroyShaderModule(&module);
+	shaderModule->stageFlags = static_cast<vk::ShaderStageFlagBits>(module.GetShaderStage());
+
+	// Demonstrates how to generate all necessary data structures to create a
+	// VkDescriptorSetLayout for each descriptor set in this shader.
+	shaderModule->descriptorSetInfos.reserve(sets.size());
+	for (size_t i_set = 0; i_set < sets.size(); ++i_set) {
+		const SpvReflectDescriptorSet& refl_set = *(sets[i_set]);
+		assert(refl_set.set < sets.size());
+		descriptors::DescriptorSetLayout layout;
+		layout.bindings.resize(refl_set.binding_count);
+		for (uint32_t i_binding = 0; i_binding < refl_set.binding_count; ++i_binding) {
+			const SpvReflectDescriptorBinding& refl_binding = *(refl_set.bindings[i_binding]);
+			auto& layout_binding = layout.bindings[i_binding];
+			layout_binding.binding = refl_binding.binding;
+			layout_binding.descriptorType = static_cast<vk::DescriptorType>(refl_binding.descriptor_type);
+			layout_binding.descriptorCount = 1;
+			for (uint32_t i_dim = 0; i_dim < refl_binding.array.dims_count; ++i_dim) {
+				layout_binding.descriptorCount *= refl_binding.array.dims[i_dim];
+			}
+			layout_binding.stageFlags = static_cast<vk::ShaderStageFlagBits>(module.GetShaderStage());
+		}
+		shaderModule->descriptorSetInfos.emplace_back(
+			refl_set.set,
+			std::move(layout)
+		);
+	}
+
+	uint32_t pushConstantCount = 0;
+	check(module.EnumeratePushConstantBlocks(&pushConstantCount, nullptr));
+	std::vector<SpvReflectBlockVariable*> pushConstants(pushConstantCount);
+	check(module.EnumeratePushConstantBlocks(&pushConstantCount, pushConstants.data()));
+
+	shaderModule->pushConstantInfos.resize(pushConstantCount);
+	for (uint32_t i_push = 0; i_push < pushConstantCount; ++i_push)
+	{
+		auto& info = shaderModule->pushConstantInfos[i_push];
+		info.size = pushConstants[i_push]->size;
+		info.offset = pushConstants[i_push]->offset;
+	}
+
+	shaderModule->entryPoint = module.GetEntryPointName();
 
 	shaderModule->shaderModule = device.createShaderModuleUnique(vk::ShaderModuleCreateInfo({
 		.codeSize = static_cast<uint32_t>(spirvCode.size() * sizeof(uint32_t)),

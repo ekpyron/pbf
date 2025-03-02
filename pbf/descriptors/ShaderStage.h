@@ -22,9 +22,7 @@ namespace pbf::descriptors
 
 struct ShaderStage
 {
-	vk::ShaderStageFlagBits stage;
 	CacheReference<ShaderModule> module;
-	std::string entryPoint;
 
 	struct SpecializationInfo
 	{
@@ -83,10 +81,11 @@ struct ShaderStage
 			.dataSize = specialization.size(),
 			.pData = specialization.data()
 		};
+		auto& _module = *module;
 		return vk::PipelineShaderStageCreateInfo{
-			.stage = stage,
-			.module = *(*module).shaderModule,
-			.pName = entryPoint.c_str(),
+			.stage = _module.stageFlags,
+			.module = *_module.shaderModule,
+			.pName = _module.entryPoint.c_str(),
 			.pSpecializationInfo = &specializationInfo
 		};
 	}
@@ -94,7 +93,7 @@ struct ShaderStage
 private:
 	using T = ShaderStage;
 public:
-	using Compare = PBFMemberComparator<&T::stage, &T::module, &T::entryPoint, &T::specialization>;
+	using Compare = PBFMemberComparator<&T::module, &T::specialization>;
 };
 
 }

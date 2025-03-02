@@ -83,13 +83,11 @@ prefixSums(_context, numKeys, vk::BufferUsageFlagBits::eStorageBuffer, MemoryTyp
 		descriptors::ComputePipeline{
 			.flags = {},
 			.shaderStage = descriptors::ShaderStage {
-				.stage = vk::ShaderStageFlagBits::eCompute,
 				.module = cache.fetch(
 					descriptors::ShaderModule{
 						.source = descriptors::ShaderModule::File{fmt::format("{}_prescan.comp.spv", _shaderPrefix)},
 						PBF_DESC_DEBUG_NAME("RadixSort: Prescan Compute Shader")
 					}),
-				.entryPoint = "main",
 				.specialization = {
 					Specialization<uint32_t>{.constantID = 0, .value = blockSize / 2}
 				}
@@ -125,13 +123,11 @@ prefixSums(_context, numKeys, vk::BufferUsageFlagBits::eStorageBuffer, MemoryTyp
 		descriptors::ComputePipeline{
 			.flags = {},
 			.shaderStage = descriptors::ShaderStage {
-				.stage = vk::ShaderStageFlagBits::eCompute,
 				.module = cache.fetch(
 					descriptors::ShaderModule{
 						.source = descriptors::ShaderModule::File{"shaders/radixsort/scan.comp.spv"},
 						PBF_DESC_DEBUG_NAME("Radix Sort: Scan Compute Shader")
 					}),
-				.entryPoint = "main",
 				.specialization = {
 					Specialization<uint32_t>{.constantID = 0, .value = blockSize / 2 }
 				}
@@ -145,13 +141,11 @@ prefixSums(_context, numKeys, vk::BufferUsageFlagBits::eStorageBuffer, MemoryTyp
 		descriptors::ComputePipeline{
 			.flags = {},
 			.shaderStage = descriptors::ShaderStage {
-				.stage = vk::ShaderStageFlagBits::eCompute,
 				.module = cache.fetch(
 					descriptors::ShaderModule{
 						.source = descriptors::ShaderModule::File{"shaders/radixsort/addblocksum.comp.spv"},
 						PBF_DESC_DEBUG_NAME("Radix Sort: Add Block Sum Compute Shader")
 					}),
-				.entryPoint = "main",
 				.specialization = {
 					Specialization<uint32_t>{.constantID = 0, .value = blockSize }
 				}
@@ -166,13 +160,11 @@ prefixSums(_context, numKeys, vk::BufferUsageFlagBits::eStorageBuffer, MemoryTyp
 		descriptors::ComputePipeline{
 			.flags = {},
 			.shaderStage = descriptors::ShaderStage {
-				.stage = vk::ShaderStageFlagBits::eCompute,
 				.module = cache.fetch(
 					descriptors::ShaderModule{
 						.source = descriptors::ShaderModule::File{fmt::format("{}_globalsort.comp.spv", _shaderPrefix)},
 						PBF_DESC_DEBUG_NAME("Radix Sort: Global Sort Compute Shader")
 					}),
-				.entryPoint = "main",
 				.specialization = {
 					Specialization<uint32_t>{.constantID = 0, .value = blockSize }
 				}

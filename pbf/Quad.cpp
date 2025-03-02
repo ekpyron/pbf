@@ -26,22 +26,18 @@ Quad::Quad(InitContext& initContext, Scene& scene, Renderer& _renderer, GlobalAp
 		pbf::descriptors::GraphicsPipeline{
             .shaderStages = {
                     {
-                            .stage = vk::ShaderStageFlagBits::eVertex,
                             .module = scene.context().cache().fetch(
 								descriptors::ShaderModule{
                                     .source = descriptors::ShaderModule::File{"shaders/particle.vert.spv"},
                                     PBF_DESC_DEBUG_NAME("shaders/particle.vert.spv Vertex Shader")
 	                            }),
-                            .entryPoint = "main"
                     },
                     {
-                            .stage = vk::ShaderStageFlagBits::eFragment,
                             .module = scene.context().cache().fetch(
 								descriptors::ShaderModule{
 									.source = descriptors::ShaderModule::File{"shaders/particle.frag.spv"},
                                     PBF_DESC_DEBUG_NAME("shaders/particle.frag.spv Fragment Shader")
 	                            }),
-                            .entryPoint = "main"
                     }
             },
             .vertexBindingDescriptions = {

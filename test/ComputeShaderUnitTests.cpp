@@ -37,7 +37,6 @@ TEST_CASE_METHOD(ComputeShaderUnitTest, "Compute Shader Stub Test", "[stub]")
 		descriptors::ComputePipeline{
 			.flags = {},
 			.shaderStage = descriptors::ShaderStage {
-				.stage = vk::ShaderStageFlagBits::eCompute,
 				.module = cache().fetch(
 					descriptors::ShaderModule{
 						.source = compileComputeShader(R"(
@@ -61,7 +60,6 @@ void main()
 						)"),
 						PBF_DESC_DEBUG_NAME("shaders/stub.comp.spv Compute Shader")
 					}),
-				.entryPoint = "main",
 				.specialization = {
 					Specialization<uint32_t>{.constantID = 0, .value = 4},
 					Specialization<uint32_t>{.constantID = 2, .value = 7}
@@ -541,7 +539,6 @@ TEST_CASE_METHOD(ComputeShaderUnitTest, "Compute Shader Sort Test Old Reference"
 		descriptors::ComputePipeline{
 			.flags = {},
 			.shaderStage = descriptors::ShaderStage {
-				.stage = vk::ShaderStageFlagBits::eCompute,
 				.module = cache().fetch(
 					descriptors::ShaderModule{
 						.source = compileComputeShader(R"(
@@ -634,7 +631,6 @@ void main()
 						)"),
 						PBF_DESC_DEBUG_NAME("Prescan Compute Shader")
 					}),
-				.entryPoint = "main",
 				.specialization = {
 					Specialization<uint32_t>{.constantID = 0, .value = blockSize / 2 }
 				}
@@ -647,7 +643,6 @@ void main()
 		descriptors::ComputePipeline{
 			.flags = {},
 			.shaderStage = descriptors::ShaderStage {
-				.stage = vk::ShaderStageFlagBits::eCompute,
 				.module = cache().fetch(
 					descriptors::ShaderModule{
 						.source = compileComputeShader(R"(
@@ -725,7 +720,6 @@ void main()
 						)"),
 						PBF_DESC_DEBUG_NAME("Scan Compute Shader")
 					}),
-				.entryPoint = "main",
 				.specialization = {
 					Specialization<uint32_t>{.constantID = 0, .value = blockSize / 2 }
 				}
@@ -739,7 +733,6 @@ void main()
 		descriptors::ComputePipeline{
 			.flags = {},
 			.shaderStage = descriptors::ShaderStage {
-				.stage = vk::ShaderStageFlagBits::eCompute,
 				.module = cache().fetch(
 					descriptors::ShaderModule{
 						.source = compileComputeShader(R"(
@@ -766,7 +759,6 @@ void main()
 						)"),
 						PBF_DESC_DEBUG_NAME("Add Block Sum Compute Shader")
 					}),
-				.entryPoint = "main",
 				.specialization = {
 					Specialization<uint32_t>{.constantID = 0, .value = blockSize }
 				}
@@ -781,7 +773,6 @@ void main()
 		descriptors::ComputePipeline{
 			.flags = {},
 			.shaderStage = descriptors::ShaderStage {
-				.stage = vk::ShaderStageFlagBits::eCompute,
 				.module = cache().fetch(
 					descriptors::ShaderModule{
 						.source = compileComputeShader(R"(
@@ -834,7 +825,6 @@ void main()
 						)"),
 						PBF_DESC_DEBUG_NAME("Global Sort Compute Shader")
 					}),
-				.entryPoint = "main",
 				.specialization = {
 					Specialization<uint32_t>{.constantID = 0, .value = blockSize }
 				}
@@ -1206,13 +1196,11 @@ TEST_CASE_METHOD(ComputeShaderUnitTest, "Compute Shader Sort Test", "[neighbour_
             pbf::descriptors::ComputePipeline{
                     .flags = {},
                     .shaderStage = pbf::descriptors::ShaderStage {
-                            .stage = vk::ShaderStageFlagBits::eCompute,
                             .module = cache().fetch(
                                     pbf::descriptors::ShaderModule{
                                             .source = pbf::descriptors::ShaderModule::File{"shaders/unittestneighbours/celloutput.comp.spv"},
                                             PBF_DESC_DEBUG_NAME("Neighbour Cell Output Unit Test Shader")
                                     }),
-                            .entryPoint = "main",
                             .specialization = {
                                     pbf::Specialization<uint32_t>{.constantID = 0, .value = blockSize}
                             }

@@ -46,13 +46,11 @@ _gridBoundaryBuffer(context, numGridCells, vk::BufferUsageFlagBits::eStorageBuff
 		descriptors::ComputePipeline{
 			.flags = {},
 			.shaderStage = descriptors::ShaderStage {
-				.stage = vk::ShaderStageFlagBits::eCompute,
 				.module = cache.fetch(
 					descriptors::ShaderModule{
 						.source = descriptors::ShaderModule::File{"shaders/neighbour/findcells.comp.spv"},
 						PBF_DESC_DEBUG_NAME("NeighbourCellFinder: Find Cells Compute Shader")
 					}),
-				.entryPoint = "main",
 				.specialization = {
 					Specialization<uint32_t>{.constantID = 0, .value = blockSize},
                     Specialization<uint32_t>{.constantID = 1, .value = static_cast<uint32_t>(maxID)}

@@ -376,13 +376,11 @@ frameSyncData(_renderer)
             descriptors::ComputePipeline{
                 .flags = {},
                 .shaderStage = descriptors::ShaderStage {
-                    .stage = vk::ShaderStageFlagBits::eCompute,
                     .module = cache.fetch(
                     descriptors::ShaderModule{
                         .source = descriptors::ShaderModule::File{"shaders/surface/depthblur.comp.spv"},
                         PBF_DESC_DEBUG_NAME("SurfaceReconstruction: depth blur shader module")
                     }),
-                    .entryPoint = "main",
                     .specialization = {}
                 },
                 .pipelineLayout = depthBlurPipelineLayout,
@@ -400,13 +398,11 @@ frameSyncData(_renderer)
 			descriptors::ComputePipeline{
 				.flags = {},
 				.shaderStage = descriptors::ShaderStage {
-					.stage = vk::ShaderStageFlagBits::eCompute,
 					.module = cache.fetch(
 					descriptors::ShaderModule{
 						.source = descriptors::ShaderModule::File{"shaders/surface/reconstruct_normals.comp.spv"},
 						PBF_DESC_DEBUG_NAME("SurfaceReconstruction: reconstruct normals shader module")
 					}),
-					.entryPoint = "main",
 					.specialization = {}
 				},
 				.pipelineLayout = reconstructNormalPipelineLayout,

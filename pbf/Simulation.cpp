@@ -273,13 +273,11 @@ void Simulation::initKeys(VulkanContext& context, vk::CommandBuffer buf)
 		descriptors::ComputePipeline{
 			.flags = {},
 			.shaderStage = descriptors::ShaderStage {
-				.stage = vk::ShaderStageFlagBits::eCompute,
 				.module = cache.fetch(
 					descriptors::ShaderModule{
 						.source = descriptors::ShaderModule::File{"shaders/simulation/keyinit.comp.spv"},
 						PBF_DESC_DEBUG_NAME("Simulation: key init shader module")
 					}),
-				.entryPoint = "main",
 				.specialization = {
 					Specialization<uint32_t>{.constantID = 0, .value = blockSize}
 				}
@@ -554,13 +552,11 @@ void Simulation::buildPipelines()
 			descriptors::ComputePipeline{
 				.flags = {},
 				.shaderStage = descriptors::ShaderStage {
-					.stage = vk::ShaderStageFlagBits::eCompute,
 					.module = cache.fetch(
 					descriptors::ShaderModule{
 						.source = descriptors::ShaderModule::File{"shaders/simulation/particledataupdate.comp.spv"},
 						PBF_DESC_DEBUG_NAME("Simulation: particle data update shader module")
 					}),
-					.entryPoint = "main",
 					.specialization = specializationInfo
 				},
 				.pipelineLayout = particleDataUpdatePipelineLayout,
@@ -585,13 +581,11 @@ void Simulation::buildPipelines()
 			descriptors::ComputePipeline{
 				.flags = {},
 				.shaderStage = descriptors::ShaderStage {
-					.stage = vk::ShaderStageFlagBits::eCompute,
 					.module = cache.fetch(
 					descriptors::ShaderModule{
 						.source = descriptors::ShaderModule::File{"shaders/simulation/unconstrainedupdate.comp.spv"},
 						PBF_DESC_DEBUG_NAME("Simulation: unconstrained system update shader (Update positions based on velocity and external forces without considering constraint violations.)")
 					}),
-					.entryPoint = "main",
 					.specialization = specializationInfo
 				},
 				.pipelineLayout = unconstrainedSystemUpdatePipelineLayout,
@@ -640,13 +634,11 @@ void Simulation::buildPipelines()
 			descriptors::ComputePipeline{
 				.flags = {},
 				.shaderStage = descriptors::ShaderStage {
-					.stage = vk::ShaderStageFlagBits::eCompute,
 					.module = cache.fetch(
 					descriptors::ShaderModule{
 						.source = descriptors::ShaderModule::File{"shaders/simulation/calclambda.comp.spv"},
 						PBF_DESC_DEBUG_NAME("Simulation: Calc Lambda Shader")
 					}),
-					.entryPoint = "main",
 					.specialization = specializationInfo
 				},
 				.pipelineLayout = calcLambdaPipelineLayout,
@@ -667,13 +659,11 @@ void Simulation::buildPipelines()
 			descriptors::ComputePipeline{
 				.flags = {},
 				.shaderStage = descriptors::ShaderStage {
-					.stage = vk::ShaderStageFlagBits::eCompute,
 					.module = cache.fetch(
 					descriptors::ShaderModule{
 						.source = descriptors::ShaderModule::File{"shaders/simulation/calcvorticity.comp.spv"},
 						PBF_DESC_DEBUG_NAME("Simulation: Calc Vorticity Shader")
 					}),
-					.entryPoint = "main",
 					.specialization = specializationInfo
 				},
 				.pipelineLayout = calcVorticityPipelineLayout,
@@ -704,13 +694,11 @@ void Simulation::buildPipelines()
 			descriptors::ComputePipeline{
 				.flags = {},
 				.shaderStage = descriptors::ShaderStage {
-					.stage = vk::ShaderStageFlagBits::eCompute,
 					.module = cache.fetch(
 					descriptors::ShaderModule{
 						.source = descriptors::ShaderModule::File{"shaders/simulation/updatevel.comp.spv"},
 						PBF_DESC_DEBUG_NAME("Simulation: Update Vel Shader")
 					}),
-					.entryPoint = "main",
 					.specialization = specializationInfo
 				},
 				.pipelineLayout = updateVelPipelineLayout,
@@ -735,13 +723,11 @@ void Simulation::buildPipelines()
 			descriptors::ComputePipeline{
 				.flags = {},
 				.shaderStage = descriptors::ShaderStage {
-					.stage = vk::ShaderStageFlagBits::eCompute,
 					.module = cache.fetch(
 					descriptors::ShaderModule{
 						.source = descriptors::ShaderModule::File{"shaders/simulation/updatepos.comp.spv"},
 						PBF_DESC_DEBUG_NAME("Simulation: Update Pos Shader")
 					}),
-					.entryPoint = "main",
 					.specialization = specializationInfo
 				},
 				.pipelineLayout = updatePosPipelineLayout,
