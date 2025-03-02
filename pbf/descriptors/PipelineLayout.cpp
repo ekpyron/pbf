@@ -16,7 +16,9 @@ vk::UniquePipelineLayout PipelineLayout::realize(ContextInterface &context) cons
     std::vector<vk::DescriptorSetLayout> vkSetLayouts;
     vkSetLayouts.reserve(setLayouts.size());
     std::transform(setLayouts.begin(), setLayouts.end(), std::back_inserter(vkSetLayouts), [](const auto& _layout) {
-        return *_layout;
+    	if (_layout)
+    		return *_layout;
+    	return vk::DescriptorSetLayout();
     });
     return device.createPipelineLayoutUnique(vk::PipelineLayoutCreateInfo{
 		.setLayoutCount = size32(vkSetLayouts),

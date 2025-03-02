@@ -15,7 +15,8 @@
 
 using namespace pbf::descriptors;
 
-vk::UniquePipeline GraphicsPipeline::realize(ContextInterface &context) const {
+pbf::Pipeline GraphicsPipeline::realize(ContextInterface &context) const {
+	pbf::Pipeline graphicsPipeline;
     auto const& device = context.device();
 
     vk::PipelineVertexInputStateCreateInfo vertexInputStateCreateInfo;
@@ -69,6 +70,10 @@ vk::UniquePipeline GraphicsPipeline::realize(ContextInterface &context) const {
     }
     colorBlendStateCreateInfo.setBlendConstants(blendConstants);
 
+	graphicsPipeline.pipelineLayout = Pipeline::deducePipelineLayout(context.cache(),
+		shaderStages
+		PBF_ARG_DEBUG_NAME(debugName + " Pipeline Layout")
+	);
 
     vk::GraphicsPipelineCreateInfo info{
 		.stageCount = static_cast<uint32_t>(stageCreateInfos.size()),
@@ -82,7 +87,7 @@ vk::UniquePipeline GraphicsPipeline::realize(ContextInterface &context) const {
 		.pDepthStencilState = &depthStencilStateCreateInfo,
 		.pColorBlendState = &colorBlendStateCreateInfo,
 		.pDynamicState = dynamicStateCreateInfo ? &*dynamicStateCreateInfo : nullptr,
-		.layout = *pipelineLayout,
+		.layout = *graphicsPipeline.pipelineLayout,
 		.renderPass = *renderPass,
 		.subpass = subpass
 	};
@@ -90,5 +95,6 @@ vk::UniquePipeline GraphicsPipeline::realize(ContextInterface &context) const {
 	auto [result, pipeline] = device.createGraphicsPipelineUnique(nullptr, info);
 	if (result != vk::Result::eSuccess)
 		throw std::runtime_error("could not create graphics pipeline.");
-	return std::move(pipeline);
+	graphicsPipeline.pipeline = std::move(pipeline);
+	return graphicsPipeline;
 }

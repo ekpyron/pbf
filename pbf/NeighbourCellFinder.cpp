@@ -11,37 +11,6 @@ _gridBoundaryBuffer(context, numGridCells, vk::BufferUsageFlagBits::eStorageBuff
 {
 	auto& cache = context.cache();
 
-	auto inputDescriptorSetLayout = cache.fetch(descriptors::DescriptorSetLayout{
-		.createFlags = {},
-		.bindings = {{
-						 .binding = 0,
-						 .descriptorType = vk::DescriptorType::eStorageBuffer,
-						 .descriptorCount = 1,
-						 .stageFlags = vk::ShaderStageFlagBits::eCompute
-					 },{
-						 .binding = 1,
-						 .descriptorType = vk::DescriptorType::eUniformBuffer,
-						 .descriptorCount = 1,
-						 .stageFlags = vk::ShaderStageFlagBits::eCompute
-					 }},
-		PBF_DESC_DEBUG_NAME("Neighbour Cell Input Descriptor Layout")
-	});
-	auto gridDataDescriptorSetLayout = cache.fetch(descriptors::DescriptorSetLayout{
-		.createFlags = {},
-		.bindings = {{
-						 .binding = 0,
-						 .descriptorType = vk::DescriptorType::eStorageBuffer,
-						 .descriptorCount = 1,
-						 .stageFlags = vk::ShaderStageFlagBits::eCompute
-					 }},
-		PBF_DESC_DEBUG_NAME("Neighbour Cell Grid Data Layout")
-	});
-	auto neighbourCellPipelineLayout = cache.fetch(
-		descriptors::PipelineLayout{
-			.setLayouts = {inputDescriptorSetLayout, gridDataDescriptorSetLayout},
-			PBF_DESC_DEBUG_NAME("Neighbour cell pipeline Layout")
-		});
-
 	_findCellsPipeline = cache.fetch(
 		descriptors::ComputePipeline{
 			.flags = {},
@@ -56,7 +25,6 @@ _gridBoundaryBuffer(context, numGridCells, vk::BufferUsageFlagBits::eStorageBuff
                     Specialization<uint32_t>{.constantID = 1, .value = static_cast<uint32_t>(maxID)}
 				}
 			},
-			.pipelineLayout = neighbourCellPipelineLayout,
 			PBF_DESC_DEBUG_NAME("NeighbourCellFinder: find cells pipeline")
 		}
 	);

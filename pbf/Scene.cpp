@@ -50,15 +50,15 @@ void Scene::enqueueCommands(vk::CommandBuffer &buf) {
 
     for (auto& [graphicsPipeline, innerMap] : indirectDrawCalls)
     {
-        buf.bindPipeline(vk::PipelineBindPoint::eGraphics, *graphicsPipeline);
-        buf.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, *(graphicsPipeline.descriptor().pipelineLayout), 0, { globalData.globalDescriptorSet()}, {});
+        buf.bindPipeline(vk::PipelineBindPoint::eGraphics, *graphicsPipeline->pipeline);
+        buf.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, *graphicsPipeline->pipelineLayout, 0, { globalData.globalDescriptorSet()}, {});
 
 		for (auto& [pushConstantData, innerMap] : innerMap)
 		{
 			if (!pushConstantData.empty())
 				buf.pushConstants(
-					*(graphicsPipeline.descriptor().pipelineLayout),
-					vk::ShaderStageFlagBits::eVertex,
+					*graphicsPipeline->pipelineLayout,
+					vk::ShaderStageFlagBits::eAll,
 					0,
 					static_cast<uint32_t>(pushConstantData.size()),
 					pushConstantData.data()

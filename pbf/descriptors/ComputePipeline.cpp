@@ -12,17 +12,28 @@
 
 using namespace pbf::descriptors;
 
-vk::UniquePipeline ComputePipeline::realize(ContextInterface &context) const {
+pbf::Pipeline ComputePipeline::realize(ContextInterface &context) const {
+	Pipeline computePipeline;
 	vk::SpecializationInfo specializationInfo;
+
+
+	computePipeline.pipelineLayout = Pipeline::deducePipelineLayout(context.cache(),
+	{ shaderStage }
+	PBF_ARG_DEBUG_NAME(debugName + " Pipeline Layout")
+	);
+
+
 	auto [result, pipeline] = context.device().createComputePipelineUnique(nullptr, vk::ComputePipelineCreateInfo{
 		.flags = flags,
 		.stage = shaderStage.createInfo(specializationInfo),
-		.layout = *pipelineLayout,
+		.layout = *computePipeline.pipelineLayout,
 		.basePipelineHandle = {},
 		.basePipelineIndex = {}
 	});
 
 	if (result != vk::Result::eSuccess)
 		throw std::runtime_error("could not create graphics pipeline.");
-	return std::move(pipeline);
+
+	computePipeline.pipeline = std::move(pipeline);
+	return computePipeline;
 }

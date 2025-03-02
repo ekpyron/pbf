@@ -6,7 +6,6 @@
 
 #include "VulkanContext.h"
 #include "Renderer.h"
-#include "descriptors/DescriptorSet.h"
 #include <list>
 
 #include "App.h"
@@ -118,34 +117,36 @@ SurfaceReconstruction::FrameData::FrameData(InitContext& _initContext, Renderer&
 
 	{
 		std::vector<vk::DescriptorSetLayout> setLayouts;
-		for (auto& layout: _parent._depthBlurPipeline.descriptor().pipelineLayout.descriptor().setLayouts)
+		_parent._depthBlurPipeline.keepAlive();
+		_parent._reconstructNormalsPipeline.keepAlive();
+		for (auto& layout: _parent._depthBlurPipeline->pipelineLayout.descriptor().setLayouts)
 			setLayouts.emplace_back(*layout);
-		for (auto& layout: _parent._depthBlurPipeline.descriptor().pipelineLayout.descriptor().setLayouts)
+		for (auto& layout: _parent._depthBlurPipeline->pipelineLayout.descriptor().setLayouts)
 			setLayouts.emplace_back(*layout);
-		for (auto& layout: _parent._reconstructNormalsPipeline.descriptor().pipelineLayout.descriptor().setLayouts)
+		for (auto& layout: _parent._reconstructNormalsPipeline->pipelineLayout.descriptor().setLayouts)
 			setLayouts.emplace_back(*layout);
 		{
 			auto allocatedDescriptorSets = context.device().allocateDescriptorSetsUnique(
 				vk::DescriptorSetAllocateInfo{
 					.descriptorPool = context.descriptorPool(),
-					.descriptorSetCount = 8,
+					.descriptorSetCount = static_cast<uint32_t>(setLayouts.size()),
 					.pSetLayouts = setLayouts.data()
 				}
 			);
 			depthBlurDescriptorSets.inputSampler = std::move(allocatedDescriptorSets.at(0));
 			depthBlurDescriptorSets.outputStorageImage = std::move(allocatedDescriptorSets.at(1));
-			depthBlurDescriptorSets.blurDirUniformBuffer = std::move(allocatedDescriptorSets.at(2));
-			depthBlurPongDescriptorSets.inputSampler = std::move(allocatedDescriptorSets.at(3));
-			depthBlurPongDescriptorSets.outputStorageImage = std::move(allocatedDescriptorSets.at(4));
-			depthBlurPongDescriptorSets.blurDirUniformBuffer = std::move(allocatedDescriptorSets.at(5));
-			reconstructNormalDescriptorSets.inputSampler = std::move(allocatedDescriptorSets.at(6));
-			reconstructNormalDescriptorSets.outputStorageImage = std::move(allocatedDescriptorSets.at(7));
-			//reconstructNormalDescriptorSets.uniformBuffer = std::move(allocatedDescriptorSets.at(5));
+			//depthBlurDescriptorSets.blurDirUniformBuffer = std::move(allocatedDescriptorSets.at(2));
+			depthBlurPongDescriptorSets.inputSampler = std::move(allocatedDescriptorSets.at(2));
+			depthBlurPongDescriptorSets.outputStorageImage = std::move(allocatedDescriptorSets.at(3));
+			//depthBlurPongDescriptorSets.blurDirUniformBuffer = std::move(allocatedDescriptorSets.at(5));
+			reconstructNormalDescriptorSets.inputSampler = std::move(allocatedDescriptorSets.at(4));
+			reconstructNormalDescriptorSets.outputStorageImage = std::move(allocatedDescriptorSets.at(5));
+			//reconstructNormalDescriptorSets.uniformBuffer = std::move(allocatedDescriptorSets.at(6));
+			// TODO: note: we're allocating one more unused descriptor set here currently.
 		}
 
 
 		std::vector<vk::WriteDescriptorSet> descriptorWrites;
-	    size_t prerenderCount = _renderer.framePrerenderCount();
 	    auto blurDirBufferInfo = _parent.blurDirBuffer.fullBufferInfo();
 	    std::list<vk::DescriptorImageInfo> imageInfos;
 	    vk::DescriptorImageInfo& inputImageInfo = imageInfos.emplace_back(vk::DescriptorImageInfo{
@@ -188,7 +189,7 @@ SurfaceReconstruction::FrameData::FrameData(InitContext& _initContext, Renderer&
 					.pTexelBufferView = nullptr
 				}
 			);
-			descriptorWrites.emplace_back(
+			/*descriptorWrites.emplace_back(
 				vk::WriteDescriptorSet{
 					.dstSet = *depthBlurDescriptorSets.blurDirUniformBuffer,
 					.dstBinding = 0,
@@ -199,7 +200,7 @@ SurfaceReconstruction::FrameData::FrameData(InitContext& _initContext, Renderer&
 					.pBufferInfo = &blurDirBufferInfo,
 					.pTexelBufferView = nullptr
 				}
-			);
+			);*/
 		}
 		// depth blur pong descriptor writes
 		{
@@ -227,7 +228,7 @@ SurfaceReconstruction::FrameData::FrameData(InitContext& _initContext, Renderer&
 					.pTexelBufferView = nullptr
 				}
 			);
-			descriptorWrites.emplace_back(
+			/*descriptorWrites.emplace_back(
 				vk::WriteDescriptorSet{
 					.dstSet = *depthBlurPongDescriptorSets.blurDirUniformBuffer,
 					.dstBinding = 0,
@@ -238,7 +239,7 @@ SurfaceReconstruction::FrameData::FrameData(InitContext& _initContext, Renderer&
 					.pBufferInfo = &blurDirBufferInfo,
 					.pTexelBufferView = nullptr
 				}
-			);
+			);*/
 		}		// reconstruct normal descriptor writes
 		{
 			descriptorWrites.emplace_back(
@@ -366,12 +367,6 @@ frameSyncData(_renderer)
         });
         descriptorSetCacheReferences.emplace_back(blurDirection);
 
-        auto depthBlurPipelineLayout = cache.fetch(
-                descriptors::PipelineLayout{
-                    .setLayouts = {depthInputSetLayout, blurredDepthOutputSetLayout, blurDirection},
-                    .pushConstants = {},
-                    PBF_DESC_DEBUG_NAME("Depth blur pipeline layout")
-                });
         _depthBlurPipeline = cache.fetch(
             descriptors::ComputePipeline{
                 .flags = {},
@@ -383,17 +378,10 @@ frameSyncData(_renderer)
                     }),
                     .specialization = {}
                 },
-                .pipelineLayout = depthBlurPipelineLayout,
                 PBF_DESC_DEBUG_NAME("SurfaceReconstruction: depth blur shader pipeline")
             }
         );
 
-    	auto reconstructNormalPipelineLayout = cache.fetch(
-				descriptors::PipelineLayout{
-					.setLayouts = {depthInputSetLayout, blurredDepthOutputSetLayout, globalAppData.globalDescriptorSetLayout()},
-					.pushConstants = {},
-					PBF_DESC_DEBUG_NAME("ReconstructNormal blur pipeline layout")
-				});
     	_reconstructNormalsPipeline = cache.fetch(
 			descriptors::ComputePipeline{
 				.flags = {},
@@ -405,7 +393,6 @@ frameSyncData(_renderer)
 					}),
 					.specialization = {}
 				},
-				.pipelineLayout = reconstructNormalPipelineLayout,
 				PBF_DESC_DEBUG_NAME("SurfaceReconstruction: reconstruct normals shader pipeline")
 			}
 		);
@@ -443,11 +430,11 @@ void SurfaceReconstruction::run(vk::CommandBuffer& _buf)
 	for (int i = 0; i < 8; i++)
 	{
 
-    _buf.bindPipeline(vk::PipelineBindPoint::eCompute, *_depthBlurPipeline);
+    _buf.bindPipeline(vk::PipelineBindPoint::eCompute, *_depthBlurPipeline->pipeline);
 
     _buf.bindDescriptorSets(
         vk::PipelineBindPoint::eCompute,
-        *_depthBlurPipeline.descriptor().pipelineLayout,
+        *_depthBlurPipeline->pipelineLayout,
         0,
         frameData.depthBlurDescriptorSets.all(),
         {}
@@ -475,7 +462,7 @@ void SurfaceReconstruction::run(vk::CommandBuffer& _buf)
 
 	_buf.bindDescriptorSets(
 	vk::PipelineBindPoint::eCompute,
-	*_depthBlurPipeline.descriptor().pipelineLayout,
+	*_depthBlurPipeline->pipelineLayout,
 	0,
 	frameData.depthBlurPongDescriptorSets.all(),
 	{}
@@ -503,7 +490,7 @@ void SurfaceReconstruction::run(vk::CommandBuffer& _buf)
 
 	_buf.bindDescriptorSets(
 		vk::PipelineBindPoint::eCompute,
-		*_depthBlurPipeline.descriptor().pipelineLayout,
+		*_depthBlurPipeline->pipelineLayout,
 		0,
 		frameData.depthBlurDescriptorSets.all(),
 		{}
@@ -532,11 +519,11 @@ void SurfaceReconstruction::run(vk::CommandBuffer& _buf)
 
 
 
-	_buf.bindPipeline(vk::PipelineBindPoint::eCompute, *_reconstructNormalsPipeline);
+	_buf.bindPipeline(vk::PipelineBindPoint::eCompute, *_reconstructNormalsPipeline->pipeline);
 
 	_buf.bindDescriptorSets(
 		vk::PipelineBindPoint::eCompute,
-		*_reconstructNormalsPipeline.descriptor().pipelineLayout,
+		*_reconstructNormalsPipeline->pipelineLayout,
 		0,
 		frameData.reconstructNormalDescriptorSets.all(),
 		{}

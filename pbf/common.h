@@ -95,6 +95,7 @@ struct FrameData: FrameDataBase {
 
 #ifndef NDEBUG
 #define PBF_DESC_DEBUG_NAME(name) .debugName = name
+#define PBF_ARG_DEBUG_NAME(name) , name
 #else
 #define PBF_DESC_DEBUG_NAME(name)
 #endif

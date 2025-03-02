@@ -65,11 +65,6 @@ void main()
 					Specialization<uint32_t>{.constantID = 2, .value = 7}
 				}
 			},
-			.pipelineLayout = cache().fetch(
-				descriptors::PipelineLayout{
-					.setLayouts = {{stubLayout}},
-					PBF_DESC_DEBUG_NAME("prescan pipeline Layout")
-				}),
 			PBF_DESC_DEBUG_NAME("prescan pipeline")
 		}
 	);
@@ -102,8 +97,8 @@ void main()
 	}
 
 	run([&](vk::CommandBuffer buf) {
-		buf.bindPipeline(vk::PipelineBindPoint::eCompute, *stubPipeline);
-		buf.bindDescriptorSets(vk::PipelineBindPoint::eCompute, *(stubPipeline.descriptor().pipelineLayout), 0, {stubParams}, {});
+		buf.bindPipeline(vk::PipelineBindPoint::eCompute, *stubPipeline->pipeline);
+		buf.bindDescriptorSets(vk::PipelineBindPoint::eCompute, *(stubPipeline->pipelineLayout), 0, {stubParams}, {});
 		buf.dispatch(4, 1, 1);
 	});
 
@@ -523,18 +518,6 @@ TEST_CASE_METHOD(ComputeShaderUnitTest, "Compute Shader Sort Test Old Reference"
 		}},
 		PBF_DESC_DEBUG_NAME("Stub Descriptor Set Layout")
 	});
-	auto sortPipelineLayout = cache().fetch(
-	descriptors::PipelineLayout{
-		.setLayouts = {{sortLayout}},
-		.pushConstants = {
-			vk::PushConstantRange{
-				vk::ShaderStageFlagBits::eCompute,
-				0,
-				sizeof(PushConstants)
-			}
-		},
-		PBF_DESC_DEBUG_NAME("prescan pipeline Layout")
-	});
 	auto prescanPipeline = cache().fetch(
 		descriptors::ComputePipeline{
 			.flags = {},
@@ -635,7 +618,6 @@ void main()
 					Specialization<uint32_t>{.constantID = 0, .value = blockSize / 2 }
 				}
 			},
-			.pipelineLayout = sortPipelineLayout,
 			PBF_DESC_DEBUG_NAME("prescan pipeline")
 		}
 	);
@@ -724,7 +706,6 @@ void main()
 					Specialization<uint32_t>{.constantID = 0, .value = blockSize / 2 }
 				}
 			},
-			.pipelineLayout = sortPipelineLayout,
 			PBF_DESC_DEBUG_NAME("scan pipeline")
 		}
 	);
@@ -763,7 +744,6 @@ void main()
 					Specialization<uint32_t>{.constantID = 0, .value = blockSize }
 				}
 			},
-			.pipelineLayout = sortPipelineLayout,
 			PBF_DESC_DEBUG_NAME("add block sum pipeline")
 		}
 	);
@@ -829,7 +809,6 @@ void main()
 					Specialization<uint32_t>{.constantID = 0, .value = blockSize }
 				}
 			},
-			.pipelineLayout = sortPipelineLayout,
 			PBF_DESC_DEBUG_NAME("global sort pipeline")
 		}
 	);
@@ -938,9 +917,9 @@ void main()
 			.bit = bit
 		};
 
-		buf.bindPipeline(vk::PipelineBindPoint::eCompute, *prescanPipeline);
-		buf.bindDescriptorSets(vk::PipelineBindPoint::eCompute, *(prescanPipeline.descriptor().pipelineLayout), 0, {prescanParams}, {});
-		buf.pushConstants(*(prescanPipeline.descriptor().pipelineLayout), vk::ShaderStageFlagBits::eCompute, 0, sizeof(pushConstants), &pushConstants);
+		buf.bindPipeline(vk::PipelineBindPoint::eCompute, *prescanPipeline->pipeline);
+		buf.bindDescriptorSets(vk::PipelineBindPoint::eCompute, *(prescanPipeline->pipelineLayout), 0, {prescanParams}, {});
+		buf.pushConstants(*(prescanPipeline->pipelineLayout), vk::ShaderStageFlagBits::eCompute, 0, sizeof(pushConstants), &pushConstants);
 		// reads keys; writes prefix sums and block sums
 		buf.dispatch(((numKeys + blockSize - 1) / blockSize), 1, 1);
 
@@ -954,11 +933,10 @@ void main()
 		for (size_t i = 0; i < blockSums.size() - 1; ++i)
 		{
 			auto& prefixSum = blockSums[i];
-			auto& blockSum = blockSums[i + 1];
 			const uint32_t numBlockSums = (prefixSum.size() + blockSize - 1) / blockSize;
 
-			buf.bindPipeline(vk::PipelineBindPoint::eCompute, *scanPipeline);
-			buf.bindDescriptorSets(vk::PipelineBindPoint::eCompute, *(scanPipeline.descriptor().pipelineLayout), 0, {scanParams[i]}, {});
+			buf.bindPipeline(vk::PipelineBindPoint::eCompute, *scanPipeline->pipeline);
+			buf.bindDescriptorSets(vk::PipelineBindPoint::eCompute, *(scanPipeline->pipelineLayout), 0, {scanParams[i]}, {});
 			buf.dispatch(numBlockSums, 1, 1);
 
 			buf.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {}, {
@@ -973,8 +951,8 @@ void main()
 			auto& prefixSum = blockSums[i - 1];
 			const uint32_t numBlockSums = (prefixSum.size() + blockSize - 1) / blockSize;
 
-			buf.bindPipeline(vk::PipelineBindPoint::eCompute, *addBlockSumPipeline);
-			buf.bindDescriptorSets(vk::PipelineBindPoint::eCompute, *(scanPipeline.descriptor().pipelineLayout), 0, {scanParams[i - 1]}, {});
+			buf.bindPipeline(vk::PipelineBindPoint::eCompute, *addBlockSumPipeline->pipeline);
+			buf.bindDescriptorSets(vk::PipelineBindPoint::eCompute, *(scanPipeline->pipelineLayout), 0, {scanParams[i - 1]}, {});
 			buf.dispatch(numBlockSums, 1, 1);
 
 			buf.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {}, {
@@ -985,9 +963,9 @@ void main()
 			}, {}, {});
 		}
 
-		buf.bindPipeline(vk::PipelineBindPoint::eCompute, *globalSortPipeline);
-		buf.bindDescriptorSets(vk::PipelineBindPoint::eCompute, *(globalSortPipeline.descriptor().pipelineLayout), 0, {globalSortParams}, {});
-		buf.pushConstants(*(globalSortPipeline.descriptor().pipelineLayout), vk::ShaderStageFlagBits::eCompute, 0, sizeof(pushConstants), &pushConstants);
+		buf.bindPipeline(vk::PipelineBindPoint::eCompute, *globalSortPipeline->pipeline);
+		buf.bindDescriptorSets(vk::PipelineBindPoint::eCompute, *(globalSortPipeline->pipelineLayout), 0, {globalSortParams}, {});
+		buf.pushConstants(*(globalSortPipeline->pipelineLayout), vk::ShaderStageFlagBits::eCompute, 0, sizeof(pushConstants), &pushConstants);
 		// reads keys, prefix sums and block sums; writes result
 		buf.dispatch(((numKeys + blockSize - 1) / blockSize), 1, 1);
 
@@ -1170,28 +1148,6 @@ TEST_CASE_METHOD(ComputeShaderUnitTest, "Compute Shader Sort Test", "[neighbour_
     pbf::Buffer<pbf::NeighbourCellFinder::GridData> gridDataBuffer(*this, 1, vk::BufferUsageFlagBits::eUniformBuffer, pbf::MemoryType::DYNAMIC);
     *gridDataBuffer.data() = gridData;
 
-
-    auto cellOutputLayoutSet0 = cache().fetch(neighbourCellFinder.inputDescriptorSetLayout());
-    auto cellOutputLayoutSet1 = cache().fetch(pbf::descriptors::DescriptorSetLayout{
-            .createFlags = {},
-            .bindings = {{
-                                 .binding = 0,
-                                 .descriptorType = vk::DescriptorType::eStorageBuffer,
-                                 .descriptorCount = 1,
-                                 .stageFlags = vk::ShaderStageFlagBits::eCompute
-                         },{
-                                 .binding = 1,
-                                 .descriptorType = vk::DescriptorType::eStorageBuffer,
-                                 .descriptorCount = 1,
-                                 .stageFlags = vk::ShaderStageFlagBits::eCompute
-                         }},
-            PBF_DESC_DEBUG_NAME("Cell Output Descriptor Set 1 Layout")
-    });
-    auto cellOutputPipelineLayout = cache().fetch(
-            pbf::descriptors::PipelineLayout{
-                    .setLayouts = {{cellOutputLayoutSet0}, {cellOutputLayoutSet1}},
-                    PBF_DESC_DEBUG_NAME("cell output pipeline Layout")
-            });
     auto cellOutputPipeline = cache().fetch(
             pbf::descriptors::ComputePipeline{
                     .flags = {},
@@ -1205,7 +1161,6 @@ TEST_CASE_METHOD(ComputeShaderUnitTest, "Compute Shader Sort Test", "[neighbour_
                                     pbf::Specialization<uint32_t>{.constantID = 0, .value = blockSize}
                             }
                     },
-                    .pipelineLayout = cellOutputPipelineLayout,
                     PBF_DESC_DEBUG_NAME("cell output unit test pipeline")
             }
     );

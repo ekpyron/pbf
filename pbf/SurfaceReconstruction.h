@@ -47,10 +47,10 @@ public:
         {
             vk::UniqueDescriptorSet inputSampler;
             vk::UniqueDescriptorSet outputStorageImage;
-            vk::UniqueDescriptorSet blurDirUniformBuffer;
+            //vk::UniqueDescriptorSet blurDirUniformBuffer;
             std::vector<vk::DescriptorSet> all() const
             {
-                return {*inputSampler, *outputStorageImage, *blurDirUniformBuffer};
+                return {*inputSampler, *outputStorageImage};//, *blurDirUniformBuffer};
             }
         };
         DepthBlurDescriptorSets depthBlurDescriptorSets;

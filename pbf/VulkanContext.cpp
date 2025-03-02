@@ -12,6 +12,9 @@
 #include <pbf/descriptors/DescriptorSetLayout.h>
 #include <contrib/crampl/crampl/ContainerContainer.h>
 #include "VulkanContext.h"
+
+#include <iostream>
+
 #include "Renderer.h"
 #include "SurfaceReconstruction.h"
 #include "Scene.h"
@@ -67,6 +70,23 @@ VulkanContext::VulkanContext() {
 			.enabledValidationFeatureCount = enables.size(),
 			.pEnabledValidationFeatures = enables.data()
 		};
+        {
+        	uint32_t count;
+        	vkEnumerateInstanceLayerProperties(&count, nullptr);
+        	std::vector<VkLayerProperties> availableLayers(count);
+        	vkEnumerateInstanceLayerProperties(&count, availableLayers.data());
+        	spdlog::get("console")->info("Found {} layers", count);
+        	for (const auto& layer : availableLayers)
+        	{
+        		spdlog::get("console")->info("Has layer {}", layer.layerName);
+        	}
+
+        }
+    	void *libHandle = dlopen( "libpthread.so.0", RTLD_GLOBAL | RTLD_LAZY );
+    	if(!libHandle)
+    	{
+    		fprintf(stderr, "dlopen failed: %s\n", dlerror());
+    	}
 #endif
         _instance = vk::createInstanceUnique(vk::InstanceCreateInfo{
 #ifndef NDEBUG
@@ -77,7 +97,7 @@ VulkanContext::VulkanContext() {
 			.ppEnabledLayerNames = layers.data(),
 			.enabledExtensionCount = static_cast<uint32_t>(extensions.size()),
 			.ppEnabledExtensionNames = extensions.data()
-		 }, nullptr, dls);
+		 }, nullptr);
     }
 #ifndef NDEBUG
     dldi = std::make_unique<vk::detail::DispatchLoaderDynamic>(*_instance, ::vkGetInstanceProcAddr);
@@ -126,10 +146,6 @@ VulkanContext::VulkanContext() {
         }
         vk::PhysicalDeviceFeatures features{};
         features.setMultiDrawIndirect(static_cast<vk::Bool32>(true));
-        std::vector<const char *> layers;
-#ifndef NDEBUG
-        layers.push_back("VK_LAYER_KHRONOS_validation");
-#endif
         vk::PhysicalDeviceMaintenance4Features maintenance4Features{
             .maintenance4 = vk::True
         };
@@ -138,8 +154,8 @@ VulkanContext::VulkanContext() {
             .pNext = &maintenance4Features,
 			.queueCreateInfoCount = static_cast<uint32_t>(queueCreateInfos.size()),
 			.pQueueCreateInfos = queueCreateInfos.data(),
-			.enabledLayerCount = 1,
-			.ppEnabledLayerNames = layers.data(),
+			.enabledLayerCount = 0,
+			.ppEnabledLayerNames = nullptr,
 			.enabledExtensionCount = 1,
 			.ppEnabledExtensionNames = &extensionName,
 			.pEnabledFeatures = &features

@@ -176,6 +176,11 @@ public:
         return _obj->get();
     }
 
+    bool valid() const
+    {
+        return _obj != nullptr;
+    }
+
     const auto *operator->() const {
         return &**this;
     }

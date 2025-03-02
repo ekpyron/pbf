@@ -31,7 +31,7 @@ public:
 		CacheReference<PipelineType> pipeline,
 		std::vector<std::vector<descriptors::DescriptorSetBinding>> const& bindings
 	) {
-		bindPipeline(buf, PipelineType::bindPoint, *pipeline, pipeline.descriptor().pipelineLayout, bindings);
+		bindPipeline(buf, PipelineType::bindPoint, *pipeline->pipeline, pipeline->pipelineLayout, bindings);
 	}
 
 	void bindPipeline(

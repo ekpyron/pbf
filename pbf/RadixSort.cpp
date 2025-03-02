@@ -39,45 +39,7 @@ prefixSums(_context, numKeys, vk::BufferUsageFlagBits::eStorageBuffer, MemoryTyp
 	blockSums.emplace_back(_context, blockSize, vk::BufferUsageFlagBits::eStorageBuffer, MemoryType::STATIC);
 
 
-	auto& prescanBlockSum = blockSums.front();
-
 	auto& cache = context.cache();
-
-	std::vector<CacheReference<descriptors::DescriptorSetLayout>> setLayouts{
-		cache.fetch(
-			descriptors::DescriptorSetLayout{
-				.createFlags = {},
-				.bindings = {{
-								 .binding = 0,
-								 .descriptorType = vk::DescriptorType::eStorageBuffer,
-								 .descriptorCount = 1,
-								 .stageFlags = vk::ShaderStageFlagBits::eCompute
-							 },
-							 {
-								 .binding = 1,
-								 .descriptorType = vk::DescriptorType::eStorageBuffer,
-								 .descriptorCount = 1,
-								 .stageFlags = vk::ShaderStageFlagBits::eCompute
-							 }},
-				PBF_DESC_DEBUG_NAME("global sort Set Layout")
-			}
-		)
-	};
-	for (auto const& layoutDescriptor: _keyAndGlobalSortShaderDescriptorLayouts)
-		setLayouts.emplace_back(cache.fetch(layoutDescriptor));
-
-	auto prescanAndGlobalortPipelineLayout = cache.fetch(
-	descriptors::PipelineLayout{
-		.setLayouts = setLayouts,
-		.pushConstants = {
-			vk::PushConstantRange{
-				vk::ShaderStageFlagBits::eCompute,
-				0,
-				sizeof(PushConstants)
-			}
-		},
-		PBF_DESC_DEBUG_NAME("prescan and global sort pipeline Layout")
-	});
 
 	prescanPipeline = cache.fetch(
 		descriptors::ComputePipeline{
@@ -92,33 +54,9 @@ prefixSums(_context, numKeys, vk::BufferUsageFlagBits::eStorageBuffer, MemoryTyp
 					Specialization<uint32_t>{.constantID = 0, .value = blockSize / 2}
 				}
 			},
-			.pipelineLayout = prescanAndGlobalortPipelineLayout,
 			PBF_DESC_DEBUG_NAME("prescan pipeline")
 		}
 	);
-	auto scanAndAddBlockSumLayout = cache.fetch(descriptors::PipelineLayout{
-		.setLayouts = {
-			cache.fetch(
-				descriptors::DescriptorSetLayout{
-					.createFlags = {},
-					.bindings = {{
-									 .binding = 0,
-									 .descriptorType = vk::DescriptorType::eStorageBuffer,
-									 .descriptorCount = 1,
-									 .stageFlags = vk::ShaderStageFlagBits::eCompute
-								 },
-								 {
-									 .binding = 1,
-									 .descriptorType = vk::DescriptorType::eStorageBuffer,
-									 .descriptorCount = 1,
-									 .stageFlags = vk::ShaderStageFlagBits::eCompute
-								 }},
-					PBF_DESC_DEBUG_NAME("scan and add block sum set Layout")
-				}
-			)
-		},
-		PBF_DESC_DEBUG_NAME("scan and add block sum pipeline Layout")
-	});
 	scanPipeline = cache.fetch(
 		descriptors::ComputePipeline{
 			.flags = {},
@@ -132,7 +70,6 @@ prefixSums(_context, numKeys, vk::BufferUsageFlagBits::eStorageBuffer, MemoryTyp
 					Specialization<uint32_t>{.constantID = 0, .value = blockSize / 2 }
 				}
 			},
-			.pipelineLayout = scanAndAddBlockSumLayout,
 			PBF_DESC_DEBUG_NAME("scan pipeline")
 		}
 	);
@@ -150,7 +87,6 @@ prefixSums(_context, numKeys, vk::BufferUsageFlagBits::eStorageBuffer, MemoryTyp
 					Specialization<uint32_t>{.constantID = 0, .value = blockSize }
 				}
 			},
-			.pipelineLayout = scanAndAddBlockSumLayout,
 			PBF_DESC_DEBUG_NAME("add block sum pipeline")
 		}
 	);
@@ -169,7 +105,6 @@ prefixSums(_context, numKeys, vk::BufferUsageFlagBits::eStorageBuffer, MemoryTyp
 					Specialization<uint32_t>{.constantID = 0, .value = blockSize }
 				}
 			},
-			.pipelineLayout = prescanAndGlobalortPipelineLayout,
 			PBF_DESC_DEBUG_NAME("global sort pipeline")
 		}
 	);
@@ -196,6 +131,8 @@ RadixSort::Result RadixSort::stage(
 		pushConstants.bit = bit;
 
 		auto& prescanBlockSum = blockSums.front();
+		for (auto& i : prescanPipeline->pipelineLayout.descriptor().setLayouts)
+			i.descriptor().log();
 		context.bindPipeline(
 			buf,
 			prescanPipeline,
@@ -208,7 +145,7 @@ RadixSort::Result RadixSort::stage(
 			}
 		);
 
-		buf.pushConstants(*(prescanPipeline.descriptor().pipelineLayout), vk::ShaderStageFlagBits::eCompute, 0, sizeof(pushConstants), &pushConstants);
+		buf.pushConstants(*(prescanPipeline->pipelineLayout), vk::ShaderStageFlagBits::eAll, 0, sizeof(pushConstants), &pushConstants);
 		// reads keys; writes prefix sums and block sums
 		buf.dispatch(((numKeys + blockSize - 1) / blockSize), 1, 1);
 
@@ -275,7 +212,7 @@ RadixSort::Result RadixSort::stage(
 				(bit == 0) ? initInfos : pingInfos
 			}
 		);
-		buf.pushConstants(*(globalSortPipeline.descriptor().pipelineLayout), vk::ShaderStageFlagBits::eCompute, 0, sizeof(pushConstants), &pushConstants);
+		buf.pushConstants(*(globalSortPipeline->pipelineLayout), vk::ShaderStageFlagBits::eAll, 0, sizeof(pushConstants), &pushConstants);
 		// reads keys, prefix sums and block sums; writes result
 		buf.dispatch(((numKeys + blockSize - 1) / blockSize), 1, 1);
 

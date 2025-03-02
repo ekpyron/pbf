@@ -22,22 +22,25 @@ Quad::Quad(InitContext& initContext, Scene& scene, Renderer& _renderer, GlobalAp
     indexBuffer = {scene.context(), 6, vk::BufferUsageFlagBits::eTransferDst | vk::BufferUsageFlagBits::eIndexBuffer,
                    pbf::MemoryType::STATIC};
 
+	auto vertexModule = scene.context().cache().fetch(
+								descriptors::ShaderModule{
+									.source = descriptors::ShaderModule::File{"shaders/particle.vert.spv"},
+									PBF_DESC_DEBUG_NAME("shaders/particle.vert.spv Vertex Shader")
+								});
+	auto fragmentModule = scene.context().cache().fetch(
+								descriptors::ShaderModule{
+									.source = descriptors::ShaderModule::File{"shaders/particle.frag.spv"},
+									PBF_DESC_DEBUG_NAME("shaders/particle.frag.spv Fragment Shader")
+								});
+
     graphicsPipeline = scene.context().cache().fetch(
 		pbf::descriptors::GraphicsPipeline{
             .shaderStages = {
                     {
-                            .module = scene.context().cache().fetch(
-								descriptors::ShaderModule{
-                                    .source = descriptors::ShaderModule::File{"shaders/particle.vert.spv"},
-                                    PBF_DESC_DEBUG_NAME("shaders/particle.vert.spv Vertex Shader")
-	                            }),
+                            .module = vertexModule,
                     },
                     {
-                            .module = scene.context().cache().fetch(
-								descriptors::ShaderModule{
-									.source = descriptors::ShaderModule::File{"shaders/particle.frag.spv"},
-                                    PBF_DESC_DEBUG_NAME("shaders/particle.frag.spv Fragment Shader")
-	                            }),
+                            .module = fragmentModule
                     }
             },
             .vertexBindingDescriptions = {
@@ -102,13 +105,6 @@ Quad::Quad(InitContext& initContext, Scene& scene, Renderer& _renderer, GlobalAp
                     ).setBlendEnable(false)
             },
             .dynamicStates = {vk::DynamicState::eViewport, vk::DynamicState::eScissor},
-            .pipelineLayout = scene.context().cache().fetch(
-				pbf::descriptors::PipelineLayout{
-                    .setLayouts = {{
-                                           globalData.globalDescriptorSetLayout()
-                                   }},
-                    PBF_DESC_DEBUG_NAME("Dummy Pipeline Layout")
-            }),
             .renderPass = _renderer.offscreenRenderPass(),
             PBF_DESC_DEBUG_NAME("Main Renderer Graphics Pipeline")
     });

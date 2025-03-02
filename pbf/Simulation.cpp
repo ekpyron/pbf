@@ -246,29 +246,6 @@ void Simulation::initKeys(VulkanContext& context, vk::CommandBuffer buf)
 {
 	Cache& cache = context.cache();
 	{
-		auto keyInitSetLayout = cache.fetch(descriptors::DescriptorSetLayout{
-			.createFlags = {},
-			.bindings = {
-				{
-					.binding = 0,
-					.descriptorType = vk::DescriptorType::eStorageBuffer,
-					.descriptorCount = 1,
-					.stageFlags = vk::ShaderStageFlagBits::eCompute
-				},
-				{
-					.binding = 1,
-					.descriptorType = vk::DescriptorType::eStorageBuffer,
-					.descriptorCount = 1,
-					.stageFlags = vk::ShaderStageFlagBits::eCompute
-				}
-			},
-			PBF_DESC_DEBUG_NAME("Simulation key init descriptor set layout")
-		});
-		auto keyInitPipelineLayout = cache.fetch(
-			descriptors::PipelineLayout{
-				.setLayouts = {keyInitSetLayout},
-				PBF_DESC_DEBUG_NAME("Key init pipeline layout.")
-			});
 		auto keyInitPipeline = cache.fetch(
 		descriptors::ComputePipeline{
 			.flags = {},
@@ -282,7 +259,6 @@ void Simulation::initKeys(VulkanContext& context, vk::CommandBuffer buf)
 					Specialization<uint32_t>{.constantID = 0, .value = blockSize}
 				}
 			},
-			.pipelineLayout = keyInitPipelineLayout,
 			PBF_DESC_DEBUG_NAME("Simulation: key init shader pipeline")
 		}
 		);
@@ -325,7 +301,7 @@ void Simulation::run(vk::CommandBuffer buf, float timestep)
 	pushConstants.externalAccell += glm::vec3(_context.window().getKey(GLFW_KEY_LEFT) ? 0.5f * Gabs : 0.0f, 0, _context.window().getKey(GLFW_KEY_UP) ? 0.5f * Gabs : 0.0f);
 	pushConstants.externalAccell += glm::vec3(_context.window().getKey(GLFW_KEY_RIGHT) ? -0.5f * Gabs : 0.0f, 0, _context.window().getKey(GLFW_KEY_DOWN) ? -0.5f * Gabs : 0.0f);
 
-	buf.pushConstants(*(_unconstrainedSystemUpdatePipeline.descriptor().pipelineLayout), vk::ShaderStageFlagBits::eCompute, 0, sizeof(pushConstants), &pushConstants);
+	buf.pushConstants(*(_unconstrainedSystemUpdatePipeline->pipelineLayout), vk::ShaderStageFlagBits::eAll, 0, sizeof(pushConstants), &pushConstants);
 
 	buf.dispatch(((getNumParticles() + blockSize - 1) / blockSize), 1, 1);
 
@@ -429,7 +405,7 @@ void Simulation::run(vk::CommandBuffer buf, float timestep)
 			{_particleData.segment(ringBufferIndex)}
 		}
 	);
-	buf.pushConstants(*(_particleDataUpdatePipeline.descriptor().pipelineLayout), vk::ShaderStageFlagBits::eCompute, 0, sizeof(float), &timestep);
+	buf.pushConstants(*(_particleDataUpdatePipeline->pipelineLayout), vk::ShaderStageFlagBits::eAll, 0, sizeof(float), &timestep);
 	buf.dispatch(((getNumParticles() + blockSize - 1) / blockSize), 1, 1);
 
 	buf.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {}, {
@@ -470,7 +446,7 @@ void Simulation::run(vk::CommandBuffer buf, float timestep)
 			{_particleData.segment(nextRingBufferIndex())}
 		}
 	);
-	buf.pushConstants(*(_updateVelPipeline.descriptor().pipelineLayout), vk::ShaderStageFlagBits::eCompute, 0, sizeof(float), &timestep);
+	buf.pushConstants(*(_updateVelPipeline->pipelineLayout), vk::ShaderStageFlagBits::eAll, 0, sizeof(float), &timestep);
 	buf.dispatch(((getNumParticles() + blockSize - 1) / blockSize), 1, 1);
 
 
@@ -520,34 +496,8 @@ void Simulation::buildPipelines()
 {
 	descriptors::ShaderStage::SpecializationInfo specializationInfo = makeSpecializationInfo();
 
-	auto singleStorageBufferDescriptorSetLayout = _context.cache().fetch(descriptors::DescriptorSetLayout{
-		.createFlags = {},
-		.bindings = {
-			{
-				.binding = 0,
-				.descriptorType = vk::DescriptorType::eStorageBuffer,
-				.descriptorCount = 1,
-				.stageFlags = vk::ShaderStageFlagBits::eCompute
-			}
-		},
-		PBF_DESC_DEBUG_NAME("Simulation: single storage buffer descriptor set")
-	});
-
 	auto& cache = _context.cache();
 	{
-
-		auto particleDataUpdatePipelineLayout = cache.fetch(
-			descriptors::PipelineLayout{
-				.setLayouts = {singleStorageBufferDescriptorSetLayout, singleStorageBufferDescriptorSetLayout, singleStorageBufferDescriptorSetLayout},
-				.pushConstants = {
-					vk::PushConstantRange{
-						vk::ShaderStageFlagBits::eCompute,
-						0,
-						sizeof(float)
-					}
-				},
-				PBF_DESC_DEBUG_NAME("Particle data update pipeline Layout")
-			});
 		_particleDataUpdatePipeline = cache.fetch(
 			descriptors::ComputePipeline{
 				.flags = {},
@@ -559,24 +509,11 @@ void Simulation::buildPipelines()
 					}),
 					.specialization = specializationInfo
 				},
-				.pipelineLayout = particleDataUpdatePipelineLayout,
 				PBF_DESC_DEBUG_NAME("Simulation: particle data update shader pipeline")
 			}
 		);
 	}
 	{
-		auto unconstrainedSystemUpdatePipelineLayout = cache.fetch(
-			descriptors::PipelineLayout{
-				.setLayouts = {singleStorageBufferDescriptorSetLayout, singleStorageBufferDescriptorSetLayout},
-				.pushConstants = {
-					vk::PushConstantRange{
-						vk::ShaderStageFlagBits::eCompute,
-						0,
-						sizeof(UnconstrainedPositionUpdatePushConstants)
-					}
-				},
-				PBF_DESC_DEBUG_NAME("Unconstrained update pipeline Layout")
-			});
 		_unconstrainedSystemUpdatePipeline = cache.fetch(
 			descriptors::ComputePipeline{
 				.flags = {},
@@ -588,48 +525,12 @@ void Simulation::buildPipelines()
 					}),
 					.specialization = specializationInfo
 				},
-				.pipelineLayout = unconstrainedSystemUpdatePipelineLayout,
 				PBF_DESC_DEBUG_NAME("Simulation: unconstrained system update pipeline (Update positions based on velocity and external forces without considering constraint violations.)")
 			}
 		);
 	}
 
 	{
-		auto inputDescriptorSetLayout = cache.fetch(descriptors::DescriptorSetLayout{
-			.createFlags = {},
-			.bindings = {{
-							 .binding = 0,
-							 .descriptorType = vk::DescriptorType::eStorageBuffer,
-							 .descriptorCount = 1,
-							 .stageFlags = vk::ShaderStageFlagBits::eCompute
-						 },{
-							 .binding = 1,
-							 .descriptorType = vk::DescriptorType::eUniformBuffer,
-							 .descriptorCount = 1,
-							 .stageFlags = vk::ShaderStageFlagBits::eCompute
-						 }},
-			PBF_DESC_DEBUG_NAME("One storage buffer one uniform buffer descriptor set layout")
-		});
-		auto gridDataDescriptorSetLayout = cache.fetch(descriptors::DescriptorSetLayout{
-			.createFlags = {},
-			.bindings = {{
-				.binding = 0,
-				.descriptorType = vk::DescriptorType::eStorageBuffer,
-				.descriptorCount = 1,
-				.stageFlags = vk::ShaderStageFlagBits::eCompute
-			}},
-			PBF_DESC_DEBUG_NAME("Grid Data Layout")
-		});
-		auto calcLambdaPipelineLayout = cache.fetch(
-			descriptors::PipelineLayout{
-				.setLayouts = {inputDescriptorSetLayout, gridDataDescriptorSetLayout,
-					singleStorageBufferDescriptorSetLayout /* lambda */,
-					singleStorageBufferDescriptorSetLayout /* vorticity */,
-					singleStorageBufferDescriptorSetLayout /* particle data */,
-					singleStorageBufferDescriptorSetLayout /* next particle data */},
-				PBF_DESC_DEBUG_NAME("Calc lambda pipeline Layout")
-			});
-
 		_calcLambdaPipeline = cache.fetch(
 			descriptors::ComputePipeline{
 				.flags = {},
@@ -641,19 +542,9 @@ void Simulation::buildPipelines()
 					}),
 					.specialization = specializationInfo
 				},
-				.pipelineLayout = calcLambdaPipelineLayout,
 				PBF_DESC_DEBUG_NAME("Simulation: calc lambda pipeline")
 			}
 		);
-
-		auto calcVorticityPipelineLayout = cache.fetch(
-			descriptors::PipelineLayout{
-				.setLayouts = {inputDescriptorSetLayout, gridDataDescriptorSetLayout,
-					singleStorageBufferDescriptorSetLayout /* vorticity */,
-					singleStorageBufferDescriptorSetLayout /* particle data */,
-					singleStorageBufferDescriptorSetLayout /* next particle data */},
-				PBF_DESC_DEBUG_NAME("Calc lambda pipeline Layout")
-			});
 
 		_calcVorticityPipeline = cache.fetch(
 			descriptors::ComputePipeline{
@@ -666,29 +557,9 @@ void Simulation::buildPipelines()
 					}),
 					.specialization = specializationInfo
 				},
-				.pipelineLayout = calcVorticityPipelineLayout,
 				PBF_DESC_DEBUG_NAME("Simulation: calc vorticity pipeline")
 			}
 		);
-
-		auto updateVelPipelineLayout = cache.fetch(
-			descriptors::PipelineLayout{
-				.setLayouts = {inputDescriptorSetLayout, gridDataDescriptorSetLayout,
-					singleStorageBufferDescriptorSetLayout /* lambda */,
-					singleStorageBufferDescriptorSetLayout /* key output */,
-					singleStorageBufferDescriptorSetLayout /* vorticities */,
-					singleStorageBufferDescriptorSetLayout /* particle data in */,
-					singleStorageBufferDescriptorSetLayout /* particle data out */
-				},
-				.pushConstants = {
-					vk::PushConstantRange{
-						vk::ShaderStageFlagBits::eCompute,
-						0,
-						sizeof(float)
-					}
-				},
-				PBF_DESC_DEBUG_NAME("Calc lambda pipeline Layout")
-			});
 
 		_updateVelPipeline = cache.fetch(
 			descriptors::ComputePipeline{
@@ -701,23 +572,9 @@ void Simulation::buildPipelines()
 					}),
 					.specialization = specializationInfo
 				},
-				.pipelineLayout = updateVelPipelineLayout,
 				PBF_DESC_DEBUG_NAME("Simulation: update vel pipeline")
 			}
 		);
-
-
-		auto updatePosPipelineLayout = cache.fetch(
-			descriptors::PipelineLayout{
-				.setLayouts = {inputDescriptorSetLayout, gridDataDescriptorSetLayout,
-					singleStorageBufferDescriptorSetLayout /* lambda */,
-					singleStorageBufferDescriptorSetLayout /* key output */,
-					singleStorageBufferDescriptorSetLayout /* vorticities */,
-					singleStorageBufferDescriptorSetLayout /* particle data in */,
-					singleStorageBufferDescriptorSetLayout /* particle data out */
-				},
-				PBF_DESC_DEBUG_NAME("Calc lambda pipeline Layout")
-			});
 
 		_updatePosPipeline = cache.fetch(
 			descriptors::ComputePipeline{
@@ -730,7 +587,6 @@ void Simulation::buildPipelines()
 					}),
 					.specialization = specializationInfo
 				},
-				.pipelineLayout = updatePosPipelineLayout,
 				PBF_DESC_DEBUG_NAME("Simulation: update pos pipeline")
 			}
 		);

@@ -20,7 +20,9 @@ vk::UniqueDescriptorSet DescriptorSet::realize(ContextInterface &context) const 
 	std::vector<vk::WriteDescriptorSet> writes;
 
 	for(uint32_t i = 0; i < size32(bindings); ++i) {
-
+		// TODO: figure out why this can happen
+		if (i >= setLayout.descriptor().bindings.size())
+			break;
 		std::visit(
 			LambdaVisitor{
 				[&](vk::DescriptorBufferInfo const& bufferInfo) {

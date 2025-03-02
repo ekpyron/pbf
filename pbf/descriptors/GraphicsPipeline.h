@@ -14,11 +14,13 @@
 #include <pbf/descriptors/ShaderModule.h>
 #include <pbf/descriptors/PipelineLayout.h>
 #include <pbf/descriptors/RenderPass.h>
+#include "../Pipeline.h"
+
 
 namespace pbf::descriptors {
 
 struct GraphicsPipeline {
-    vk::UniquePipeline realize(ContextInterface &context) const;
+    pbf::Pipeline realize(ContextInterface &context) const;
 
     std::vector<ShaderStage> shaderStages;
     std::vector<vk::VertexInputBindingDescription> vertexBindingDescriptions;
@@ -38,7 +40,6 @@ struct GraphicsPipeline {
     vk::Viewport viewport = {};
     vk::Rect2D scissor = { {}, { static_cast<std::uint32_t>(viewport.width), static_cast<std::uint32_t>(viewport.height) } };
 
-    CacheReference<PipelineLayout> pipelineLayout;
     CacheReference<RenderPass> renderPass;
 
 	static constexpr vk::PipelineBindPoint bindPoint = vk::PipelineBindPoint::eGraphics;
@@ -54,7 +55,7 @@ public:
 		&T::rasterizationStateCreateInfo, &T::multisampleStateCreateInfo, &T::depthStencilStateCreateInfo,
 		&T::colorBlendAttachmentStates,
 		&T::dynamicStates, &T::blendConstants, &T::blendLogicOp, &T::subpass,
-		&T::viewport, &T::scissor, &T::pipelineLayout, &T::renderPass>;
+		&T::viewport, &T::scissor, &T::renderPass>;
 	using Depends = crampl::NonTypeList<&T::renderPass>;
 };
 

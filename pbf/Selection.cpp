@@ -158,13 +158,6 @@ _indexBuffer(initContext.context, 6, vk::BufferUsageFlagBits::eTransferDst | vk:
 					)
 				},
 				.dynamicStates = {vk::DynamicState::eViewport, vk::DynamicState::eScissor},
-				.pipelineLayout = _context.cache().fetch(
-					pbf::descriptors::PipelineLayout{
-						.setLayouts = {{
-							m_globalData.globalDescriptorSetLayout()
-						}},
-						PBF_DESC_DEBUG_NAME("Selection Renderer Pipeline Layout")
-					}),
 				.renderPass = _renderPass,
 				PBF_DESC_DEBUG_NAME("Selection Renderer Graphics Pipeline")
 			});
@@ -266,8 +259,8 @@ std::optional<uint32_t> Selection::operator()(RingBuffer<ParticleData>& particle
 		.pClearValues = clearValues.data()
 	}, vk::SubpassContents::eInline);
 
-	cmdBuf->bindPipeline(vk::PipelineBindPoint::eGraphics, *_graphicsPipeline);
-	cmdBuf->bindDescriptorSets(vk::PipelineBindPoint::eGraphics, *(_graphicsPipeline.descriptor().pipelineLayout), 0, { m_globalData.globalDescriptorSet()}, {});
+	cmdBuf->bindPipeline(vk::PipelineBindPoint::eGraphics, *_graphicsPipeline->pipeline);
+	cmdBuf->bindDescriptorSets(vk::PipelineBindPoint::eGraphics, *_graphicsPipeline->pipelineLayout, 0, { m_globalData.globalDescriptorSet()}, {});
 	cmdBuf->bindIndexBuffer(_indexBuffer.buffer(), 0, vk::IndexType::eUint16);
 	cmdBuf->bindVertexBuffers(0, {particleData.buffer()}, {particleData.segment(m_renderer.currentFrameSync()).offset});
 

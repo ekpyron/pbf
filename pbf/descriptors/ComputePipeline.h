@@ -6,22 +6,21 @@
 #include <pbf/descriptors/ShaderModule.h>
 #include <pbf/descriptors/PipelineLayout.h>
 #include <pbf/descriptors/RenderPass.h>
+#include "../Pipeline.h"
 
 namespace pbf::descriptors {
 
 struct ComputePipeline {
-    vk::UniquePipeline realize(ContextInterface &context) const;
+    Pipeline realize(ContextInterface &context) const;
 
 	vk::PipelineCreateFlags flags;
 	ShaderStage shaderStage;
-
-	CacheReference<PipelineLayout> pipelineLayout;
 
 	static constexpr vk::PipelineBindPoint bindPoint = vk::PipelineBindPoint::eCompute;
 private:
 	using T = ComputePipeline;
 public:
-    using Compare = PBFMemberComparator<&T::flags, &T::shaderStage, &T::pipelineLayout>;
+    using Compare = PBFMemberComparator<&T::flags, &T::shaderStage>;
 
 #ifndef NDEBUG
     std::string debugName;
