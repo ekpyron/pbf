@@ -9,5 +9,6 @@ struct ShaderModule {
 
     bool operator!() const { return !shaderModule; }
 };
+using ShaderModulePtr = std::unique_ptr<ShaderModule>;
 
 }

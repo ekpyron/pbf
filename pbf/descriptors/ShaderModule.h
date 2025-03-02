@@ -26,7 +26,7 @@ struct ShaderModule {
 	};
 	std::variant<File, RawSPIRV> source;
 
-    std::unique_ptr<pbf::ShaderModule> realize(ContextInterface &context) const;
+    pbf::ShaderModulePtr realize(ContextInterface &context) const;
 
     using Compare = PBFMemberComparator<&ShaderModule::source>;
 

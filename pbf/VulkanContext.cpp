@@ -48,7 +48,7 @@ VulkanContext::VulkanContext() {
         auto extensions = _glfw.getRequiredInstanceExtensions();
 #ifndef NDEBUG
         extensions.push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
-        layers.push_back("VK_LAYER_KHRONOS_validation");
+        //layers.push_back("VK_LAYER_KHRONOS_validation");
     	//layers.push_back("VK_LAYER_DEV_self_validation");
 #endif
         vk::ApplicationInfo appInfo{
@@ -85,15 +85,15 @@ VulkanContext::VulkanContext() {
             vk::DebugUtilsMessengerCreateInfoEXT {
 				.messageSeverity = ~vk::DebugUtilsMessageSeverityFlagBitsEXT(),
 				.messageType = ~vk::DebugUtilsMessageTypeFlagBitsEXT(),
-				.pfnUserCallback = [](VkDebugUtilsMessageSeverityFlagBitsEXT           messageSeverity,
-                       VkDebugUtilsMessageTypeFlagsEXT                  messageType,
-                       const VkDebugUtilsMessengerCallbackDataEXT*      pCallbackData,
+				.pfnUserCallback = [](vk::DebugUtilsMessageSeverityFlagBitsEXT           messageSeverity,
+                       vk::DebugUtilsMessageTypeFlagsEXT                  messageType,
+                       const vk::DebugUtilsMessengerCallbackDataEXT*      pCallbackData,
                        void*                                            pUserData) -> VkBool32 {
                         return static_cast<VulkanContext *>(pUserData)->debugUtilMessengerCallback(
-                                vk::DebugUtilsMessageSeverityFlagBitsEXT(messageSeverity),
-                                vk::DebugUtilsMessageTypeFlagBitsEXT(messageType),
-                                *reinterpret_cast<const vk::DebugUtilsMessengerCallbackDataEXT*>(pCallbackData)
-                                );
+                                messageSeverity,
+                                messageType,
+                                *pCallbackData
+                            );
                         },
 				.pUserData = this
             }, nullptr, *dldi);
