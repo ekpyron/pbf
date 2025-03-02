@@ -11,6 +11,8 @@ set(SPDLOG_BUILD_BENCH OFF CACHE BOOL "" FORCE)
 set(FMT_TEST OFF CACHE BOOL "" FORCE)
 set(FMT_DOC OFF CACHE BOOL "" FORCE)
 set(GLM_TEST_ENABLE OFF CACHE BOOL "" FORCE)
+set(SPIRV_REFLECT_EXECUTABLE OFF CACHE BOOL "" FORCE)
+set(SPIRV_REFLECT_STATIC_LIB ON CACHE BOOL "" FORCE)
 
 find_package(glfw3 REQUIRED)
 find_package(Vulkan COMPONENTS glslangValidator glslc REQUIRED)
@@ -20,6 +22,7 @@ add_definitions(-DSPDLOG_FMT_EXTERNAL -DVULKAN_HPP_NO_STRUCT_CONSTRUCTORS)
 add_subdirectory(contrib/spdlog)
 add_subdirectory(contrib/glm)
 add_subdirectory(contrib/crampl)
+add_subdirectory(contrib/SPIRV-Reflect)
 
 add_library(imgui STATIC contrib/imgui/backends/imgui_impl_vulkan.cpp contrib/imgui/backends/imgui_impl_glfw.cpp
         contrib/imgui/imgui.cpp contrib/imgui/imgui_widgets.cpp contrib/imgui/imgui_draw.cpp contrib/imgui/imgui_tables.cpp)

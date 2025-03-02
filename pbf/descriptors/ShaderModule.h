@@ -11,6 +11,7 @@
 #include <pbf/common.h>
 #include <pbf/descriptors/Order.h>
 #include <variant>
+#include "../ShaderModule.h"
 
 namespace pbf::descriptors {
 
@@ -25,7 +26,7 @@ struct ShaderModule {
 	};
 	std::variant<File, RawSPIRV> source;
 
-    vk::UniqueShaderModule realize(ContextInterface &context) const;
+    std::unique_ptr<pbf::ShaderModule> realize(ContextInterface &context) const;
 
     using Compare = PBFMemberComparator<&ShaderModule::source>;
 

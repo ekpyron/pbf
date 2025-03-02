@@ -21,3 +21,6 @@
 [submodule "contrib/imgui"]
 	path = contrib/imgui
 	url = https://github.com/ocornut/imgui.git
+[submodule "contrib/SPIRV-Reflect"]
+	path = contrib/SPIRV-Reflect
+	url = https://github.com/KhronosGroup/SPIRV-Reflect.git

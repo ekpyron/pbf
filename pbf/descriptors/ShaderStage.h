@@ -85,7 +85,7 @@ struct ShaderStage
 		};
 		return vk::PipelineShaderStageCreateInfo{
 			.stage = stage,
-			.module = *module,
+			.module = *(*module).shaderModule,
 			.pName = entryPoint.c_str(),
 			.pSpecializationInfo = &specializationInfo
 		};

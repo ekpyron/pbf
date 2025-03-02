@@ -7,9 +7,10 @@
 #include "ComputeShaderUnitTestContext.h"
 #include <glslang/Include/glslang_c_interface.h>
 
-auto debugUtilMessengerCallback(vk::DebugUtilsMessageSeverityFlagsEXT messageSeverity,
+auto debugUtilMessengerCallback(vk::DebugUtilsMessageSeverityFlagBitsEXT messageSeverity,
     vk::DebugUtilsMessageTypeFlagsEXT messageType,
-    const vk::DebugUtilsMessengerCallbackDataEXT &callbackData) {
+    const vk::DebugUtilsMessengerCallbackDataEXT *callbackDataPtr, void*) {
+	const vk::DebugUtilsMessengerCallbackDataEXT &callbackData = *callbackDataPtr;
 	if (!(messageType & ~vk::DebugUtilsMessageTypeFlagBitsEXT::eDeviceAddressBinding) && !callbackData.pMessage)
 		return VK_FALSE;
 	std::string messageTypeString = "Unknown";
@@ -105,16 +106,7 @@ ComputeShaderUnitTestContext::ComputeShaderUnitTestContext() {
 		vk::DebugUtilsMessengerCreateInfoEXT {
 			.messageSeverity = ~vk::DebugUtilsMessageSeverityFlagBitsEXT(),
 			.messageType = ~vk::DebugUtilsMessageTypeFlagBitsEXT(),
-			.pfnUserCallback = [](VkDebugUtilsMessageSeverityFlagBitsEXT           messageSeverity,
-								  VkDebugUtilsMessageTypeFlagsEXT                  messageType,
-								  const VkDebugUtilsMessengerCallbackDataEXT*      pCallbackData,
-								  void*                                            pUserData) -> VkBool32 {
-				return debugUtilMessengerCallback(
-					vk::DebugUtilsMessageSeverityFlagBitsEXT(messageSeverity),
-					vk::DebugUtilsMessageTypeFlagBitsEXT(messageType),
-					*reinterpret_cast<const vk::DebugUtilsMessengerCallbackDataEXT*>(pCallbackData)
-				);
-			},
+			.pfnUserCallback = debugUtilMessengerCallback,
 			.pUserData = nullptr
 		}, nullptr, *_dldi);
 
