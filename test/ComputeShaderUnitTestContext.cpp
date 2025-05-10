@@ -105,7 +105,7 @@ ComputeShaderUnitTestContext::ComputeShaderUnitTestContext() {
 	_debugUtilsMessenger = _instance->createDebugUtilsMessengerEXTUnique(
 		vk::DebugUtilsMessengerCreateInfoEXT {
 			.messageSeverity = ~vk::DebugUtilsMessageSeverityFlagBitsEXT(),
-			.messageType = ~vk::DebugUtilsMessageTypeFlagBitsEXT(),
+			.messageType = vk::DebugUtilsMessageTypeFlagBitsEXT::eGeneral|vk::DebugUtilsMessageTypeFlagBitsEXT::ePerformance|vk::DebugUtilsMessageTypeFlagBitsEXT::eValidation,
 			.pfnUserCallback = debugUtilMessengerCallback,
 			.pUserData = nullptr
 		}, nullptr, *_dldi);

@@ -51,7 +51,7 @@ VulkanContext::VulkanContext() {
         auto extensions = _glfw.getRequiredInstanceExtensions();
 #ifndef NDEBUG
         extensions.push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
-        //layers.push_back("VK_LAYER_KHRONOS_validation");
+        layers.push_back("VK_LAYER_KHRONOS_validation");
     	//layers.push_back("VK_LAYER_DEV_self_validation");
 #endif
         vk::ApplicationInfo appInfo{
@@ -104,7 +104,7 @@ VulkanContext::VulkanContext() {
     _debugUtilsMessenger = _instance->createDebugUtilsMessengerEXTUnique(
             vk::DebugUtilsMessengerCreateInfoEXT {
 				.messageSeverity = ~vk::DebugUtilsMessageSeverityFlagBitsEXT(),
-				.messageType = ~vk::DebugUtilsMessageTypeFlagBitsEXT(),
+				.messageType = vk::DebugUtilsMessageTypeFlagBitsEXT::eGeneral|vk::DebugUtilsMessageTypeFlagBitsEXT::ePerformance|vk::DebugUtilsMessageTypeFlagBitsEXT::eValidation,
 				.pfnUserCallback = [](vk::DebugUtilsMessageSeverityFlagBitsEXT           messageSeverity,
                        vk::DebugUtilsMessageTypeFlagsEXT                  messageType,
                        const vk::DebugUtilsMessengerCallbackDataEXT*      pCallbackData,
@@ -234,8 +234,6 @@ VkBool32
 VulkanContext::debugUtilMessengerCallback(vk::DebugUtilsMessageSeverityFlagsEXT messageSeverity,
     vk::DebugUtilsMessageTypeFlagsEXT messageType,
     const vk::DebugUtilsMessengerCallbackDataEXT &callbackData) const {
-	if (!(messageType & ~vk::DebugUtilsMessageTypeFlagBitsEXT::eDeviceAddressBinding) && !callbackData.pMessage)
-		return VK_FALSE;
 	auto logger = spdlog::get("vulkan");
     std::string messageTypeString = "Unknown";
     std::map<std::string, std::string> nameMap;
@@ -256,6 +254,7 @@ VulkanContext::debugUtilMessengerCallback(vk::DebugUtilsMessageSeverityFlagsEXT 
         messageTypeString = "Performance";
     if (messageSeverity & vk::DebugUtilsMessageSeverityFlagBitsEXT::eError) {
         logger->error("[{}] {}", messageTypeString, message);
+    	//assert(false); // Be easy on the GPU.
     } else if (messageSeverity & vk::DebugUtilsMessageSeverityFlagBitsEXT::eWarning) {
         logger->warn("[{}] {}", messageTypeString, message);
     } else if (messageSeverity & vk::DebugUtilsMessageSeverityFlagBitsEXT::eInfo) {

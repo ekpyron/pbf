@@ -35,9 +35,11 @@ public:
         {
             return vk::Extent3D{extent2D().width, extent2D().height, 1};
         }
+        Image depthInputImage;
         Image depthPingImage;
         Image depthPongImage;
         Image thicknessImage;
+        vk::UniqueImageView depthInputView{};
         vk::UniqueImageView depthPingView{};
         vk::UniqueImageView depthPongView{};
         vk::UniqueImageView thicknessView{};
@@ -53,7 +55,8 @@ public:
                 return {*inputSampler, *outputStorageImage};//, *blurDirUniformBuffer};
             }
         };
-        DepthBlurDescriptorSets depthBlurDescriptorSets;
+        DepthBlurDescriptorSets depthBlurInputDescriptorSets;
+        DepthBlurDescriptorSets depthBlurPingDescriptorSets;
         DepthBlurDescriptorSets depthBlurPongDescriptorSets;
         struct ReconstructNormalDescriptorSets
         {
@@ -81,7 +84,7 @@ private:
 
     FrameSyncData<FrameData> frameSyncData;
 
-    vk::UniqueSampler depthSampler;
+    vk::UniqueSampler depthAndColorSampler;
     Buffer<BlurDir> blurDirBuffer;
     CacheReference<descriptors::ComputePipeline> _depthBlurPipeline;
     CacheReference<descriptors::ComputePipeline> _reconstructNormalsPipeline;
