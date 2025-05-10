@@ -52,7 +52,7 @@ void main (void)
 
     if (depth == 1.0)
     {
-        imageStore(outputImage, ivec2(gl_GlobalInvocationID.xy), vec4(1,0,0,0));
+        imageStore(outputImage, ivec2(gl_GlobalInvocationID.xy), vec4(0.1,0.1,0.1,1.0));
         return;
     }
 

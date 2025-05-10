@@ -116,6 +116,8 @@ void GUI::render(Scene& scene, vk::CommandBuffer buf)
 			scene.resetParticles();
 		}
 
+		ImGui::Checkbox("Run Surface Reconstruction", &_runSurfaceReconstruction);
+
 
 		static auto lastTime = std::chrono::steady_clock::now();
 		static size_t frameCount = 0;

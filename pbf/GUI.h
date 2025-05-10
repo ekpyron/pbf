@@ -21,6 +21,7 @@ public:
 	void postInitCleanup();
 	void render(Scene& scene, vk::CommandBuffer buf);
 	bool runSPH() const { return _runSPH; }
+	bool runSurfaceReconstruction() const { return _runSurfaceReconstruction; }
 
 private:
 	friend class UIControlled;
@@ -36,6 +37,7 @@ private:
 	Renderer& renderer;
 	Selection _selection;
 	bool _runSPH = false;
+	bool _runSurfaceReconstruction = true;
 	std::mutex _imguiMutex;
 	ImGuiContext* _imguiContext = nullptr;
 };

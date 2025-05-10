@@ -235,7 +235,8 @@ void Renderer::render(Scene& scene, GUI& gui, float timestep) {
 
     	buffer->endRenderPass();
 
-    	_surfaceReconstruction->run(*buffer);
+    	if (gui.runSurfaceReconstruction())
+	    	_surfaceReconstruction->run(*buffer);
 
     	vk::ImageBlit blit{
     		.srcSubresource = {
