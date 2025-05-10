@@ -130,6 +130,25 @@ SurfaceReconstruction::FrameData::FrameData(InitContext& _initContext, Renderer&
                 .dstAccessMask = {},
                 .oldLayout = vk::ImageLayout::eUndefined,
                 .newLayout = vk::ImageLayout::eGeneral,
+                .image = depthPingImage.image(),
+                .subresourceRange = {
+                    .aspectMask = vk::ImageAspectFlagBits::eColor,
+                    .baseMipLevel = 0,
+                    .levelCount = 1,
+                    .baseArrayLayer = 0,
+                    .layerCount = 1
+                }
+            }
+        });
+
+    _initContext.initCommandBuffer->pipelineBarrier(
+        vk::PipelineStageFlagBits::eTransfer,
+        vk::PipelineStageFlagBits::eComputeShader, {}, {}, {}, {
+            vk::ImageMemoryBarrier{
+                .srcAccessMask = {},
+                .dstAccessMask = {},
+                .oldLayout = vk::ImageLayout::eUndefined,
+                .newLayout = vk::ImageLayout::eGeneral,
                 .image = depthPongImage.image(),
                 .subresourceRange = {
                     .aspectMask = vk::ImageAspectFlagBits::eColor,
