@@ -34,7 +34,8 @@ private:
 	void buildPipelines();
 
 	float h = glm::length(glm::vec3(1.0f, 1.0f, 1.0f));
-	float rho_0 = 1.0f;
+	float rho_0_type_0 = 1.0f;
+	float rho_0_type_1 = 2.0f;
 	float epsilon = 5.0f;
 	float xsph_viscosity_c = 0.01f;
 	float tensile_instability_k = 0.1f;

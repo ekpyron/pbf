@@ -39,6 +39,8 @@ void main(void)
 
     float lambda = lambdas[gid];
 
+    float one_over_rho_0_i = (type == 0) ? one_over_rho_0_type_0 : one_over_rho_0_type_1;
+
     FOR_EACH_NEIGHBOUR(gid, j)
     {
         ParticleKey key_j = particleKeys[j];
@@ -60,7 +62,9 @@ void main(void)
     }
     END_FOR_EACH_NEIGHBOUR()
 
-    position += one_over_rho_0 * deltap;
+    // TODO: think about whether rho_0_i is correct here.
+    // Consider instead to scale lambda and lambda[j] with their respecting rho_0_k above.
+    position += one_over_rho_0_i * deltap;
 
     // Cylinder Z
     /* position.z = clamp(position.z, 1, 63);

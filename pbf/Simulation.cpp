@@ -207,7 +207,8 @@ void Simulation::ui()
 {
 	bool rebuildPipelines = false;
 	rebuildPipelines |= ImGui::SliderFloat("h", &h, 0.25f, 4.0f, "%.3f");
-	rebuildPipelines |= ImGui::SliderFloat("rho_0", &rho_0, 0.1f, 10.0f, "%.1f");
+	rebuildPipelines |= ImGui::SliderFloat("rho_0_type_0", &rho_0_type_0, 0.1f, 10.0f, "%.1f");
+	rebuildPipelines |= ImGui::SliderFloat("rho_0_type_1", &rho_0_type_1, 0.1f, 10.0f, "%.1f");
 	rebuildPipelines |= ImGui::SliderFloat("epsilon", &epsilon, 0.01f, 100.0f, "%.2f");
 	rebuildPipelines |= ImGui::SliderFloat("xsph_viscosity_c", &xsph_viscosity_c, 0.0001f, 1.0f, "%.5f");
 	rebuildPipelines |= ImGui::SliderFloat("tensile_instability_k", &tensile_instability_k, 0.01f, 1.0f, "%.3f");
@@ -229,12 +230,13 @@ descriptors::ShaderStage::SpecializationInfo Simulation::makeSpecializationInfo(
 	return {
 		Specialization<uint32_t>{.constantID = 0, .value = blockSize},
 		Specialization<float>{.constantID = 1, .value = h},
-		Specialization<float>{.constantID = 2, .value = 1.0f / rho_0},
+		Specialization<float>{.constantID = 2, .value = 1.0f / rho_0_type_0},
 		Specialization<float>{.constantID = 3, .value = epsilon},
 		Specialization<float>{.constantID = 4, .value = xsph_viscosity_c},
 		Specialization<float>{.constantID = 5, .value = tensile_instability_k},
 		Specialization<float>{.constantID = 6, .value = vorticity_epsilon},
 		Specialization<float>{.constantID = 7, .value = tensile_instability_scale},
+		Specialization<float>{.constantID = 8, .value = 1.0f / rho_0_type_1},
 	};
 }
 
