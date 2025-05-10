@@ -21,8 +21,7 @@ GlobalAppData::GlobalAppData(VulkanContext& context)
                 .bindings = {{
                                      .binding = 0,
                                      .descriptorType = vk::DescriptorType::eUniformBuffer,
-                                     .descriptorCount = 1,
-                                     .stageFlags = vk::ShaderStageFlagBits::eAll
+                                     .descriptorCount = 1
                              }},
             PBF_DESC_DEBUG_NAME("Global Descriptor Set Layout")
         });

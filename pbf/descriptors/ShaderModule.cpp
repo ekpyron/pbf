@@ -76,7 +76,6 @@ pbf::ShaderModulePtr ShaderModule::realize(ContextInterface &context) const {
 			for (uint32_t i_dim = 0; i_dim < refl_binding.array.dims_count; ++i_dim) {
 				layout_binding.descriptorCount *= refl_binding.array.dims[i_dim];
 			}
-			layout_binding.stageFlags = static_cast<vk::ShaderStageFlagBits>(module.GetShaderStage());
 		}
 		shaderModule->descriptorSetInfos.emplace_back(
 			refl_set.set,

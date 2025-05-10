@@ -29,14 +29,12 @@ public:
 				{
 					.binding = 0,
 					.descriptorType = vk::DescriptorType::eStorageBuffer,
-					.descriptorCount = 1,
-					.stageFlags = vk::ShaderStageFlagBits::eCompute
+					.descriptorCount = 1
 				},
 				{
 					.binding = 1,
 					.descriptorType = vk::DescriptorType::eUniformBuffer,
-					.descriptorCount = 1,
-					.stageFlags = vk::ShaderStageFlagBits::eCompute
+					.descriptorCount = 1
 				}
 			},
 			PBF_DESC_DEBUG_NAME("Neighbour Cell Finder Input Descriptor Set Layout")

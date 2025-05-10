@@ -26,13 +26,12 @@ struct DescriptorSetLayout {
         std::uint32_t binding = 0;
         vk::DescriptorType descriptorType;
         std::uint32_t descriptorCount;
-        vk::ShaderStageFlags stageFlags;
         //mutable const std::vector<CacheReference<Sampler>> immutableSamplers; // todo immutable samplers
 
 	private:
 		using T = Binding;
 	public:
-        using Compare = PBFMemberComparator<&T::binding, &T::descriptorType, &T::descriptorCount, &T::stageFlags>;
+        using Compare = PBFMemberComparator<&T::binding, &T::descriptorType, &T::descriptorCount>;
     };
 
     DescriptorSetLayout operator+(const DescriptorSetLayout &_other) const
@@ -51,9 +50,7 @@ struct DescriptorSetLayout {
                 assert(b1.binding == b2.binding);
                 assert(b1.descriptorType == b2.descriptorType);
                 assert(b1.descriptorCount == b2.descriptorCount);
-                b1.stageFlags = vk::ShaderStageFlagBits::eAll;  // b1.stageFlags|b2.stageFlags;
             }
-            result.bindings[i].stageFlags = vk::ShaderStageFlagBits::eAll;
         }
         return result;
     }

@@ -18,7 +18,7 @@ vk::UniqueDescriptorSetLayout DescriptorSetLayout::realize(ContextInterface &con
             binding.binding,
             binding.descriptorType,
             binding.descriptorCount,
-            binding.stageFlags,
+            vk::ShaderStageFlagBits::eCompute|vk::ShaderStageFlagBits::eAllGraphics,
             nullptr // todo: immutable samplers
         };
     });

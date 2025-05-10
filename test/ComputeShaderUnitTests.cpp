@@ -28,8 +28,7 @@ TEST_CASE_METHOD(ComputeShaderUnitTest, "Compute Shader Stub Test", "[stub]")
 		.bindings = {{
 			.binding = 0,
 			.descriptorType = vk::DescriptorType::eStorageBuffer,
-			.descriptorCount = 1,
-			.stageFlags = vk::ShaderStageFlagBits::eCompute
+			.descriptorCount = 1
 		}},
 		PBF_DESC_DEBUG_NAME("Stub Descriptor Set Layout")
 	});
@@ -498,23 +497,19 @@ TEST_CASE_METHOD(ComputeShaderUnitTest, "Compute Shader Sort Test Old Reference"
 		.bindings = {{
 			.binding = 0,
 			.descriptorType = vk::DescriptorType::eStorageBuffer,
-			.descriptorCount = 1,
-			.stageFlags = vk::ShaderStageFlagBits::eCompute
+			.descriptorCount = 1
 		},{
 			.binding = 1,
 			.descriptorType = vk::DescriptorType::eStorageBuffer,
-			.descriptorCount = 1,
-			.stageFlags = vk::ShaderStageFlagBits::eCompute
+			.descriptorCount = 1
 		},{
 			.binding = 2,
 			.descriptorType = vk::DescriptorType::eStorageBuffer,
-			.descriptorCount = 1,
-			.stageFlags = vk::ShaderStageFlagBits::eCompute
+			.descriptorCount = 1
 		},{
 			.binding = 3,
 			.descriptorType = vk::DescriptorType::eStorageBuffer,
-			.descriptorCount = 1,
-			.stageFlags = vk::ShaderStageFlagBits::eCompute
+			.descriptorCount = 1
 		}},
 		PBF_DESC_DEBUG_NAME("Stub Descriptor Set Layout")
 	});
@@ -1057,13 +1052,11 @@ TEST_CASE_METHOD(ComputeShaderUnitTest, "Compute Shader Sort Test", "[sort] ")
 		.bindings = {{
 						 .binding = 0,
 						 .descriptorType = vk::DescriptorType::eStorageBuffer,
-						 .descriptorCount = 1,
-						 .stageFlags = vk::ShaderStageFlagBits::eCompute
+						 .descriptorCount = 1
 					 },{
 						 .binding = 1,
 						 .descriptorType = vk::DescriptorType::eStorageBuffer,
-						 .descriptorCount = 1,
-						 .stageFlags = vk::ShaderStageFlagBits::eCompute
+						 .descriptorCount = 1
 					 }},
 		PBF_DESC_DEBUG_NAME("unit test key and global sort descriptor set layout")
 	}};

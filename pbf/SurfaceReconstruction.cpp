@@ -392,8 +392,7 @@ SurfaceReconstruction::SurfaceReconstruction(InitContext& _initContext, Renderer
                 {
                     .binding = 0,
                     .descriptorType = vk::DescriptorType::eCombinedImageSampler,
-                    .descriptorCount = 1,
-                    .stageFlags = vk::ShaderStageFlagBits::eCompute
+                    .descriptorCount = 1
                 }
             },
             PBF_DESC_DEBUG_NAME("SurfaceReconstruction: depth input set layout")
@@ -405,8 +404,7 @@ SurfaceReconstruction::SurfaceReconstruction(InitContext& _initContext, Renderer
                 {
                     .binding = 0,
                     .descriptorType = vk::DescriptorType::eStorageImage,
-                    .descriptorCount = 1,
-                    .stageFlags = vk::ShaderStageFlagBits::eCompute
+                    .descriptorCount = 1
                 }
             },
             PBF_DESC_DEBUG_NAME("SurfaceReconstruction: depth output set layout")
@@ -418,8 +416,7 @@ SurfaceReconstruction::SurfaceReconstruction(InitContext& _initContext, Renderer
                 {
                     .binding = 0,
                     .descriptorType = vk::DescriptorType::eStorageImage,
-                    .descriptorCount = 1,
-                    .stageFlags = vk::ShaderStageFlagBits::eCompute
+                    .descriptorCount = 1
                 }
             },
             PBF_DESC_DEBUG_NAME("SurfaceReconstruction: blurred depth output set layout")
@@ -431,8 +428,7 @@ SurfaceReconstruction::SurfaceReconstruction(InitContext& _initContext, Renderer
                 {
                     .binding = 0,
                     .descriptorType = vk::DescriptorType::eUniformBuffer,
-                    .descriptorCount = 1,
-                    .stageFlags = vk::ShaderStageFlagBits::eCompute
+                    .descriptorCount = 1
                 }
             },
             PBF_DESC_DEBUG_NAME("SurfaceReconstruction: blur direction set layout")
