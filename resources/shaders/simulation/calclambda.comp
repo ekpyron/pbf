@@ -28,8 +28,6 @@ void main(void)
     ParticleKey key = particleKeys[gid];
     vec3 position = key.position;
 
-    uint type = particles[key.index].type;
-
     float sum_k_grad_Ci = 0;
     float rho = 0;
 
@@ -39,7 +37,6 @@ void main(void)
     {
         ParticleKey key_j = particleKeys[j];
         vec3 position_j = key_j.position;
-        uint type_j = particles[key_j.index].type;
 
         vec3 p_ij = position - position_j;
 
