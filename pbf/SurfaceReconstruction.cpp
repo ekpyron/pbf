@@ -37,7 +37,7 @@ SurfaceReconstruction::FrameData::FrameData(InitContext& _initContext, Renderer&
         vk::ImageUsageFlagBits::eTransferSrc | vk::ImageUsageFlagBits::eSampled,
         extent3D()
     ),
-    thicknessImage(
+    particleColorImage(
         _initContext.context,
         vk::Format::eR8G8B8A8Unorm,
         vk::ImageUsageFlagBits::eStorage | vk::ImageUsageFlagBits::eTransferSrc |
@@ -90,9 +90,9 @@ SurfaceReconstruction::FrameData::FrameData(InitContext& _initContext, Renderer&
             .layerCount = 1,
         }
     });
-    thicknessView = context.device().createImageViewUnique(vk::ImageViewCreateInfo{
+    particleColorImageView = context.device().createImageViewUnique(vk::ImageViewCreateInfo{
         .flags = {},
-        .image = thicknessImage.image(),
+        .image = particleColorImage.image(),
         .viewType = vk::ImageViewType::e2D,
         .format = vk::Format::eR8G8B8A8Unorm,
         .components = vk::ComponentMapping{},
@@ -105,7 +105,7 @@ SurfaceReconstruction::FrameData::FrameData(InitContext& _initContext, Renderer&
         }
     });
     std::array attachments = {
-        *thicknessView,
+        *particleColorImageView,
         *depthInputView
     };
     spdlog::get("console")->debug("Create Surface Reconstruction FrameData Framebuffer");
@@ -213,7 +213,7 @@ SurfaceReconstruction::FrameData::FrameData(InitContext& _initContext, Renderer&
             .imageLayout = vk::ImageLayout::eGeneral
         });
         vk::DescriptorImageInfo& thicknessImageInfo = imageInfos.emplace_back(vk::DescriptorImageInfo{
-            .imageView = *thicknessView,
+            .imageView = *particleColorImageView,
             .imageLayout = vk::ImageLayout::eGeneral
         });
         // depth blur input descriptor writes
@@ -654,7 +654,7 @@ void SurfaceReconstruction::run(vk::CommandBuffer& _buf)
                 .dstAccessMask = {},
                 .oldLayout = vk::ImageLayout::eGeneral,
                 .newLayout = vk::ImageLayout::eGeneral,
-                .image = frameData.thicknessImage.image(),
+                .image = frameData.particleColorImage.image(),
                 .subresourceRange = {
                     .aspectMask = vk::ImageAspectFlagBits::eColor,
                     .baseMipLevel = 0,

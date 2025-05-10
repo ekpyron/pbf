@@ -38,12 +38,17 @@ public:
         Image depthInputImage;
         Image depthPingImage;
         Image depthPongImage;
-        Image thicknessImage;
+        Image particleColorImage;
         vk::UniqueImageView depthInputView{};
         vk::UniqueImageView depthPingView{};
         vk::UniqueImageView depthPongView{};
-        vk::UniqueImageView thicknessView{};
+        vk::UniqueImageView particleColorImageView{};
         vk::UniqueFramebuffer frameBuffer{};
+
+        vk::Image outputImage() const
+        {
+            return particleColorImage.image();
+        }
 
         struct DepthBlurDescriptorSets
         {

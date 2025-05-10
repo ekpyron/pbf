@@ -287,7 +287,7 @@ void Renderer::render(Scene& scene, GUI& gui, float timestep) {
 			});
 
     	buffer->blitImage(
-			offscreenData.thicknessImage.image(),
+			offscreenData.outputImage(),
 			vk::ImageLayout::eGeneral,
 			_swapchain->images()[imageIndex],
 			vk::ImageLayout::eTransferDstOptimal,
