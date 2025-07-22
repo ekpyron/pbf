@@ -15,7 +15,7 @@ public:
     DistanceConstraintSolver(const DistanceConstraintSolver&) = delete;
     DistanceConstraintSolver& operator=(const DistanceConstraintSolver&) = delete;
 
-    void run(vk::CommandBuffer buf);
+    void run(vk::CommandBuffer buf, vk::DescriptorBufferInfo const& _particleDataInOut);
 
 private:
     struct Constraint

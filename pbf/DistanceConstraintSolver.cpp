@@ -5,7 +5,7 @@ namespace pbf
 
 DistanceConstraintSolver::DistanceConstraintSolver() = default;
 
-void DistanceConstraintSolver::run(vk::CommandBuffer buf)
+void DistanceConstraintSolver::run(vk::CommandBuffer buf, vk::DescriptorBufferInfo const& _particleDataInOut)
 {
     // For reference:
     // https://matthias-research.github.io/pages/publications/XPBD.pdf
@@ -25,7 +25,7 @@ void DistanceConstraintSolver::run(vk::CommandBuffer buf)
      * But there is exactly one constraint per particle (that the estimated density around it is rest density).
      * So iterating over all *particles*, in that case, is the same as iterating over all constraints.
      *
-     * For distance constraints, we calculate a fixed set of particle pairs to be constrainted up front and
+     * For distance constraints, we calculate a fixed set of particle pairs to be constrained up front and
      * store them in @m constraints and iterate over those.
      * The solver can be build following https://matthias-research.github.io/pages/publications/XPBD.pdf
      *

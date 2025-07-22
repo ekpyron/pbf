@@ -416,7 +416,9 @@ void Simulation::run(vk::CommandBuffer buf, float timestep)
 		 *		_particleData.segment(nextRingBufferIndex())
 		 */
 
-		_distanceConstraintSolver.run(buf);
+		// Assumed to perform its update in place in _particleData.segment(nextRingBufferIndex())
+		_distanceConstraintSolver.run(buf, _particleData.segment(nextRingBufferIndex()));
+
 		// copy positions from particle data to particle keys (or adjust radix sort input)
 		//		_particleData.segment(nextRingBufferIndex()) -> _particleKeys.segment(ringBufferIndex)
 
