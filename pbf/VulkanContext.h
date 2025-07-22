@@ -152,10 +152,14 @@ private:
 
 	static constexpr std::uint32_t maxGlobalDescriptorSets = 1024;
     static const auto &globalDescriptorPoolSizes() {
-        static std::array<vk::DescriptorPoolSize, 2> sizes {{{
+        static std::array<vk::DescriptorPoolSize, 4> sizes {{{
 			vk::DescriptorType::eUniformBuffer, 512
 		}, {
 			vk::DescriptorType::eStorageBuffer, 512
+		}, {
+			vk::DescriptorType::eCombinedImageSampler, 512
+		}, {
+			vk::DescriptorType::eStorageImage, 512
 		}}};
         return sizes;
     }

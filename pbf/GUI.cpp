@@ -29,9 +29,8 @@ GUI::GUI(pbf::InitContext &initContext, Renderer& renderer, GlobalAppData& globa
 	init_info.CheckVkResultFn = [](VkResult result) {
 		// TODO
 	};
-	ImGui_ImplVulkan_Init(&init_info, *renderer.renderPass());
-
-	ImGui_ImplVulkan_CreateFontsTexture(*initContext.initCommandBuffer);
+	init_info.RenderPass = *renderer.renderPass();
+	ImGui_ImplVulkan_Init(&init_info);
 }
 
 GUI::~GUI()
@@ -46,7 +45,6 @@ void GUI::postInitCleanup()
 {
 	std::lock_guard guard(_imguiMutex);
 	ImGui::SetCurrentContext(_imguiContext);
-	ImGui_ImplVulkan_DestroyFontUploadObjects();
 }
 
 void GUI::render(Scene& scene, vk::CommandBuffer buf)
