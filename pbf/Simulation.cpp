@@ -328,7 +328,7 @@ void Simulation::run(vk::CommandBuffer buf, float timestep)
         auto sortResult = _radixSort.stage(
                 buf,
                 30,
-                step == 0 ? initInfos : pingInfos, pingInfos, pongInfos
+                initInfos, pingInfos, pongInfos
         );
 
         size_t pingBufferSegment = sortResult == RadixSort::Result::InPingBuffer ? 0 : 1;
@@ -421,7 +421,7 @@ void Simulation::run(vk::CommandBuffer buf, float timestep)
 		//		_particleData.segment(nextRingBufferIndex()) -> _particleKeys.segment(ringBufferIndex)
 
 		_context.bindPipeline(buf, _keyInitPipeline, {
-				{{_particleData.segment(nextRingBufferIndex()), _tempBuffer.segment(pongBufferSegment)}}
+				{{_particleData.segment(nextRingBufferIndex()), _particleKeys.segment(ringBufferIndex)}}
 		});
 		buf.dispatch(((getNumParticles() + blockSize - 1) / blockSize), 1, 1);
 
@@ -431,8 +431,6 @@ void Simulation::run(vk::CommandBuffer buf, float timestep)
 				.dstAccessMask = vk::AccessFlagBits::eShaderRead
 			}
 		}, {}, {});
-
-		std::swap(pingBufferSegment, pongBufferSegment);
 	}
 
 	_context.bindPipeline(
