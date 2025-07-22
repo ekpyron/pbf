@@ -147,7 +147,7 @@ void Renderer::render(Scene& scene, GUI& gui, float timestep) {
     auto &currentFrameSync = _frameSync[_currentFrameSync];
 
 	{
-		auto result = device.waitForFences({*currentFrameSync.fence}, static_cast<vk::Bool32>(true), TIMEOUT);
+		auto result = device.waitForFences({*currentFrameSync.fence}, true, TIMEOUT);
 		// TODO: handle result
 	}
     currentFrameSync.reset();

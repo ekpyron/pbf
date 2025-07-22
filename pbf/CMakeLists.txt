@@ -19,7 +19,9 @@ set(SOURCES main.cpp glfw.h VulkanContext.cpp VulkanContext.h App.cpp App.h Swap
         Simulation.cpp Simulation.h Image.cpp Image.h GUI.cpp GUI.h UIControlled.cpp UIControlled.h
         SurfaceReconstruction.cpp
         SurfaceReconstruction.h
-        FrameSyncData.h)
+        FrameSyncData.h
+        DistanceConstraintSolver.cpp
+        DistanceConstraintSolver.h)
 
 add_executable(${PROJECT_NAME} ${SOURCES})
 target_link_libraries(${PROJECT_NAME} PUBLIC glfw pbf_common imgui)

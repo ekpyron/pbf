@@ -11,7 +11,7 @@ layout(std430, binding = 0, set = 0) readonly buffer ParticleKeys
     ParticleKey particleKeys[];
 };
 
-layout(std430, binding = 0, set = 2) writeonly buffer LambdaBuffer
+layout(std430, binding = 0, set = 2) buffer LambdaBuffer
 {
     float lambdas[];
 };
@@ -21,6 +21,7 @@ layout(std430, binding = 0, set = 3) readonly buffer Particles
     ParticleData particles[];
 };
 
+//const float alpha = 0.01;
 
 void main(void)
 {
@@ -66,5 +67,11 @@ void main(void)
 
     // compute lambda_i (equations 1 and 9)
     float C_i = rho * one_over_rho_0_i - 1;
-    lambdas[gid] = -C_i / (sum_k_grad_Ci + epsilon);
+    /*
+     * previously: lambdas[key.index] = -C_i / (sum_k_grad_Ci + epsilon);
+     * with epsilon == 5.0f
+     */
+    float alpha = epsilon;
+    lambdas[key.index] = -C_i / (sum_k_grad_Ci + epsilon);
+    //lambdas[key.index] = -(C_i - alpha * lambdas[key.index]) / (sum_k_grad_Ci + alpha);
 }

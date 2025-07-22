@@ -6,6 +6,7 @@
 #include "Cache.h"
 #include "RadixSort.h"
 #include "NeighbourCellFinder.h"
+#include "DistanceConstraintSolver.h"
 #include <pbf/descriptors/ComputePipeline.h>
 
 namespace pbf {
@@ -36,7 +37,7 @@ private:
 	float h = glm::length(glm::vec3(1.0f, 1.0f, 1.0f));
 	float rho_0_type_0 = 1.0f;
 	float rho_0_type_1 = 2.0f;
-	float epsilon = 5.0f;
+	float epsilon = 80.0f;
 	float xsph_viscosity_c = 0.01f;
 	float tensile_instability_k = 0.1f;
 	float vorticity_epsilon = 5.0f;
@@ -56,11 +57,8 @@ private:
 	RingBuffer<ParticleData> _particleData;
 	RingBuffer<ParticleKey> _particleKeys;
 
-	struct UnconstrainedPositionUpdatePushConstants {
-		glm::vec3 externalAccell;
-		float lastTimestep = 1.0f/60.0f;
-		float timestep = 1.0f/60.0f;
-	};
+	DistanceConstraintSolver _distanceConstraintSolver;
+
 
     using GridData = NeighbourCellFinder::GridData;
 	Buffer<GridData> _gridDataBuffer;
@@ -73,6 +71,11 @@ private:
 
 	RingBuffer<ParticleKey> _tempBuffer;
 
+	struct UnconstrainedPositionUpdatePushConstants {
+		glm::vec3 externalAccell;
+		float lastTimestep = 1.0f/60.0f;
+		float timestep = 1.0f/60.0f;
+	};
 	CacheReference<descriptors::ComputePipeline> _unconstrainedSystemUpdatePipeline;
 	CacheReference<descriptors::ComputePipeline> _particleDataUpdatePipeline;
 	CacheReference<descriptors::ComputePipeline> _calcLambdaPipeline;

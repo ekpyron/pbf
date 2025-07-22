@@ -105,7 +105,7 @@ _particleData([&]() {
 }()),
 _particleKeys(initContext.context, _particleData.size(), _particleData.segments(), vk::BufferUsageFlagBits::eStorageBuffer|vk::BufferUsageFlagBits::eTransferDst, MemoryType::STATIC),
 _gridDataBuffer(_context, 1, vk::BufferUsageFlagBits::eUniformBuffer|vk::BufferUsageFlagBits::eTransferDst, MemoryType::STATIC),
-_lambdaBuffer(initContext.context, _particleData.size(), vk::BufferUsageFlagBits::eStorageBuffer, MemoryType::STATIC),
+_lambdaBuffer(initContext.context, _particleData.size(), vk::BufferUsageFlagBits::eStorageBuffer|vk::BufferUsageFlagBits::eTransferDst, MemoryType::STATIC),
 _vorticityBuffer(initContext.context, _particleData.size(), vk::BufferUsageFlagBits::eStorageBuffer, MemoryType::STATIC),
 _radixSort(_context, blockSize, getNumParticles() / blockSize, radixSortDescriptorSetLayoutDescriptors(), "shaders/particlesort"),
 _neighbourCellFinder(_context, GridData{}.numCells(), getNumParticles()),
@@ -304,9 +304,11 @@ void Simulation::run(vk::CommandBuffer buf, float timestep)
 
 	buf.dispatch(((getNumParticles() + blockSize - 1) / blockSize), 1, 1);
 
-	buf.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {}, {
+	buf.fillBuffer(_lambdaBuffer.buffer(), 0, _lambdaBuffer.deviceSize(), 0);
+
+	buf.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader|vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eComputeShader, {}, {
 		vk::MemoryBarrier{
-			.srcAccessMask = vk::AccessFlagBits::eShaderWrite,
+			.srcAccessMask = vk::AccessFlagBits::eShaderWrite|vk::AccessFlagBits::eTransferWrite,
 			.dstAccessMask = vk::AccessFlagBits::eShaderRead
 		}
 	}, {}, {});
@@ -329,8 +331,17 @@ void Simulation::run(vk::CommandBuffer buf, float timestep)
 		_tempBuffer.segment(0)
 	};
 
+	/* up to date info in:
+	* 		_particleKeys.segment(ringBufferIndex)
+	*		_particleData.segment(ringBufferIndex)
+	*		initInfos
+	*/
+
+
 	static constexpr size_t numSteps = 3;
-	for (size_t step = 0; step < numSteps; ++step) {
+	for (size_t step = 0; step < numSteps; ++step)
+	{
+
         // TODO: adjust neighbourCellFinderInputInfos according to expected sortResult -> probably done
         auto sortResult = _radixSort.stage(
                 buf,
@@ -340,6 +351,14 @@ void Simulation::run(vk::CommandBuffer buf, float timestep)
 
         size_t pingBufferSegment = sortResult == RadixSort::Result::InPingBuffer ? 0 : 1;
         size_t pongBufferSegment = sortResult == RadixSort::Result::InPingBuffer ? 1 : 0;
+
+		/* up to date info in:
+		* 		_particleKeys.segment(ringBufferIndex)
+		*		_particleData.segment(ringBufferIndex)
+		*		initInfos
+		*	sorted up to date info in:
+		*		_tempBuffer.segment(pingBufferSegment)
+		*/
 
         _neighbourCellFinder(buf, _particleData.size(), _tempBuffer.segment(pingBufferSegment), _gridDataBuffer.fullBufferInfo());
 
@@ -391,6 +410,17 @@ void Simulation::run(vk::CommandBuffer buf, float timestep)
 				.dstAccessMask = vk::AccessFlagBits::eShaderRead
 			}
 		}, {}, {});
+
+
+		/* sorted up to date info in:
+		*		_tempBuffer.segment(pongBufferSegment)
+		*/
+
+		// copy positions from particle keys to particle data
+		//		_tempBuffer.segment(pongBufferSegment) -> _particleData.segment(ringBufferIndex)
+		_distanceConstraintSolver.run(buf);
+		// copy positions from particle data to particle keys (or adjust radix sort input)
+		//		_particleData.segment(ringBufferIndex) -> _particleKeys.segment(ringBufferIndex)
 
 		std::swap(pingBufferSegment, pongBufferSegment);
 	}

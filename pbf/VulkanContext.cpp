@@ -82,11 +82,6 @@ VulkanContext::VulkanContext() {
         	}
 
         }
-    	void *libHandle = dlopen( "libpthread.so.0", RTLD_GLOBAL | RTLD_LAZY );
-    	if(!libHandle)
-    	{
-    		fprintf(stderr, "dlopen failed: %s\n", dlerror());
-    	}
 #endif
         _instance = vk::createInstanceUnique(vk::InstanceCreateInfo{
 #ifndef NDEBUG
