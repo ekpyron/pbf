@@ -72,6 +72,6 @@ void main(void)
      * with epsilon == 5.0f
      */
     float alpha = epsilon;
-    lambdas[key.index] = -C_i / (sum_k_grad_Ci + epsilon);
-    //lambdas[key.index] = -(C_i - alpha * lambdas[key.index]) / (sum_k_grad_Ci + alpha);
+    //lambdas[key.index] = -C_i / (sum_k_grad_Ci + epsilon);
+    lambdas[key.index] = -(C_i - alpha * lambdas[key.index]) / (sum_k_grad_Ci + alpha);
 }
