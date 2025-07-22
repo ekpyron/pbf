@@ -56,7 +56,6 @@ private:
 
     struct FrameSync {
     	vk::UniqueSemaphore imageAvailableSemaphore;
-        vk::UniqueSemaphore renderFinishedSemaphore;
 		vk::UniqueSemaphore computeFinishedSemaphore;
         vk::UniqueFence fence;
         vk::UniqueCommandBuffer commandBuffer{};

@@ -72,15 +72,12 @@ Renderer::Renderer(InitContext &initContext, GlobalAppData &globalAppData) : _co
         _frameSync.emplace_back(FrameSync{
 			_context.device().createSemaphoreUnique({}),
 			_context.device().createSemaphoreUnique({}),
-			_context.device().createSemaphoreUnique({}),
 			_context.device().createFenceUnique(vk::FenceCreateInfo {
 				.flags = vk::FenceCreateFlagBits::eSignaled
 			}),
 	});
         PBF_DEBUG_SET_OBJECT_NAME(_context, *_frameSync.back().imageAvailableSemaphore,
                                   fmt::format("Image Available Semaphore #{}", i));
-        PBF_DEBUG_SET_OBJECT_NAME(_context, *_frameSync.back().renderFinishedSemaphore,
-                                  fmt::format("Render Finished Semaphore #{}", i));
 		PBF_DEBUG_SET_OBJECT_NAME(_context, *_frameSync.back().computeFinishedSemaphore,
 								  fmt::format("Compute Finished Semaphore #{}", i));
         PBF_DEBUG_SET_OBJECT_NAME(_context, *_frameSync.back().fence, fmt::format("Frame Fence #{}", i));
@@ -351,7 +348,7 @@ void Renderer::render(Scene& scene, GUI& gui, float timestep) {
 			.commandBufferCount = 1,
 			.pCommandBuffers = &*buffer,
 			.signalSemaphoreCount = 1,
-			.pSignalSemaphores = &*currentFrameSync.renderFinishedSemaphore
+			.pSignalSemaphores = &*_swapchain->renderFinishedSemaphores()[imageIndex]
 		}}, *currentFrameSync.fence);
 	}
 
@@ -360,7 +357,7 @@ void Renderer::render(Scene& scene, GUI& gui, float timestep) {
 	try	{
 		auto result = _context.presentQueue().presentKHR(vk::PresentInfoKHR{
 			.waitSemaphoreCount = 1,
-			.pWaitSemaphores = &*currentFrameSync.renderFinishedSemaphore,
+			.pWaitSemaphores = &*_swapchain->renderFinishedSemaphores()[imageIndex],
 			.swapchainCount = 1,
 			.pSwapchains = &_swapchain->swapchain(),
 			.pImageIndices = &imageIndex,
@@ -369,6 +366,7 @@ void Renderer::render(Scene& scene, GUI& gui, float timestep) {
 		if (result != vk::Result::eSuccess)
 			vk::detail::throwResultException(result, "");
 	} catch (const vk::OutOfDateKHRError&) {
+		spdlog::get("console")->debug("OutOfDateKHRError on presentKHR");
 		reset();
 	}
 

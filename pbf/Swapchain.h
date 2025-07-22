@@ -21,6 +21,7 @@ public:
     const vk::SwapchainKHR &swapchain() const { return *_swapchain; }
 
     const std::vector<vk::Image> &images() const { return _images; }
+    const std::vector<vk::UniqueSemaphore> &renderFinishedSemaphores() const { return _renderFinishedSemaphores; }
     const std::vector<vk::UniqueImageView> &imageViews() const { return _imageViews; };
     const std::vector<vk::UniqueFramebuffer> &frameBuffers() const { return _frameBuffers; };
     const vk::Extent2D &extent() const { return _extent; }
@@ -34,6 +35,7 @@ private:
     vk::Extent2D _extent;
     vk::UniqueSwapchainKHR _swapchain;
     std::vector<vk::Image> _images;
+    std::vector<vk::UniqueSemaphore> _renderFinishedSemaphores;
     std::vector<vk::UniqueImageView> _imageViews;
     std::vector<vk::UniqueFramebuffer> _frameBuffers;
 	std::vector<Image> _depthBuffers;

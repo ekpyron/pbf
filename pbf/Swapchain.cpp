@@ -59,9 +59,13 @@ Swapchain::Swapchain(VulkanContext &context, const vk::RenderPass& renderPass, v
     }
 
     _images = device.getSwapchainImagesKHR(*_swapchain);
+
+	_renderFinishedSemaphores.reserve(_images.size());
     _imageViews.reserve(_images.size());
     for(const auto &image : _images) {
-        _imageViews.emplace_back(device.createImageViewUnique(vk::ImageViewCreateInfo{
+    	_renderFinishedSemaphores.emplace_back(device.createSemaphoreUnique({}));
+    	PBF_DEBUG_SET_OBJECT_NAME(context, *_renderFinishedSemaphores.back(), fmt::format("Render Finished Semaphore #{}", _renderFinishedSemaphores.size() - 1));
+    	_imageViews.emplace_back(device.createImageViewUnique(vk::ImageViewCreateInfo{
 			.image = image,
 			.viewType = vk::ImageViewType::e2D,
 			.format = context.surfaceFormat().format,
