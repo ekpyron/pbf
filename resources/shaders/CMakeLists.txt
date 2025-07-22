@@ -45,6 +45,7 @@ add_shader(simulation/calclambda.comp.spv simulation/calclambda.comp)
 add_shader(simulation/updatepos.comp.spv simulation/updatepos.comp)
 add_shader(simulation/calcvorticity.comp.spv simulation/calcvorticity.comp)
 add_shader(simulation/updatevel.comp.spv simulation/updatevel.comp)
+add_shader(simulation/copyparticlekeystodata.comp.spv simulation/copyparticlekeystodata.comp)
 
 add_shader(surface/depthblur.comp.spv surface/depthblur.comp)
 add_shader(surface/reconstruct_normals.comp.spv surface/reconstruct_normals.comp)

@@ -163,10 +163,8 @@ _tempBuffer(_context, _particleData.size(), 2, vk::BufferUsageFlagBits::eStorage
 		);
 	}
 
-
-	initKeys(initContext.context, *initContext.initCommandBuffer);
-
 	buildPipelines();
+	initKeys(initContext.context, *initContext.initCommandBuffer);
 }
 
 void Simulation::reset(vk::CommandBuffer &buf) {
@@ -245,25 +243,9 @@ void Simulation::initKeys(VulkanContext& context, vk::CommandBuffer buf)
 {
 	Cache& cache = context.cache();
 	{
-		auto keyInitPipeline = cache.fetch(
-		descriptors::ComputePipeline{
-			.flags = {},
-			.shaderStage = descriptors::ShaderStage {
-				.module = cache.fetch(
-					descriptors::ShaderModule{
-						.source = descriptors::ShaderModule::File{"shaders/simulation/keyinit.comp.spv"},
-						PBF_DESC_DEBUG_NAME("Simulation: key init shader module")
-					}),
-				.specialization = {
-					Specialization<uint32_t>{.constantID = 0, .value = blockSize}
-				}
-			},
-			PBF_DESC_DEBUG_NAME("Simulation: key init shader pipeline")
-		}
-		);
 		for (size_t i = 0; i < _particleData.segments(); ++i) {
 			_context.bindPipeline(
-				buf, keyInitPipeline,
+				buf, _keyInitPipeline,
 				{{_particleData.segment(i), _particleKeys.segment(i)}}
 			);
 			buf.dispatch(((getNumParticles() + blockSize - 1) / blockSize), 1, 1);
@@ -416,11 +398,39 @@ void Simulation::run(vk::CommandBuffer buf, float timestep)
 		*		_tempBuffer.segment(pongBufferSegment)
 		*/
 
-		// copy positions from particle keys to particle data
-		//		_tempBuffer.segment(pongBufferSegment) -> _particleData.segment(ringBufferIndex)
+		_context.bindPipeline(buf, _copyParticleKeysToDatePipeline, {
+			{_tempBuffer.segment(pongBufferSegment)},
+			{_particleData.segment(nextRingBufferIndex())}
+		});
+		buf.dispatch(((getNumParticles() + blockSize - 1) / blockSize), 1, 1);
+
+		buf.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {}, {
+			vk::MemoryBarrier{
+				.srcAccessMask = vk::AccessFlagBits::eShaderWrite,
+				.dstAccessMask = vk::AccessFlagBits::eShaderRead
+			}
+		}, {}, {});
+
+		/* up to date info in:
+ 		 *		_tempBuffer.segment(pongBufferSegment)
+		 *		_particleData.segment(nextRingBufferIndex())
+		 */
+
 		_distanceConstraintSolver.run(buf);
 		// copy positions from particle data to particle keys (or adjust radix sort input)
-		//		_particleData.segment(ringBufferIndex) -> _particleKeys.segment(ringBufferIndex)
+		//		_particleData.segment(nextRingBufferIndex()) -> _particleKeys.segment(ringBufferIndex)
+
+		_context.bindPipeline(buf, _keyInitPipeline, {
+				{{_particleData.segment(nextRingBufferIndex()), _tempBuffer.segment(pongBufferSegment)}}
+		});
+		buf.dispatch(((getNumParticles() + blockSize - 1) / blockSize), 1, 1);
+
+		buf.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {}, {
+			vk::MemoryBarrier{
+				.srcAccessMask = vk::AccessFlagBits::eShaderWrite,
+				.dstAccessMask = vk::AccessFlagBits::eShaderRead
+			}
+		}, {}, {});
 
 		std::swap(pingBufferSegment, pongBufferSegment);
 	}
@@ -527,6 +537,24 @@ void Simulation::buildPipelines()
 
 	auto& cache = _context.cache();
 	{
+		_keyInitPipeline = cache.fetch(
+			descriptors::ComputePipeline{
+				.flags = {},
+				.shaderStage = descriptors::ShaderStage {
+					.module = cache.fetch(
+						descriptors::ShaderModule{
+							.source = descriptors::ShaderModule::File{"shaders/simulation/keyinit.comp.spv"},
+							PBF_DESC_DEBUG_NAME("Simulation: key init shader module")
+						}),
+					.specialization = {
+						Specialization<uint32_t>{.constantID = 0, .value = blockSize}
+					}
+				},
+				PBF_DESC_DEBUG_NAME("Simulation: key init shader pipeline")
+			}
+		);
+	}
+	{
 		_particleDataUpdatePipeline = cache.fetch(
 			descriptors::ComputePipeline{
 				.flags = {},
@@ -539,6 +567,22 @@ void Simulation::buildPipelines()
 					.specialization = specializationInfo
 				},
 				PBF_DESC_DEBUG_NAME("Simulation: particle data update shader pipeline")
+			}
+		);
+	}
+	{
+		_copyParticleKeysToDatePipeline = cache.fetch(
+			descriptors::ComputePipeline{
+				.flags = {},
+				.shaderStage = descriptors::ShaderStage {
+					.module = cache.fetch(
+					descriptors::ShaderModule{
+						.source = descriptors::ShaderModule::File{"shaders/simulation/copyparticlekeystodata.comp.spv"},
+						PBF_DESC_DEBUG_NAME("Simulation: copy particle keys to particle data shader")
+					}),
+					.specialization = specializationInfo // TODO: maybe remove; all unused in shader
+				},
+				PBF_DESC_DEBUG_NAME("Simulation: copy particle keys to particle data pipeline")
 			}
 		);
 	}

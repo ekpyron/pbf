@@ -1,0 +1,38 @@
+#version 460
+#extension GL_ARB_separate_shader_objects : enable
+#extension GL_KHR_shader_subgroup_basic : enable
+
+#include "common.comp"
+
+layout (local_size_x_id = 0, local_size_y = 1, local_size_z = 1) in;
+
+layout(std430, binding = 0, set = 0) readonly buffer ParticleKeys
+{
+    ParticleKey particleKeys[];
+};
+
+layout(std430, binding = 0, set = 1) writeonly buffer Particles
+{
+    ParticleData particles[];
+};
+
+void main (void)
+{
+    uint gid = gl_GlobalInvocationID.x;
+    ParticleKey key = particleKeys[gid];
+    vec3 position = key.position;
+    /*
+    {
+        vec3 cornerToPosition = position - vec3(-30,-64,-30);
+        cornerToPosition *= vec3(lessThan(cornerToPosition, vec3(0,0,0))) * (-1.4) + 1;
+        position = vec3(-30,-64,-30) + cornerToPosition;
+    }
+    {
+        vec3 cornerToPosition = position - vec3(30,63,30);
+        cornerToPosition *= vec3(greaterThan(cornerToPosition, vec3(0,0,0))) * (-1.4) + 1;
+        position = vec3(30,63,30) + cornerToPosition;
+    }
+    particleKeys[gid].position = position;
+    */
+    particles[key.index].position = position;
+}

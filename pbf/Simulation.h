@@ -76,12 +76,14 @@ private:
 		float lastTimestep = 1.0f/60.0f;
 		float timestep = 1.0f/60.0f;
 	};
+	CacheReference<descriptors::ComputePipeline> _keyInitPipeline;
 	CacheReference<descriptors::ComputePipeline> _unconstrainedSystemUpdatePipeline;
 	CacheReference<descriptors::ComputePipeline> _particleDataUpdatePipeline;
 	CacheReference<descriptors::ComputePipeline> _calcLambdaPipeline;
 	CacheReference<descriptors::ComputePipeline> _updatePosPipeline;
 	CacheReference<descriptors::ComputePipeline> _calcVorticityPipeline;
 	CacheReference<descriptors::ComputePipeline> _updateVelPipeline;
+	CacheReference<descriptors::ComputePipeline> _copyParticleKeysToDatePipeline;
 
 	descriptors::ShaderStage::SpecializationInfo makeSpecializationInfo() const;
 
