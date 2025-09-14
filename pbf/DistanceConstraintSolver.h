@@ -4,6 +4,9 @@
 #include "Buffer.h"
 
 #include <pbf/descriptors/ComputePipeline.h>
+#include "VulkanContext.h"
+
+#include "contrib/Catch2/src/catch2/internal/catch_context.hpp"
 
 namespace pbf
 {
@@ -17,6 +20,7 @@ public:
         uint32_t index_j = 0;
         float distance = 1.0;
         float alpha = 1.0; // stiffness
+        glm::vec4 aux;
     };
     DistanceConstraintSolver(InitContext& _initContext, std::vector<Constraint> const& _constraints);
     ~DistanceConstraintSolver() = default;
@@ -25,13 +29,16 @@ public:
 
     void run(vk::CommandBuffer buf, vk::DescriptorBufferInfo const& _particleDataInOut);
 private:
+    VulkanContext& _context;
     Buffer<Constraint> constraints;
     // potentially: std::vector<Buffer<Constraint>> for graph-color batched constraint sets.
     Buffer<float> lambdas;
 
-    CacheReference<Pipeline> calcLambda;
-    CacheReference<Pipeline> updatePosition;
+    CacheReference<descriptors::ComputePipeline> calcLambda;
+    CacheReference<descriptors::ComputePipeline> updatePosition;
     uint blockSize = 256;
+
+    void buildPipelines();
 
 };
 

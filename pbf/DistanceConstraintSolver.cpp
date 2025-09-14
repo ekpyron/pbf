@@ -1,14 +1,17 @@
 #include "DistanceConstraintSolver.h"
 
-#include "VulkanContext.h"
-
 namespace pbf
 {
 
 DistanceConstraintSolver::DistanceConstraintSolver(InitContext& _initContext, std::vector<Constraint> const& _constraints):
-    constraints(_initContext.context, _constraints.size(), vk::BufferUsageFlagBits::eTransferDst|vk::BufferUsageFlagBits::eStorageBuffer, MemoryType::STATIC)
+    _context(_initContext.context),
+    constraints(_initContext.context, _constraints.size(), vk::BufferUsageFlagBits::eTransferDst|vk::BufferUsageFlagBits::eStorageBuffer, MemoryType::STATIC),
+    lambdas(_initContext.context, _constraints.size(), vk::BufferUsageFlagBits::eTransferDst|vk::BufferUsageFlagBits::eStorageBuffer, MemoryType::STATIC)
 {
-    Buffer<Constraint> constraintInitBuffer(_initContext.context, _constraints.size(), vk::BufferUsageFlagBits::eTransferSrc, MemoryType::TRANSIENT);
+    auto& constraintInitBuffer = _initContext.createInitData<Buffer<Constraint>>(
+            _context, _constraints.size(), vk::BufferUsageFlagBits::eTransferSrc, pbf::MemoryType::TRANSIENT
+    );
+
     std::ranges::copy(_constraints, constraintInitBuffer.data());
     _initContext.initCommandBuffer->copyBuffer(
         constraintInitBuffer.buffer(),
@@ -18,6 +21,15 @@ DistanceConstraintSolver::DistanceConstraintSolver(InitContext& _initContext, st
         }
         }
     );
+
+    _initContext.initCommandBuffer->pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eComputeShader, {}, {
+        vk::MemoryBarrier{
+            .srcAccessMask = vk::AccessFlagBits::eTransferWrite,
+            .dstAccessMask = vk::AccessFlagBits::eShaderRead
+        }
+    }, {}, {});
+
+    buildPipelines();
 }
 
 void DistanceConstraintSolver::run(vk::CommandBuffer buf, vk::DescriptorBufferInfo const& _particleDataInOut)
@@ -51,17 +63,70 @@ void DistanceConstraintSolver::run(vk::CommandBuffer buf, vk::DescriptorBufferIn
      * as already split into color-coded batches manually on initialization.)
      *
      */
+    buf.fillBuffer(lambdas.buffer(), 0, lambdas.deviceSize(), 0);
+
+    buf.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eComputeShader, {}, {
+    vk::MemoryBarrier{
+        .srcAccessMask = vk::AccessFlagBits::eTransferWrite,
+        .dstAccessMask = vk::AccessFlagBits::eShaderRead
+    }
+}, {}, {});
+
+    for (size_t distancestep = 0; distancestep < 1; ++distancestep)
+    {
+
+    // TODO: barriers?
+
+    _context.bindPipeline(buf, calcLambda, {
+        {vk::DescriptorBufferInfo{
+            constraints.buffer(), 0, constraints.deviceSize()
+        }}, // set 0
+        {
+            vk::DescriptorBufferInfo{
+                lambdas.buffer(), 0, lambdas.deviceSize()
+            }
+        }, // set 1
+        {_particleDataInOut}
+    });
+
+    buf.dispatch((constraints.size()  + blockSize - 1) / blockSize, 1, 1);
+
+        buf.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {}, {
+            vk::MemoryBarrier{
+                .srcAccessMask = vk::AccessFlagBits::eShaderWrite,
+                .dstAccessMask = vk::AccessFlagBits::eShaderRead
+            }
+        }, {}, {});
+    }
 #if 0
-    // TODO: barriers
-    buf.bindPipeline(vk::PipelineBindPoint::eCompute, distanceConstraints.calcLambda);
-    // TODO bind buffers
-    buf.dispatch((distanceConstraints.constraints.size()  + distanceConstraints.blockSize - 1) / distanceConstraints.blockSize, 1, 1);
     // TODO: barriers
     buf.bindPipeline(vk::PipelineBindPoint::eCompute, distanceConstraints.updatePosition);
     // TODO bind buffers
     buf.dispatch((distanceConstraints.constraints.size()  + distanceConstraints.blockSize - 1) / distanceConstraints.blockSize, 1, 1);
     // TODO: barriers
 #endif
+}
+
+void DistanceConstraintSolver::buildPipelines()
+{
+    auto& cache = _context.cache();
+    calcLambda = cache.fetch(
+        descriptors::ComputePipeline{
+            .flags = {},
+            .shaderStage = descriptors::ShaderStage {
+                .module = cache.fetch(
+                descriptors::ShaderModule{
+                    .source = descriptors::ShaderModule::File{"shaders/simulation/constraints/distance/calclambda.comp.spv"},
+                    PBF_DESC_DEBUG_NAME("Simulation: Constraints: Distance: Calc Lambda Shader")
+                }),
+                .specialization = {
+                    Specialization<uint32_t>{.constantID = 0, .value = blockSize},
+                    Specialization<uint32_t>{.constantID = 9, .value = static_cast<uint32_t>(constraints.size())},
+                }
+            },
+            PBF_DESC_DEBUG_NAME("Simulation: Constraints: Distance: calc lambda pipeline")
+        }
+    );
 }
 
 }

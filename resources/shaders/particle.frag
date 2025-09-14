@@ -60,6 +60,8 @@ void main() {
     else if (fAux != 0)
         outColor = vec4(1.0, 1.0, 0.0, 1.0);
 
+    outColor = uintBitsToFloat(fAux)*vec4(1.0, 0.0, 0.0, 1.0);
+
 #if 0
     outColor = vec4(fGrid, 1.0);
 /*

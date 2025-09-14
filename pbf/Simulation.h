@@ -36,11 +36,12 @@ private:
 
 	float h = glm::length(glm::vec3(1.0f, 1.0f, 1.0f));
 	float rho_0_type_0 = 1.0f;
-	float rho_0_type_1 = 2.0f;
+	float rho_0_type_1 = 1.0f;
 	float epsilon = 80.0f;
 	float xsph_viscosity_c = 0.01f;
 	float tensile_instability_k = 0.1f;
 	float vorticity_epsilon = 5.0f;
+	bool _runDistanceConstraintSolver = true;
 
 	float _lastTimestep = 1.0 / 60.0;
 	void initKeys(VulkanContext& context, vk::CommandBuffer buf);
@@ -56,7 +57,6 @@ private:
     }
 	RingBuffer<ParticleData> _particleData;
 	RingBuffer<ParticleKey> _particleKeys;
-
 	std::unique_ptr<DistanceConstraintSolver> _distanceConstraintSolver;
 
     using GridData = NeighbourCellFinder::GridData;

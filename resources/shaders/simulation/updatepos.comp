@@ -60,7 +60,7 @@ void main(void)
         // accumulate position corrections (part of equation 12)
         deltap += (lambda + lambdas[index_j] + scorr) * grad;
 
-        deltap += (len < 1.2 ? 1 : 0) * ((type == type_j) ? 0.0 : -1.0) * ((0.10 * (len - 1.2)) / len * p_ij);
+        //deltap += (len < 1.2 ? 1 : 0) * ((type == type_j) ? 0.0 : -1.0) * ((0.10 * (len - 1.2)) / len * p_ij);
     }
     END_FOR_EACH_NEIGHBOUR()
 

@@ -49,9 +49,9 @@ void main(void)
         vec3 grad = gradWspiky(p_ij);
         gradVorticity += vorticities[j].w * grad;
 
-        if (particles[particleKeys[j].index].aux == -1u) {
+        /*if (particles[particleKeys[j].index].aux == -1u) {
             neighbourIsSelected = true;
-        }
+        }*/
 
     }
     END_FOR_EACH_NEIGHBOUR()
@@ -64,7 +64,7 @@ void main(void)
     velocity += timestep * vorticity_epsilon * cross(gradVorticity, vorticities[gid].xyz);
 
     outputParticles[key.index].velocity = velocity;
-    if (particles[key.index].aux != -1u) {
+    /*if (particles[key.index].aux != -1u) {
         if (neighbourIsSelected) {
             outputParticles[key.index].aux = 1u;
         } else {
@@ -72,5 +72,5 @@ void main(void)
         }
     } else {
         outputParticles[key.index].aux = -1u;
-    }
+    }*/
 }
