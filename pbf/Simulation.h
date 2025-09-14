@@ -57,7 +57,7 @@ private:
 	RingBuffer<ParticleData> _particleData;
 	RingBuffer<ParticleKey> _particleKeys;
 
-	DistanceConstraintSolver _distanceConstraintSolver;
+	std::unique_ptr<DistanceConstraintSolver> _distanceConstraintSolver;
 
     using GridData = NeighbourCellFinder::GridData;
 	Buffer<GridData> _gridDataBuffer;

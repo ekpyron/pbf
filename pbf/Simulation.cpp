@@ -10,13 +10,14 @@ namespace pbf {
 
 namespace {
 
-void initializeParticleData(ParticleData* data, size_t numParticles)
+void initializeSystem(ParticleData* data, size_t numParticles, std::vector<DistanceConstraintSolver::Constraint>* distanceConstraints = nullptr)
 {
     std::random_device rd;
     std::mt19937 gen(rd());
     std::uniform_real_distribution<float> dist(-0.25f, 0.25f);
     size_t id = 0;
     auto edgeLength = std::ceil(std::cbrt(numParticles));
+	std::vector<uint32_t> borderParticles;
     [&](){
         for (int32_t x = 0; x < edgeLength; ++x)
         {
@@ -26,6 +27,11 @@ void initializeParticleData(ParticleData* data, size_t numParticles)
                 {
                     if (id >= numParticles)
                         return;
+                	bool isBorder = ((x == 0) || (x == edgeLength - 1)) ||
+                		((y == 0) || (y == edgeLength - 1)) ||
+                		((z == 0) || (z == edgeLength - 1));
+                	if (isBorder)
+                		borderParticles.push_back(id);
                     data[id].position = glm::vec3(x - 32, -63 + y, z - 32);
                     data[id].position += glm::vec3(dist(gen), dist(gen), dist(gen));
                     data[id].position *= 0.8f;
@@ -36,7 +42,20 @@ void initializeParticleData(ParticleData* data, size_t numParticles)
             }
         }
     }();
-    std::shuffle(data, data + numParticles, gen);
+	if (distanceConstraints)
+		for (size_t i = 0; i < borderParticles.size(); ++i)
+		{
+			for (size_t j = i + 1; j < borderParticles.size(); ++j)
+			{
+				if (glm::distance(data[i].position / 0.8f, data[j].position / 0.8f) < 1.5f)
+				{
+					distanceConstraints->push_back(DistanceConstraintSolver::Constraint(
+						i, j, glm::distance(data[i].position, data[j].position), 1.0f
+					));
+				}
+			}
+		}
+    //std::shuffle(data, data + numParticles, gen);
 }
 
 constexpr auto radixSortDescriptorSetLayoutDescriptors() {
@@ -79,10 +98,12 @@ _particleData([&]() {
     );
 
     ParticleData* data = initBuffer.data();
-    initializeParticleData(data, numParticles);
+	std::vector<DistanceConstraintSolver::Constraint> distanceConstraints;
+    initializeSystem(data, numParticles, &distanceConstraints);
+    auto& initCmdBuf = *initContext.initCommandBuffer;
+	_distanceConstraintSolver = std::make_unique<pbf::DistanceConstraintSolver>(initContext, distanceConstraints);
     initBuffer.flush();
 
-    auto& initCmdBuf = *initContext.initCommandBuffer;
     for (size_t i = 0; i < particleData.segments(); ++i)
         initCmdBuf.copyBuffer(initBuffer.buffer(), particleData.buffer(), {
                 vk::BufferCopy {
@@ -173,7 +194,7 @@ void Simulation::reset(vk::CommandBuffer &buf) {
     );
     ParticleData* data = initBuffer.data();
 
-    initializeParticleData(data, _particleData.size());
+    initializeSystem(data, _particleData.size());
     initBuffer.flush();
 
     for (size_t i = 0; i < _particleData.segments(); ++i)
@@ -417,7 +438,7 @@ void Simulation::run(vk::CommandBuffer buf, float timestep)
 		 */
 
 		// Assumed to perform its update in place in _particleData.segment(nextRingBufferIndex())
-		_distanceConstraintSolver.run(buf, _particleData.segment(nextRingBufferIndex()));
+		_distanceConstraintSolver->run(buf, _particleData.segment(nextRingBufferIndex()));
 
 		// copy positions from particle data to particle keys (or adjust radix sort input)
 		//		_particleData.segment(nextRingBufferIndex()) -> _particleKeys.segment(ringBufferIndex)

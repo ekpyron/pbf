@@ -3,7 +3,7 @@ TODO NEW:
     * Plan: Figure 18 of https://matthias-research.github.io/pages/publications/flex.pdf;
             i.e. water-filled balloon
     * Simulation.cpp:initializeParticleData --> initializeSystem
-            Also generate distance constraints as defined in DistanceConstraintSolver.h to contrain distances of
+            Also generate distance constraints as defined in DistanceConstraintSolver.h to constrain distances of
             the outer hull of the system.
     * Distance contrainted particles still have the same type as fluid particles; density solving does not change at all.
     * Implement distance contraint solution.

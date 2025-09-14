@@ -1,9 +1,24 @@
 #include "DistanceConstraintSolver.h"
 
+#include "VulkanContext.h"
+
 namespace pbf
 {
 
-DistanceConstraintSolver::DistanceConstraintSolver() = default;
+DistanceConstraintSolver::DistanceConstraintSolver(InitContext& _initContext, std::vector<Constraint> const& _constraints):
+    constraints(_initContext.context, _constraints.size(), vk::BufferUsageFlagBits::eTransferDst|vk::BufferUsageFlagBits::eStorageBuffer, MemoryType::STATIC)
+{
+    Buffer<Constraint> constraintInitBuffer(_initContext.context, _constraints.size(), vk::BufferUsageFlagBits::eTransferSrc, MemoryType::TRANSIENT);
+    std::ranges::copy(_constraints, constraintInitBuffer.data());
+    _initContext.initCommandBuffer->copyBuffer(
+        constraintInitBuffer.buffer(),
+        constraints.buffer(),
+        {vk::BufferCopy{
+            0, 0, constraints.deviceSize()
+        }
+        }
+    );
+}
 
 void DistanceConstraintSolver::run(vk::CommandBuffer buf, vk::DescriptorBufferInfo const& _particleDataInOut)
 {
@@ -48,6 +63,5 @@ void DistanceConstraintSolver::run(vk::CommandBuffer buf, vk::DescriptorBufferIn
     // TODO: barriers
 #endif
 }
-
 
 }

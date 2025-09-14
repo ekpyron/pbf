@@ -10,14 +10,6 @@ namespace pbf
 
 class DistanceConstraintSolver {
 public:
-    DistanceConstraintSolver();
-    ~DistanceConstraintSolver() = default;
-    DistanceConstraintSolver(const DistanceConstraintSolver&) = delete;
-    DistanceConstraintSolver& operator=(const DistanceConstraintSolver&) = delete;
-
-    void run(vk::CommandBuffer buf, vk::DescriptorBufferInfo const& _particleDataInOut);
-
-private:
     struct Constraint
     {
         // dot(particlepos[index_i] - particlepos[index_j], particlepos[index_i] - particlepos[index_j]) - distance² = 0.0
@@ -26,6 +18,13 @@ private:
         float distance = 1.0;
         float alpha = 1.0; // stiffness
     };
+    DistanceConstraintSolver(InitContext& _initContext, std::vector<Constraint> const& _constraints);
+    ~DistanceConstraintSolver() = default;
+    DistanceConstraintSolver(const DistanceConstraintSolver&) = delete;
+    DistanceConstraintSolver& operator=(const DistanceConstraintSolver&) = delete;
+
+    void run(vk::CommandBuffer buf, vk::DescriptorBufferInfo const& _particleDataInOut);
+private:
     Buffer<Constraint> constraints;
     // potentially: std::vector<Buffer<Constraint>> for graph-color batched constraint sets.
     Buffer<float> lambdas;
