@@ -139,9 +139,15 @@ VulkanContext::VulkanContext() {
 				.pQueuePriorities = &queuePriority
 			}};
         }
-        vk::PhysicalDeviceFeatures features{};
-        features.setMultiDrawIndirect(static_cast<vk::Bool32>(true));
+    	vk::PhysicalDeviceShaderDemoteToHelperInvocationFeatures shaderDemoteToHelperInvocationFeatures{
+    		.shaderDemoteToHelperInvocation = true
+    	};
+        vk::PhysicalDeviceFeatures2 features{
+        	.pNext = &shaderDemoteToHelperInvocationFeatures
+        };
+    	features.features.setMultiDrawIndirect(static_cast<vk::Bool32>(true));
         vk::PhysicalDeviceMaintenance4Features maintenance4Features{
+        	.pNext = &features,
             .maintenance4 = vk::True
         };
         auto extensionName = VK_KHR_SWAPCHAIN_EXTENSION_NAME;
@@ -153,7 +159,7 @@ VulkanContext::VulkanContext() {
 			.ppEnabledLayerNames = nullptr,
 			.enabledExtensionCount = 1,
 			.ppEnabledExtensionNames = &extensionName,
-			.pEnabledFeatures = &features
+			//.pEnabledFeatures = &features
 		});
 
         _graphicsQueue = _device->getQueue(_families.graphics, 0);

@@ -59,7 +59,6 @@ private:
 
 	DistanceConstraintSolver _distanceConstraintSolver;
 
-
     using GridData = NeighbourCellFinder::GridData;
 	Buffer<GridData> _gridDataBuffer;
 
@@ -67,7 +66,7 @@ private:
 	Buffer<glm::vec4> _vorticityBuffer;
 
 	RadixSort _radixSort;
-	NeighbourCellFinder _neighbourCellFinder;
+	std::unique_ptr<NeighbourCellFinder> _neighbourCellFinder;
 
 	RingBuffer<ParticleKey> _tempBuffer;
 

@@ -45,8 +45,6 @@ void main (void)
     if (gid == 0)
     {
         grid[GetGridIndex(particleKeys[0].position)].startIndex = 0;
-        //uint maxID = gl_NumWorkGroups.x * gl_WorkGroupSize.x;
-        //grid[GetGridIndex(GRID_MAX)].endIndex = maxID;
         grid[GetGridIndex(particleKeys[MAX_ID - 1].position)].endIndex = MAX_ID;
         return;
     }

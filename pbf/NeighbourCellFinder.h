@@ -12,11 +12,27 @@ public:
 	NeighbourCellFinder(ContextInterface& context, size_t numGridCells, size_t maxID, MemoryType gridBoundaryBufferMemoryType = MemoryType::STATIC);
 
     struct GridData {
-        glm::ivec4 max = glm::ivec4(127, 127, 127, 0);
-        glm::ivec4 min = glm::ivec4(-128, -128, -128, 0);
-        glm::ivec3 hashweights = glm::ivec3(1, (max.x - min.x + 1), (max.x - min.x + 1) * (max.y - min.y + 1));
-    	float cellSize = glm::sqrt(3.0f);
-        [[nodiscard]] inline size_t numCells() const {
+    	GridData(glm::ivec3 const& _min, glm::ivec3 const& _max, float h):
+    	max(_max.x, _max.y, _max.z, 0),
+    	min(_min.x, _min.y, _min.z, 0),
+    	hashweights(1, (_max.x - _min.x + 1), (_max.x - _min.x + 1) * (_max.y - _min.y + 1)),
+    	cellSize(h)
+    	{
+    	}
+    	GridData() = delete;
+        glm::ivec4 max;
+        glm::ivec4 min;
+        glm::ivec3 hashweights;
+    	float cellSize;
+    	glm::vec3 maxGridCoords() const
+    	{
+    		return cellSize * glm::vec3(max.x, max.y, max.z);
+    	}
+    	glm::vec3 minGridCoords() const
+    	{
+    		return cellSize * glm::vec3(min.x, min.y, min.z);
+    	}
+    	[[nodiscard]] inline size_t numCells() const {
             glm::ivec3 gridExtents = glm::ivec3(max) - glm::ivec3(min);
             return (gridExtents.x + 1) * (gridExtents.y + 1) * (gridExtents.z + 1);
         }

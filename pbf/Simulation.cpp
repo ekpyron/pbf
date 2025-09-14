@@ -108,7 +108,6 @@ _gridDataBuffer(_context, 1, vk::BufferUsageFlagBits::eUniformBuffer|vk::BufferU
 _lambdaBuffer(initContext.context, _particleData.size(), vk::BufferUsageFlagBits::eStorageBuffer|vk::BufferUsageFlagBits::eTransferDst, MemoryType::STATIC),
 _vorticityBuffer(initContext.context, _particleData.size(), vk::BufferUsageFlagBits::eStorageBuffer, MemoryType::STATIC),
 _radixSort(_context, blockSize, getNumParticles() / blockSize, radixSortDescriptorSetLayoutDescriptors(), "shaders/particlesort"),
-_neighbourCellFinder(_context, GridData{}.numCells(), getNumParticles()),
 _tempBuffer(_context, _particleData.size(), 2, vk::BufferUsageFlagBits::eStorageBuffer|vk::BufferUsageFlagBits::eTransferSrc, MemoryType::STATIC)
 {
 	if (getNumParticles() % blockSize)
@@ -123,7 +122,8 @@ _tempBuffer(_context, _particleData.size(), 2, vk::BufferUsageFlagBits::eStorage
 			vk::BufferUsageFlagBits::eTransferSrc,
 			MemoryType::TRANSIENT
 		);
-		std::construct_at<GridData>(gridDataInitBuffer.data());
+		std::construct_at<GridData>(gridDataInitBuffer.data(), glm::ivec3(-128, -128, -128), glm::ivec3(127, 127, 127), h);
+		_neighbourCellFinder = std::make_unique<NeighbourCellFinder>(_context, gridDataInitBuffer.data()->numCells(), getNumParticles());
 		gridDataInitBuffer.flush();
 
 		auto& initCmdBuf = *initContext.initCommandBuffer;
@@ -342,7 +342,7 @@ void Simulation::run(vk::CommandBuffer buf, float timestep)
 		*		_tempBuffer.segment(pingBufferSegment)
 		*/
 
-        _neighbourCellFinder(buf, _particleData.size(), _tempBuffer.segment(pingBufferSegment), _gridDataBuffer.fullBufferInfo());
+        (*_neighbourCellFinder)(buf, _particleData.size(), _tempBuffer.segment(pingBufferSegment), _gridDataBuffer.fullBufferInfo());
 
 
 
@@ -351,7 +351,7 @@ void Simulation::run(vk::CommandBuffer buf, float timestep)
 			buf, _calcLambdaPipeline,
 			{
 				{_tempBuffer.segment(pingBufferSegment), _gridDataBuffer.fullBufferInfo()},
-				{_neighbourCellFinder.gridBoundaryBuffer().fullBufferInfo()},
+				{_neighbourCellFinder->gridBoundaryBuffer().fullBufferInfo()},
 				{_lambdaBuffer.fullBufferInfo()},
 				{_particleData.segment(nextRingBufferIndex())}
 			}
@@ -373,7 +373,7 @@ void Simulation::run(vk::CommandBuffer buf, float timestep)
 							 _gridDataBuffer.fullBufferInfo()
 						 },
 						 { // set 1
-							 _neighbourCellFinder.gridBoundaryBuffer().fullBufferInfo()
+							 _neighbourCellFinder->gridBoundaryBuffer().fullBufferInfo()
 						 },
 						 { // set 2
 							 _lambdaBuffer.fullBufferInfo()
@@ -459,7 +459,7 @@ void Simulation::run(vk::CommandBuffer buf, float timestep)
 		_calcVorticityPipeline,
 		{
 			{_particleKeys.segment(nextRingBufferIndex()), _gridDataBuffer.fullBufferInfo()},
-			{_neighbourCellFinder.gridBoundaryBuffer().fullBufferInfo()},
+			{_neighbourCellFinder->gridBoundaryBuffer().fullBufferInfo()},
 			{_vorticityBuffer.fullBufferInfo()},
 			{_particleData.segment(nextRingBufferIndex())},
 			{_particleData.segment(ringBufferIndex)},
@@ -479,7 +479,7 @@ void Simulation::run(vk::CommandBuffer buf, float timestep)
 		_updateVelPipeline,
 		{
 			{_particleKeys.segment(nextRingBufferIndex()), _gridDataBuffer.fullBufferInfo()},
-			{_neighbourCellFinder.gridBoundaryBuffer().fullBufferInfo()},
+			{_neighbourCellFinder->gridBoundaryBuffer().fullBufferInfo()},
 			{_vorticityBuffer.fullBufferInfo()},
 			{_particleData.segment(ringBufferIndex)},
 			{_particleData.segment(nextRingBufferIndex())}
