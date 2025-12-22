@@ -198,7 +198,7 @@ void Renderer::render(Scene& scene, GUI& gui, float timestep) {
 
 		if (gui.runSPH())
 		{
-            static size_t numSimulationSteps = 4;
+            static size_t numSimulationSteps = 1;
             for(size_t i = 0; i < numSimulationSteps; ++i)
 			    scene.simulation().run(*buffer, timestep / float(numSimulationSteps));
 		}
