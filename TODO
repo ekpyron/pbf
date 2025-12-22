@@ -1,3 +1,7 @@
+TODO NEW NEW:
+    * Consider for Distance Constraint Solver:
+        - instead of in-place particle position updates, ping-pong.
+
 TODO NEW:
     * Fix new validation layer issues.
     * Plan: Figure 18 of https://matthias-research.github.io/pages/publications/flex.pdf;
@@ -5,8 +9,8 @@ TODO NEW:
     * Simulation.cpp:initializeParticleData --> initializeSystem
             Also generate distance constraints as defined in DistanceConstraintSolver.h to constrain distances of
             the outer hull of the system.
-    * Distance contrainted particles still have the same type as fluid particles; density solving does not change at all.
-    * Implement distance contraint solution.
+    * Distance constrained particles still have the same type as fluid particles; density solving does not change at all.
+    * Implement distance constraint solution.
     * See what happens.
 
 

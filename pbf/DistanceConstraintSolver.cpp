@@ -1,10 +1,13 @@
 #include "DistanceConstraintSolver.h"
+
+#include "imgui.h"
 #include "Scene.h"
 
 namespace pbf
 {
 
-DistanceConstraintSolver::DistanceConstraintSolver(InitContext& _initContext, std::vector<Constraint> const& _constraints):
+DistanceConstraintSolver::DistanceConstraintSolver(InitContext& _initContext, GUI& gui, std::vector<Constraint> const& _constraints):
+    UIControlled(gui),
     _context(_initContext.context),
     constraints(_initContext.context, _constraints.size(), vk::BufferUsageFlagBits::eTransferDst|vk::BufferUsageFlagBits::eStorageBuffer, MemoryType::STATIC),
     lambdas(_initContext.context, _constraints.size(), vk::BufferUsageFlagBits::eTransferDst|vk::BufferUsageFlagBits::eStorageBuffer, MemoryType::STATIC)
@@ -33,7 +36,33 @@ DistanceConstraintSolver::DistanceConstraintSolver(InitContext& _initContext, st
     buildPipelines();
 }
 
-void DistanceConstraintSolver::run(vk::CommandBuffer buf, float _timestep, vk::DescriptorBufferInfo const& _particleDataInOut, vk::DescriptorBufferInfo const& _previousParticleData)
+
+std::string DistanceConstraintSolver::uiCategory() const
+{
+    return "Distance Constraint Solver";
+}
+
+void DistanceConstraintSolver::ui()
+{
+    ImGui::SliderFloat("force constant factor", &forceConstantFactor, 0.001f, 20.0f, "%.3f");
+    ImGui::SliderFloat("alpha factor", &alphaFactor, 0.001f, 100.0f, "%.3f");
+    ImGui::SliderFloat("beta factor", &betaFactor, 0.001f, 100.0f, "%.3f");
+
+}
+
+void DistanceConstraintSolver::_startSolverLoop(vk::CommandBuffer buf)
+{
+    buf.fillBuffer(lambdas.buffer(), 0, lambdas.deviceSize(), 0);
+    buf.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eComputeShader, {}, {
+    vk::MemoryBarrier{
+        .srcAccessMask = vk::AccessFlagBits::eTransferWrite,
+        .dstAccessMask = vk::AccessFlagBits::eShaderRead
+    }
+}, {}, {});
+}
+
+
+void DistanceConstraintSolver::_run(vk::CommandBuffer buf, float _timestep, vk::DescriptorBufferInfo const& _particleDataInOut, vk::DescriptorBufferInfo const& _previousParticleData)
 {
     // For reference:
     // https://matthias-research.github.io/pages/publications/XPBD.pdf
@@ -64,22 +93,17 @@ void DistanceConstraintSolver::run(vk::CommandBuffer buf, float _timestep, vk::D
      * as already split into color-coded batches manually on initialization.)
      *
      */
-    buf.fillBuffer(lambdas.buffer(), 0, lambdas.deviceSize(), 0);
-
-    buf.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eComputeShader, {}, {
-    vk::MemoryBarrier{
-        .srcAccessMask = vk::AccessFlagBits::eTransferWrite,
-        .dstAccessMask = vk::AccessFlagBits::eShaderRead
-    }
-}, {}, {});
 
     constexpr size_t numSteps = 1;
 
     struct PushConstants
     {
-        float timestep;
+        float timestep = 0.01f;
+        float forceConstantFactor = 1.0f;
+        float alphaFactor = 1.0f;
+        float betaFactor = 1.0f;
     };
-    PushConstants pushConstants{_timestep};
+    PushConstants pushConstants{_timestep, forceConstantFactor, alphaFactor, betaFactor};
 
     for (size_t distancestep = 0; distancestep < numSteps; ++distancestep)
     {

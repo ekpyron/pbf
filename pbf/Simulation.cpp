@@ -94,8 +94,8 @@ void initializeSystem(ParticleData* data, size_t numParticles, std::vector<Dista
 		{
 			assert(glm::distance(data[i].position / 0.8f, data[j].position / 0.8f) < 3.0f);
 			distanceConstraints->push_back(DistanceConstraintSolver::Constraint(
-				i, j, glm::distance(data[i].position, data[j].position), 0.0001f,
-				glm::vec4()
+				i, j, glm::distance(data[i].position, data[j].position),
+				0.001f,1.0f, 0.01f, glm::vec2()
 			));
 		}
 	}
@@ -154,7 +154,7 @@ _tempBuffer(_context, _particleData.size(), 2, vk::BufferUsageFlagBits::eStorage
 		std::vector<DistanceConstraintSolver::Constraint> distanceConstraints;
 		initializeSystem(data, numParticles, &distanceConstraints);
 		auto& initCmdBuf = *initContext.initCommandBuffer;
-		_distanceConstraintSolver = std::make_unique<pbf::DistanceConstraintSolver>(initContext, distanceConstraints);
+		_distanceConstraintSolver = std::make_unique<pbf::DistanceConstraintSolver>(initContext, gui, distanceConstraints);
 		initBuffer.flush();
 
 		for (size_t i = 0; i < particleData.segments(); ++i)
@@ -271,6 +271,7 @@ std::string Simulation::uiCategory() const
 void Simulation::ui()
 {
 	ImGui::Checkbox("Run Distance Constraint Solver", &_runDistanceConstraintSolver);
+	ImGui::SliderFloat("key power", &keyPower, 0.1f, 20.0f, "%.3f");
 	bool rebuildPipelines = false;
 	rebuildPipelines |= ImGui::SliderFloat("h", &h, 0.25f, 4.0f, "%.3f");
 	rebuildPipelines |= ImGui::SliderFloat("rho_0_type_0", &rho_0_type_0, 0.1f, 10.0f, "%.1f");
@@ -348,9 +349,8 @@ void Simulation::run(vk::CommandBuffer buf, float timestep)
 		.timestep = timestep
 	};
 	_lastTimestep = timestep;
-	float keyPower = 20.0f * Gabs;
-	pushConstants.externalAccell += keyPower * glm::vec3(_context.window().getKey(GLFW_KEY_LEFT) ? 1.0f : 0.0f, 0, _context.window().getKey(GLFW_KEY_UP) ? 1.0f : 0.0f);
-	pushConstants.externalAccell += keyPower * glm::vec3(_context.window().getKey(GLFW_KEY_RIGHT) ? -1.0f : 0.0f, 0, _context.window().getKey(GLFW_KEY_DOWN) ? -1.0f : 0.0f);
+	pushConstants.externalAccell += keyPower * Gabs * glm::vec3(_context.window().getKey(GLFW_KEY_LEFT) ? 1.0f : 0.0f, 0, _context.window().getKey(GLFW_KEY_UP) ? 1.0f : 0.0f);
+	pushConstants.externalAccell += keyPower * Gabs * glm::vec3(_context.window().getKey(GLFW_KEY_RIGHT) ? -1.0f : 0.0f, 0, _context.window().getKey(GLFW_KEY_DOWN) ? -1.0f : 0.0f);
 
 	buf.pushConstants(*(_unconstrainedSystemUpdatePipeline->pipelineLayout), vk::ShaderStageFlagBits::eAll, 0, sizeof(pushConstants), &pushConstants);
 
@@ -389,7 +389,7 @@ void Simulation::run(vk::CommandBuffer buf, float timestep)
 	*		initInfos
 	*/
 
-
+	auto distanceConstraintRunner = _runDistanceConstraintSolver ? std::make_optional(_distanceConstraintSolver->startSolverLoop(buf)) : std::nullopt;
 	static constexpr size_t numSteps = 3;
 	for (size_t step = 0; step < numSteps; ++step)
 	{
@@ -488,8 +488,8 @@ void Simulation::run(vk::CommandBuffer buf, float timestep)
 		 */
 
 		// Assumed to perform its update in place in _particleData.segment(nextRingBufferIndex())
-		if (_runDistanceConstraintSolver)
-			_distanceConstraintSolver->run(buf, timestep, _particleData.segment(nextRingBufferIndex()), _particleData.segment(ringBufferIndex));
+		if (distanceConstraintRunner)
+			(*distanceConstraintRunner)(buf, timestep, _particleData.segment(nextRingBufferIndex()), _particleData.segment(ringBufferIndex));
 
 		// copy positions from particle data to particle keys (or adjust radix sort input)
 		//		_particleData.segment(nextRingBufferIndex()) -> _particleKeys.segment(ringBufferIndex)

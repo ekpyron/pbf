@@ -86,6 +86,8 @@ private:
 
 	descriptors::ShaderStage::SpecializationInfo makeSpecializationInfo() const;
 
+	float keyPower = 5.0f;
+
 	static constexpr std::uint32_t blockSize = 256;
 };
 
