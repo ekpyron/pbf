@@ -13,27 +13,56 @@ namespace pbf
 {
     struct ParticleData;
 
-    class DistanceConstraintSolver: public UIControlled {
-public:
-    struct Constraint
+    struct DistanceConstraintSolverConfig
     {
-        // dot(particlepos[index_i] - particlepos[index_j], particlepos[index_i] - particlepos[index_j]) - distance² = 0.0
-        uint32_t index_i = 0;
-        uint32_t index_j = 0;
-        float distance = 1.0;
-        float alpha = 1.0; // stiffness
-        float forceConstant = 1.0;
-        float beta = 0.01; // damping
-        glm::vec2 aux;
+        struct Constraint
+        {
+            // dot(particlepos[index_i] - particlepos[index_j], particlepos[index_i] - particlepos[index_j]) - distance² = 0.0
+            uint32_t index_i = 0;
+            uint32_t index_j = 0;
+            float distance = 1.0;
+            float alpha = 1.0; // stiffness
+            float forceConstant = 1.0;
+            float beta = 0.01; // damping
+            glm::vec2 aux;
+        };
+        static constexpr auto uiCategory() { return "Distance Constraint Solver"; }
+        static constexpr auto shader() { return "shaders/simulation/constraints/distance/calclambda.comp.spv"; }
     };
-    DistanceConstraintSolver(InitContext& _initContext, GUI& gui, std::vector<Constraint> const& _constraints);
-    ~DistanceConstraintSolver() = default;
-    DistanceConstraintSolver(const DistanceConstraintSolver&) = delete;
-    DistanceConstraintSolver& operator=(const DistanceConstraintSolver&) = delete;
+
+    struct PositionConstraintSolverConfig
+    {
+        struct Constraint
+        {
+            glm::vec3 position{};
+            uint32_t index_i = 0;
+            float distance = 0.0;
+            float alpha = 1.0; // stiffness
+            float forceConstant = 1.0;
+            float beta = 0.01; // damping
+        };
+        static constexpr auto uiCategory() { return "Position Constraint Solver"; }
+        static constexpr auto shader() { return "shaders/simulation/constraints/position/calclambda.comp.spv"; }
+    };
+
+    template<typename ConstraintSolverConfig>
+    class GenericConstraintSolver: public UIControlled {
+public:
+    using Constraint = ConstraintSolverConfig::Constraint;
+    GenericConstraintSolver(InitContext& _initContext, GUI& gui, std::vector<Constraint> const& _constraints);
+    ~GenericConstraintSolver() = default;
+    GenericConstraintSolver(const GenericConstraintSolver&) = delete;
+    GenericConstraintSolver& operator=(const GenericConstraintSolver&) = delete;
     auto startSolverLoop(vk::CommandBuffer buf) -> auto
     {
         _startSolverLoop(buf);
         return [&]<typename... Args>(Args&&... args) { return _run(std::forward<Args>(args)...); };
+    }
+
+    void setConstraintsFromBuffer(vk::CommandBuffer buf, vk::Buffer buffer);
+    size_t numConstraints() const
+    {
+        return constraints.size();
     }
 
 protected:
@@ -58,5 +87,8 @@ private:
     void buildPipelines();
 
 };
+
+using DistanceConstraintSolver = GenericConstraintSolver<DistanceConstraintSolverConfig>;
+using PositionConstraintSolver = GenericConstraintSolver<PositionConstraintSolverConfig>;
 
 }

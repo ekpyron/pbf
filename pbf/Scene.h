@@ -74,7 +74,7 @@ private:
     VulkanContext& _context;
 	GlobalAppData& globalData;
 
-	uint32_t const _numParticles = 64*32*32;//64 * 64 * 32;
+	uint32_t const _numParticles = 32*32*32;//64*32*32;//64 * 64 * 32;
 
 	RingBuffer<ParticleData> _particleData;
 

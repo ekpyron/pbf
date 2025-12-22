@@ -35,7 +35,7 @@ void main (void)
     velocity += mass * externalAccel * timestep;
     float r = length(particleKeys[gid].position);
     vec3 gravityDir = -particleKeys[gid].position / r;
-    velocity += mass * 4 * (timestep * gravityDir);
+    velocity += mass * 8 * (timestep * gravityDir);
     particleKeys[gid].position += timestep * velocity;
     particles[key.index].velocity = velocity;
 }

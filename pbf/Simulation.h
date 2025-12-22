@@ -58,6 +58,10 @@ private:
 	RingBuffer<ParticleData> _particleData;
 	RingBuffer<ParticleKey> _particleKeys;
 	std::unique_ptr<DistanceConstraintSolver> _distanceConstraintSolver;
+	std::unique_ptr<PositionConstraintSolver> _positionConstraintSolver;
+	std::move_only_function<void(std::vector<PositionConstraintSolver::Constraint>& _contraints, float _angle)const> positionConstraintFiller;
+	float currentRotatorAngle = 0.0f;
+	float rotatorSpeed = 1.0f;
 
     using GridData = NeighbourCellFinder::GridData;
 	Buffer<GridData> _gridDataBuffer;

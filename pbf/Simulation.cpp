@@ -10,95 +10,173 @@ namespace pbf {
 
 namespace {
 
-void initializeSystem(ParticleData* data, size_t numParticles, std::vector<DistanceConstraintSolver::Constraint>* distanceConstraints = nullptr)
+[[nodiscard]] auto initializeSystem(ParticleData* data, size_t numParticles, std::vector<DistanceConstraintSolver::Constraint>* distanceConstraints = nullptr)
 {
     std::random_device rd;
     std::mt19937 gen(rd());
     std::uniform_real_distribution<float> dist(-0.25f, 0.25f);
-    size_t edgeLength = std::ceil(std::cbrt(numParticles));
-	std::set<std::pair<uint32_t, uint32_t>> borderParticlePairs;
 
-	auto isBorder = [&](int32_t x, int32_t y, int32_t z)
-	{
-		return ((x < 3) || (x >= edgeLength - 3)) ||
-								((y < 3) || (y >= edgeLength - 3)) ||
-								((z < 3) || (z >= edgeLength - 3));
-	};
+	size_t bladeLength = 8;
+	size_t bladeHeight = 8;
+	size_t numBlades = 5;
+	size_t numParticlesRotator = bladeHeight * (4 + numBlades * bladeLength * 2);
 
-	auto calcId = [&](int32_t x, int32_t y, int32_t z)
-	{
-		return x * edgeLength * edgeLength + y * edgeLength + z;
-	};
-	auto isInSystem = [&](int32_t x, int32_t y, int32_t z)
-	{
-		return x >= 0 && y >= 0 && z >= 0 && x < edgeLength && y < edgeLength && z < edgeLength && calcId(x,y,z) < numParticles;
-	};
+	assert(numParticlesRotator < numParticles);
+	size_t numParticlesFluid = numParticles - numParticlesRotator;
 
-    [&](){
-        for (int32_t x = 0; x < edgeLength; ++x)
-        {
-            for (int32_t y = 0; y < edgeLength; ++y)
-            {
-                for (int32_t z = 0; z < edgeLength; ++z)
-                {
-                	int32_t id = calcId(x, y, z);
-                    if (id >= numParticles)
-                        return;
-                    data[id].position = glm::vec3(x - 32, -63 + y, z - 32);
-                    //data[id].position += glm::vec3(dist(gen), dist(gen), dist(gen));
-                    data[id].position *= 0.8f;
-                	data[id].aux = (id % 256 == 0) ? -1u : 0;
-                    data[id].velocity = glm::vec3(0,0,0);
-                    data[id].type = id > (numParticles / 2);
-                	if (isBorder(x, y, z) && distanceConstraints)
-                	{
-                		/*distanceConstraints->push_back(DistanceConstraintSolver::Constraint(
-							id, 0, 0, 1.0f,
-							glm::vec4(data[id].position, 0.0f)
-						));*/
-                		for (int32_t dx = -1; dx <= 1; ++dx)
-                			for (int32_t dy = -1; dy <= 1; ++dy)
-                				for (int32_t dz = -1; dz <= 1; ++dz)
-                				{
-                					if (isBorder(x + dx, y + dy, z + dz) && isInSystem(x + dx, y + dy, z + dz))
+	// Fluid Particles
+    {
+	    size_t edgeLength = std::ceil(std::cbrt(numParticlesFluid));
+		std::set<std::pair<uint32_t, uint32_t>> borderParticlePairs;
+
+		auto isBorder = [&](int32_t x, int32_t y, int32_t z)
+		{
+			return ((x < 3) || (x >= edgeLength - 3)) ||
+									((y < 3) || (y >= edgeLength - 3)) ||
+									((z < 3) || (z >= edgeLength - 3));
+		};
+
+		auto calcId = [&](int32_t x, int32_t y, int32_t z)
+		{
+			return x * edgeLength * edgeLength + y * edgeLength + z;
+		};
+		auto isInSystem = [&](int32_t x, int32_t y, int32_t z)
+		{
+			return x >= 0 && y >= 0 && z >= 0 && x < edgeLength && y < edgeLength && z < edgeLength && calcId(x,y,z) < numParticlesFluid;
+		};
+
+	    [&](){
+	        for (int32_t x = 0; x < edgeLength; ++x)
+	        {
+	            for (int32_t y = 0; y < edgeLength; ++y)
+	            {
+	                for (int32_t z = 0; z < edgeLength; ++z)
+	                {
+                		int32_t id = calcId(x, y, z);
+	                    if (id >= numParticlesFluid)
+	                        return;
+	                    data[id].position = glm::vec3(x - 32, -63 + y, z - 32);
+	                    //data[id].position += glm::vec3(dist(gen), dist(gen), dist(gen));
+	                    data[id].position *= 0.8f;
+                		data[id].aux = (id % 256 == 0) ? -1u : 0;
+	                    data[id].velocity = glm::vec3(0,0,0);
+	                    data[id].type = id > (numParticlesFluid / 2);
+                		if (isBorder(x, y, z) && distanceConstraints)
+                		{
+                			/*distanceConstraints->push_back(DistanceConstraintSolver::Constraint(
+								id, 0, 0, 1.0f,
+								glm::vec4(data[id].position, 0.0f)
+							));*/
+                			for (int32_t dx = -1; dx <= 1; ++dx)
+                				for (int32_t dy = -1; dy <= 1; ++dy)
+                					for (int32_t dz = -1; dz <= 1; ++dz)
                 					{
-                						int32_t id_j = calcId(x + dx, y + dy, z + dz);
-                						if (id < id_j)
-	                						borderParticlePairs.insert(std::make_pair(id, id_j));
+                						if (isBorder(x + dx, y + dy, z + dz) && isInSystem(x + dx, y + dy, z + dz))
+                						{
+                							int32_t id_j = calcId(x + dx, y + dy, z + dz);
+                							if (id < id_j)
+	                							borderParticlePairs.insert(std::make_pair(id, id_j));
+                						}
                 					}
-                				}
-                	}
-                }
-            }
-        }
-    }();
-	if (distanceConstraints)
-	{
-		/*const float restDist = 1.0f;
-		for (size_t i = 1; i < 1000; ++i)
+                		}
+	                }
+	            }
+	        }
+	    }();
+		if (false && distanceConstraints)
 		{
-			distanceConstraints->push_back(DistanceConstraintSolver::Constraint(
-				i, i+1, restDist, 0.001f,
-				glm::vec4()
-			));
-			distanceConstraints->push_back(DistanceConstraintSolver::Constraint(
-				i-1, i+1, restDist * 2.0f, 0.0001f,
-				glm::vec4()
-			));
-			distanceConstraints->push_back(DistanceConstraintSolver::Constraint(
-				i, i+2, restDist * 2.0f, 0.0001f,
-				glm::vec4()
-			));
-		}*/
-		for (auto [i, j]: borderParticlePairs)
-		{
-			assert(glm::distance(data[i].position / 0.8f, data[j].position / 0.8f) < 3.0f);
-			distanceConstraints->push_back(DistanceConstraintSolver::Constraint(
-				i, j, glm::distance(data[i].position, data[j].position),
-				0.001f,1.0f, 0.01f, glm::vec2()
-			));
+			/*const float restDist = 1.0f;
+			for (size_t i = 1; i < 1000; ++i)
+			{
+				distanceConstraints->push_back(DistanceConstraintSolver::Constraint(
+					i, i+1, restDist, 0.001f,
+					glm::vec4()
+				));
+				distanceConstraints->push_back(DistanceConstraintSolver::Constraint(
+					i-1, i+1, restDist * 2.0f, 0.0001f,
+					glm::vec4()
+				));
+				distanceConstraints->push_back(DistanceConstraintSolver::Constraint(
+					i, i+2, restDist * 2.0f, 0.0001f,
+					glm::vec4()
+				));
+			}*/
+			for (auto [i, j]: borderParticlePairs)
+			{
+				assert(glm::distance(data[i].position / 0.8f, data[j].position / 0.8f) < 3.0f);
+				distanceConstraints->push_back(DistanceConstraintSolver::Constraint(
+					i, j, glm::distance(data[i].position, data[j].position),
+					0.001f,1.0f, 0.01f, glm::vec2()
+				));
+			}
 		}
-	}
+    }
+
+	// Rotator Particles
+/*	size_t bladeLength = 4;
+	size_t bladeHeight = 4;
+	size_t numParticlesRotator = bladeHeight * (4 + 4 * bladeLength * 2);
+*/
+    std::move_only_function<void(std::vector<PositionConstraintSolver::Constraint>& _contraints, float _angle)const> positionConstraintFiller = [](...){};
+    {
+    	auto id = numParticlesFluid;
+
+
+    	for (size_t height = 0; height < bladeHeight; ++height)
+    	{
+    		size_t const startId = id;
+    		auto centerQuadPositions = std::array{glm::vec3(-0.5, height, -0.5),
+			glm::vec3(0.5, height, -0.5),
+			glm::vec3(-0.5, height, 0.5),
+			glm::vec3(0.5, height, 0.5)};
+    		for (auto p: centerQuadPositions)
+    			data[id++].position = p;
+    		positionConstraintFiller = [startId = startId, centerQuadPositions = std::move(centerQuadPositions), previousFiller = std::move(positionConstraintFiller)](std::vector<PositionConstraintSolver::Constraint>& _constraints, float _angle)
+    		{
+    			previousFiller(_constraints, _angle);
+    			auto rot = glm::rotate(glm::mat4(1), _angle, glm::vec3(0, 1, 0));
+    			for (size_t i = 0; i < centerQuadPositions.size(); ++i)
+    				_constraints.push_back(PositionConstraintSolver::Constraint(
+    					glm::vec3(rot * glm::vec4(centerQuadPositions[i], 1.0)),
+    					startId + i, 0.0, 0.01f, 400.0f, 0.01f
+    				));
+    		};
+
+    		std::vector<glm::vec3> dirs;
+    		for (size_t i = 0; i < numBlades; ++i)
+	    		dirs.emplace_back(glm::rotate(glm::mat4(1), float(i) / float(numBlades) * glm::two_pi<float>(), glm::vec3(0, 1, 0)) * glm::vec4(1.0f, 0.0f, 0.0f, 1.0f));
+    		for (auto dir:dirs)
+    		{
+    			glm::vec3 normal(0,1,0);
+    			glm::vec3 tangent = glm::cross(dir, normal);
+    			for (size_t i = 0; i < bladeLength; ++i)
+    			{
+    				data[id++].position = glm::vec3(0, height, 0) + float(1 + i) * dir + 0.5f*tangent;
+    				data[id++].position = glm::vec3(0, height, 0) + float(1 + i) * dir - 0.5f*tangent;
+    			}
+    		}
+    	}
+    	for (size_t i = 0; i < numParticlesRotator - 1; ++i)
+    	{
+    		for (size_t j = i+1; j < numParticlesRotator; ++j)
+    		{
+    			if (distanceConstraints)
+    			{
+    				float dist = glm::distance(data[numParticlesFluid + i].position, data[numParticlesFluid + j].position);
+    				if (dist < 6.0)
+    				distanceConstraints->push_back(DistanceConstraintSolver::Constraint(
+						numParticlesFluid + i, numParticlesFluid + j, dist,
+						0.001f, 1.0f, 0.01f, glm::vec2()
+					));
+    			}
+    		}
+
+    	}
+    	assert(id == numParticles);
+    }
+
+	return positionConstraintFiller;
+
     //std::shuffle(data, data + numParticles, gen);
 }
 
@@ -125,8 +203,8 @@ constexpr auto radixSortDescriptorSetLayoutDescriptors() {
 
 Simulation::Simulation(InitContext &initContext, Renderer& renderer, GUI& gui, size_t numParticles):
 UIControlled(gui),
-renderer(renderer),
 _context(initContext.context),
+renderer(renderer),
 _particleData{
 	initContext.context,
 	numParticles,
@@ -152,9 +230,12 @@ _tempBuffer(_context, _particleData.size(), 2, vk::BufferUsageFlagBits::eStorage
 
 		ParticleData* data = initBuffer.data();
 		std::vector<DistanceConstraintSolver::Constraint> distanceConstraints;
-		initializeSystem(data, numParticles, &distanceConstraints);
+		std::vector<PositionConstraintSolver::Constraint> positionConstraints;
+		positionConstraintFiller = initializeSystem(data, numParticles, &distanceConstraints);
+		positionConstraintFiller(positionConstraints, 0.0f);
 		auto& initCmdBuf = *initContext.initCommandBuffer;
 		_distanceConstraintSolver = std::make_unique<pbf::DistanceConstraintSolver>(initContext, gui, distanceConstraints);
+		_positionConstraintSolver = std::make_unique<pbf::PositionConstraintSolver>(initContext, gui, positionConstraints);
 		initBuffer.flush();
 
 		for (size_t i = 0; i < particleData.segments(); ++i)
@@ -261,6 +342,7 @@ void Simulation::reset(vk::CommandBuffer &buf) {
             .offset = 0,
             .size = _particleData.deviceSize(),
     }}, {});
+	currentRotatorAngle = 0.0f;
 }
 
 std::string Simulation::uiCategory() const
@@ -272,6 +354,7 @@ void Simulation::ui()
 {
 	ImGui::Checkbox("Run Distance Constraint Solver", &_runDistanceConstraintSolver);
 	ImGui::SliderFloat("key power", &keyPower, 0.1f, 20.0f, "%.3f");
+	ImGui::SliderFloat("rotator speed", &rotatorSpeed, 0.1f, 20.0f, "%.3f");
 	bool rebuildPipelines = false;
 	rebuildPipelines |= ImGui::SliderFloat("h", &h, 0.25f, 4.0f, "%.3f");
 	rebuildPipelines |= ImGui::SliderFloat("rho_0_type_0", &rho_0_type_0, 0.1f, 10.0f, "%.1f");
@@ -338,13 +421,26 @@ void Simulation::run(vk::CommandBuffer buf, float timestep)
 		_resetKeys = false;
 	}
 
+	{
+		auto& copyBuffer = renderer.createFrameData<Buffer<PositionConstraintSolver::Constraint>>(
+				_context, _positionConstraintSolver->numConstraints(), vk::BufferUsageFlagBits::eTransferSrc, pbf::MemoryType::TRANSIENT
+		);
+		auto* data = copyBuffer.data();
+		std::vector<PositionConstraintSolver::Constraint> constraints;
+		positionConstraintFiller(constraints, currentRotatorAngle);
+		for (auto&& [id, c]: constraints | std::ranges::views::enumerate)
+			data[id] = c;
+		_positionConstraintSolver->setConstraintsFromBuffer(buf, copyBuffer.buffer());
+		currentRotatorAngle += timestep * rotatorSpeed;
+	}
+
 	_context.bindPipeline(buf, _unconstrainedSystemUpdatePipeline, {
 		{_particleKeys.segment(ringBufferIndex)},
 		{_particleData.segment(ringBufferIndex)}
 	});
 	static constexpr float Gabs = 9.81f;
 	UnconstrainedPositionUpdatePushConstants pushConstants{
-		.externalAccell = glm::vec3(0.0f, -0.1f*Gabs, 0.0f),
+		.externalAccell = glm::vec3(0.0f, -0.0f*Gabs, 0.0f),
 		.lastTimestep = _lastTimestep,
 		.timestep = timestep
 	};
@@ -390,6 +486,7 @@ void Simulation::run(vk::CommandBuffer buf, float timestep)
 	*/
 
 	auto distanceConstraintRunner = _runDistanceConstraintSolver ? std::make_optional(_distanceConstraintSolver->startSolverLoop(buf)) : std::nullopt;
+	auto positionConstraintRunner = _positionConstraintSolver->startSolverLoop(buf);
 	static constexpr size_t numSteps = 3;
 	for (size_t step = 0; step < numSteps; ++step)
 	{
@@ -490,6 +587,7 @@ void Simulation::run(vk::CommandBuffer buf, float timestep)
 		// Assumed to perform its update in place in _particleData.segment(nextRingBufferIndex())
 		if (distanceConstraintRunner)
 			(*distanceConstraintRunner)(buf, timestep, _particleData.segment(nextRingBufferIndex()), _particleData.segment(ringBufferIndex));
+		positionConstraintRunner(buf, timestep, _particleData.segment(nextRingBufferIndex()), _particleData.segment(ringBufferIndex));
 
 		// copy positions from particle data to particle keys (or adjust radix sort input)
 		//		_particleData.segment(nextRingBufferIndex()) -> _particleKeys.segment(ringBufferIndex)

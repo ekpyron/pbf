@@ -6,7 +6,8 @@
 namespace pbf
 {
 
-DistanceConstraintSolver::DistanceConstraintSolver(InitContext& _initContext, GUI& gui, std::vector<Constraint> const& _constraints):
+template<typename ConstraintSolverConfig>
+GenericConstraintSolver<ConstraintSolverConfig>::GenericConstraintSolver(InitContext& _initContext, GUI& gui, std::vector<Constraint> const& _constraints):
     UIControlled(gui),
     _context(_initContext.context),
     constraints(_initContext.context, _constraints.size(), vk::BufferUsageFlagBits::eTransferDst|vk::BufferUsageFlagBits::eStorageBuffer, MemoryType::STATIC),
@@ -37,20 +38,23 @@ DistanceConstraintSolver::DistanceConstraintSolver(InitContext& _initContext, GU
 }
 
 
-std::string DistanceConstraintSolver::uiCategory() const
+template<typename ConstraintSolverConfig>
+std::string GenericConstraintSolver<ConstraintSolverConfig>::uiCategory() const
 {
-    return "Distance Constraint Solver";
+    return ConstraintSolverConfig::uiCategory();
 }
 
-void DistanceConstraintSolver::ui()
+template<typename ConstraintSolverConfig>
+void GenericConstraintSolver<ConstraintSolverConfig>::ui()
 {
-    ImGui::SliderFloat("force constant factor", &forceConstantFactor, 0.001f, 20.0f, "%.3f");
-    ImGui::SliderFloat("alpha factor", &alphaFactor, 0.001f, 100.0f, "%.3f");
-    ImGui::SliderFloat("beta factor", &betaFactor, 0.001f, 100.0f, "%.3f");
+    ImGui::SliderFloat(fmt::format("{}: force constant factor", ConstraintSolverConfig::uiCategory()).c_str(), &forceConstantFactor, 0.001f, 20.0f, "%.3f");
+    ImGui::SliderFloat(fmt::format("{}: alpha factor", ConstraintSolverConfig::uiCategory()).c_str(), &alphaFactor, 0.001f, 100.0f, "%.3f");
+    ImGui::SliderFloat(fmt::format("{}: beta factor", ConstraintSolverConfig::uiCategory()).c_str(), &betaFactor, 0.001f, 100.0f, "%.3f");
 
 }
 
-void DistanceConstraintSolver::_startSolverLoop(vk::CommandBuffer buf)
+template<typename ConstraintSolverConfig>
+void GenericConstraintSolver<ConstraintSolverConfig>::_startSolverLoop(vk::CommandBuffer buf)
 {
     buf.fillBuffer(lambdas.buffer(), 0, lambdas.deviceSize(), 0);
     buf.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eComputeShader, {}, {
@@ -61,8 +65,8 @@ void DistanceConstraintSolver::_startSolverLoop(vk::CommandBuffer buf)
 }, {}, {});
 }
 
-
-void DistanceConstraintSolver::_run(vk::CommandBuffer buf, float _timestep, vk::DescriptorBufferInfo const& _particleDataInOut, vk::DescriptorBufferInfo const& _previousParticleData)
+template<typename ConstraintSolverConfig>
+void GenericConstraintSolver<ConstraintSolverConfig>::_run(vk::CommandBuffer buf, float _timestep, vk::DescriptorBufferInfo const& _particleDataInOut, vk::DescriptorBufferInfo const& _previousParticleData)
 {
     // For reference:
     // https://matthias-research.github.io/pages/publications/XPBD.pdf
@@ -142,7 +146,24 @@ void DistanceConstraintSolver::_run(vk::CommandBuffer buf, float _timestep, vk::
 #endif
 }
 
-void DistanceConstraintSolver::buildPipelines()
+template<typename ConstraintSolverConfig>
+void GenericConstraintSolver<ConstraintSolverConfig>::setConstraintsFromBuffer(vk::CommandBuffer buf, vk::Buffer buffer)
+{
+    buf.copyBuffer(buffer, constraints.buffer(), {
+        vk::BufferCopy {
+            0, 0, constraints.deviceSize()
+        }
+    });
+    buf.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eComputeShader, {}, {
+    vk::MemoryBarrier{
+        .srcAccessMask = vk::AccessFlagBits::eTransferWrite,
+        .dstAccessMask = vk::AccessFlagBits::eShaderRead
+    }
+}, {}, {});
+}
+
+template<typename ConstraintSolverConfig>
+void GenericConstraintSolver<ConstraintSolverConfig>::buildPipelines()
 {
     auto& cache = _context.cache();
     calcLambda = cache.fetch(
@@ -151,17 +172,20 @@ void DistanceConstraintSolver::buildPipelines()
             .shaderStage = descriptors::ShaderStage {
                 .module = cache.fetch(
                 descriptors::ShaderModule{
-                    .source = descriptors::ShaderModule::File{"shaders/simulation/constraints/distance/calclambda.comp.spv"},
-                    PBF_DESC_DEBUG_NAME("Simulation: Constraints: Distance: Calc Lambda Shader")
+                    .source = descriptors::ShaderModule::File{ConstraintSolverConfig::shader()},
+                    PBF_DESC_DEBUG_NAME(fmt::format("Simulation: Constraints: {}: Calc Lambda Shader", ConstraintSolverConfig::uiCategory()))
                 }),
                 .specialization = {
                     Specialization<uint32_t>{.constantID = 0, .value = blockSize},
                     Specialization<uint32_t>{.constantID = 9, .value = static_cast<uint32_t>(constraints.size())},
                 }
             },
-            PBF_DESC_DEBUG_NAME("Simulation: Constraints: Distance: calc lambda pipeline")
+            PBF_DESC_DEBUG_NAME(fmt::format("Simulation: Constraints: {}: calc lambda pipeline", ConstraintSolverConfig::uiCategory()))
         }
     );
 }
+
+template class GenericConstraintSolver<DistanceConstraintSolverConfig>;
+template class GenericConstraintSolver<PositionConstraintSolverConfig>;
 
 }

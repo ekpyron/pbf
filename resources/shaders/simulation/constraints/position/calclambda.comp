@@ -7,19 +7,18 @@
 
 layout (local_size_x_id = 0, local_size_y = 1, local_size_z = 1) in;
 
-struct DistanceConstraint {
+struct PositionConstraint {
+    vec3 position;
     uint index_i;
-    uint index_j;
     float distance;
-    float alpha; // stiffness
+    float alpha;
     float forceConstant;
     float beta;
-    vec2 aux;
 };
 
-layout(std430, binding = 0, set = 0) readonly buffer DistanceConstraintBuffer
+layout(std430, binding = 0, set = 0) readonly buffer PositionConstraintBuffer
 {
-    DistanceConstraint constraints[];
+    PositionConstraint constraints[];
 };
 
 layout(std430, binding = 0, set = 1) buffer LambdaBuffer
@@ -51,42 +50,34 @@ void main(void)
     uint gid = gl_GlobalInvocationID.x;
     if (gid >= numConstraints)
         return;
-    DistanceConstraint constraint = constraints[gid];
+    PositionConstraint constraint = constraints[gid];
     ParticleData particle_i = particles[constraint.index_i];
-    ParticleData particle_j = particles[constraint.index_j];
+    vec3 target_position = constraint.position;
 
     vec3 v_i = particle_i.position - particlesOrig[constraint.index_i].position;
-    vec3 v_j = particle_j.position - particlesOrig[constraint.index_j].position;
 
-    vec3 dist_ij = particle_i.position - particle_j.position;
+    vec3 dist_ij = particle_i.position - target_position;
     float normsquared = dot(dist_ij, dist_ij);
     float norm = sqrt(normsquared);
-    float dist = constraint.distance;
-    float violation = norm - dist;
+    float violation = norm;
     float forceConstant = forceConstantFactor * constraint.forceConstant;
     vec3 grad_C_k = 2. * forceConstant * violation / norm * dist_ij;
     //float gradLength = length(grad_C_k);
     //grad_C_k = normalize(grad_C_k) * clamp(gradLength, 0, 100);
     float inverseMassFactor_i = 1.0 / GetMassForType(particle_i.type);
-    float inverseMassFactor_j = 1.0 / GetMassForType(particle_j.type);
     float deltaT = timestep;
     float alphaSquiggly = alphaFactor * constraint.alpha / (deltaT*deltaT);
     //float deltaLambda =(-forceConstant*violation*violation - alphaSquiggly * lambdas[gid]) / (dot(grad_C_k, grad_C_k) * inverseMassFactor + alphaSquiggly);
     float beta = betaFactor * constraint.beta; // 0.01
     float gamma = alphaSquiggly * deltaT * beta;
-    float deltaLambda = (-forceConstant*violation*violation - alphaSquiggly * lambdas[gid] - gamma * dot(grad_C_k, v_i) - gamma * dot(-grad_C_k, v_j)) / ((1 + gamma) * dot(grad_C_k, grad_C_k) * (inverseMassFactor_i + inverseMassFactor_j) + alphaSquiggly);
+    float deltaLambda = (-forceConstant*violation*violation - alphaSquiggly * lambdas[gid] - gamma * dot(grad_C_k, v_i)) / ((1 + gamma) * dot(grad_C_k, grad_C_k) * inverseMassFactor_i + alphaSquiggly);
     lambdas[gid] += deltaLambda;
-    particles[constraint.index_i].aux = floatBitsToUint(min(abs(lambdas[gid]) * 10000000.0, 1.0));
-    particles[constraint.index_j].aux = floatBitsToUint(min(abs(lambdas[gid]) * 10000000.0, 1.0));
 
     vec3 deltax = grad_C_k * deltaLambda;
     // TODO: atomic
     /*particles[constraint.index_j].position -= inverseMassFactor_j * deltax;
     particles[constraint.index_i].position -= inverseMassFactor_i * deltax;*/
     // TODO: this should really not write into the same buffer, but ping-pong into a new one per iteration.
-    atomicAdd(particles[constraint.index_j].position.x, -inverseMassFactor_j * deltax.x);
-    atomicAdd(particles[constraint.index_j].position.y, -inverseMassFactor_j * deltax.y);
-    atomicAdd(particles[constraint.index_j].position.z, -inverseMassFactor_j * deltax.z);
     atomicAdd(particles[constraint.index_i].position.x, inverseMassFactor_i * deltax.x);
     atomicAdd(particles[constraint.index_i].position.y, inverseMassFactor_i * deltax.y);
     atomicAdd(particles[constraint.index_i].position.z, inverseMassFactor_i * deltax.z);
