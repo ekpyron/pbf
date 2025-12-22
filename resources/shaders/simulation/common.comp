@@ -45,6 +45,11 @@ uint GetGridIndex(vec3 position) {
     return uint(gridPositive.x * GRID_HASHWEIGHTS.x + gridPositive.y * GRID_HASHWEIGHTS.y + gridPositive.z * GRID_HASHWEIGHTS.z);
 }
 
+float GetMassForType(uint type) {
+    float masses[2] = { 1.0f, 1.0f };
+    return masses[type];
+}
+
 layout (constant_id = 1) const float h = 2.5; // TODO
 layout (constant_id = 2) const float one_over_rho_0_type_0 = 1.0;
 layout (constant_id = 3) const float epsilon = 5.0;

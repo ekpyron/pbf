@@ -10,8 +10,9 @@
 
 namespace pbf
 {
+    struct ParticleData;
 
-class DistanceConstraintSolver {
+    class DistanceConstraintSolver {
 public:
     struct Constraint
     {
@@ -27,7 +28,7 @@ public:
     DistanceConstraintSolver(const DistanceConstraintSolver&) = delete;
     DistanceConstraintSolver& operator=(const DistanceConstraintSolver&) = delete;
 
-    void run(vk::CommandBuffer buf, vk::DescriptorBufferInfo const& _particleDataInOut);
+    void run(vk::CommandBuffer buf, float _timestep, vk::DescriptorBufferInfo const& _particleDataInOut, vk::DescriptorBufferInfo const& _previousParticleData);
 private:
     VulkanContext& _context;
     Buffer<Constraint> constraints;

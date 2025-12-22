@@ -78,7 +78,7 @@ void initializeSystem(ParticleData* data, size_t numParticles, std::vector<Dista
 		{
 			assert(glm::distance(data[i].position / 0.8f, data[j].position / 0.8f) < 3.0f);
 			distanceConstraints->push_back(DistanceConstraintSolver::Constraint(
-				i, j, glm::distance(data[i].position, data[j].position), 1.0f,
+				i, j, glm::distance(data[i].position, data[j].position), 0.001f,
 				glm::vec4(data[i].position, 0.0f)
 			));
 		}
@@ -472,7 +472,7 @@ void Simulation::run(vk::CommandBuffer buf, float timestep)
 
 		// Assumed to perform its update in place in _particleData.segment(nextRingBufferIndex())
 		if (_runDistanceConstraintSolver)
-			_distanceConstraintSolver->run(buf, _particleData.segment(nextRingBufferIndex()));
+			_distanceConstraintSolver->run(buf, timestep, _particleData.segment(nextRingBufferIndex()), _particleData.segment(ringBufferIndex));
 
 		// copy positions from particle data to particle keys (or adjust radix sort input)
 		//		_particleData.segment(nextRingBufferIndex()) -> _particleKeys.segment(ringBufferIndex)

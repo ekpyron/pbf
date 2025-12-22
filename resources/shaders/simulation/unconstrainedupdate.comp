@@ -30,9 +30,8 @@ void main (void)
     vec3 velocity = data.velocity;
     uint type = data.type;
 
-    float masses[2] = { 1.0f, 1.0f };
 
-    velocity += masses[type] * externalAccel * timestep;
+    velocity += GetMassForType(type) * externalAccel * timestep;
     float r = length(particleKeys[gid].position);
     vec3 gravityDir = -particleKeys[gid].position / r;
     //velocity += masses[type] * 4 * (timestep * gravityDir);

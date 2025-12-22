@@ -1,4 +1,5 @@
 #include "DistanceConstraintSolver.h"
+#include "Scene.h"
 
 namespace pbf
 {
@@ -32,7 +33,7 @@ DistanceConstraintSolver::DistanceConstraintSolver(InitContext& _initContext, st
     buildPipelines();
 }
 
-void DistanceConstraintSolver::run(vk::CommandBuffer buf, vk::DescriptorBufferInfo const& _particleDataInOut)
+void DistanceConstraintSolver::run(vk::CommandBuffer buf, float _timestep, vk::DescriptorBufferInfo const& _particleDataInOut, vk::DescriptorBufferInfo const& _previousParticleData)
 {
     // For reference:
     // https://matthias-research.github.io/pages/publications/XPBD.pdf
@@ -72,24 +73,33 @@ void DistanceConstraintSolver::run(vk::CommandBuffer buf, vk::DescriptorBufferIn
     }
 }, {}, {});
 
-    for (size_t distancestep = 0; distancestep < 1; ++distancestep)
+    constexpr size_t numSteps = 3;
+
+    struct PushConstants
     {
+        float timestep;
+    };
+    PushConstants pushConstants{_timestep};
 
-    // TODO: barriers?
+    for (size_t distancestep = 0; distancestep < numSteps; ++distancestep)
+    {
+        // TODO: barriers?
 
-    _context.bindPipeline(buf, calcLambda, {
-        {vk::DescriptorBufferInfo{
-            constraints.buffer(), 0, constraints.deviceSize()
-        }}, // set 0
-        {
-            vk::DescriptorBufferInfo{
-                lambdas.buffer(), 0, lambdas.deviceSize()
-            }
-        }, // set 1
-        {_particleDataInOut}
-    });
+        _context.bindPipeline(buf, calcLambda, {
+            {vk::DescriptorBufferInfo{
+                constraints.buffer(), 0, constraints.deviceSize()
+            }}, // set 0
+            {
+                vk::DescriptorBufferInfo{
+                    lambdas.buffer(), 0, lambdas.deviceSize()
+                }
+            }, // set 1
+            // in, out, orig
+            {_particleDataInOut, _previousParticleData}
+        });
+        buf.pushConstants(*calcLambda->pipelineLayout, vk::ShaderStageFlagBits::eAll, 0, sizeof(pushConstants), &pushConstants);
 
-    buf.dispatch((constraints.size()  + blockSize - 1) / blockSize, 1, 1);
+        buf.dispatch((constraints.size()  + blockSize - 1) / blockSize, 1, 1);
 
         buf.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {}, {
             vk::MemoryBarrier{
@@ -98,6 +108,7 @@ void DistanceConstraintSolver::run(vk::CommandBuffer buf, vk::DescriptorBufferIn
             }
         }, {}, {});
     }
+
 #if 0
     // TODO: barriers
     buf.bindPipeline(vk::PipelineBindPoint::eCompute, distanceConstraints.updatePosition);
