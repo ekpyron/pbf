@@ -20,6 +20,7 @@ layout(location = 2) out vec3 fGrid;
 layout(location = 3) out vec3 fPosition;
 layout(location = 4) out vec3 fVelocity;
 layout(location = 5) out uint fType;
+layout(location = 6) out uint fParticleID;
 
 layout(location = 0) in vec2 vPosition;
 layout(location = 1) in vec3 vParticlePosition;
@@ -40,4 +41,5 @@ void main() {
     fPosition = (ubo.viewmat * vec4(pos, 1.0)).xyz;
     fVelocity = vVelocity;
     fType = vType;
+    fParticleID = gl_InstanceIndex;
 }

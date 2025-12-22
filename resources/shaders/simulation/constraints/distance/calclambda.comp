@@ -1,6 +1,7 @@
 #version 460
 #extension GL_ARB_separate_shader_objects : enable
 #extension GL_KHR_shader_subgroup_basic : enable
+#extension GL_EXT_shader_atomic_float : enable
 
 #include "../../common.comp"
 
@@ -47,11 +48,12 @@ void main(void)
         return;
     DistanceConstraint constraint = constraints[gid];
     ParticleData particle_i = particles[constraint.index_i];
-    vec3 particle_j = constraint.aux.xyz;//particles[constraint.index_j].position;
+    ParticleData particle_j = particles[constraint.index_j];
 
-    vec3 v = particle_i.position - particlesOrig[constraint.index_i].position;
+    vec3 v_i = particle_i.position - particlesOrig[constraint.index_i].position;
+    vec3 v_j = particle_j.position - particlesOrig[constraint.index_j].position;
 
-    vec3 dist_ij = particle_i.position - particle_j;
+    vec3 dist_ij = particle_i.position - particle_j.position;
     float normsquared = dot(dist_ij, dist_ij);
     float norm = sqrt(normsquared);
     float distsquared = constraint.distance*constraint.distance;
@@ -59,19 +61,26 @@ void main(void)
     float violation = norm - dist;
     const float forceConstant = 1.0;
     vec3 grad_C_k = 2. * forceConstant * violation / norm * dist_ij;
-    float gradLength = length(grad_C_k);
-    grad_C_k = normalize(grad_C_k) * clamp(gradLength, 0, 100);
-    float inverseMassFactor = 1.0 / GetMassForType(particle_i.type); // TODO
+    //float gradLength = length(grad_C_k);
+    //grad_C_k = normalize(grad_C_k) * clamp(gradLength, 0, 100);
+    float inverseMassFactor_i = 1.0 / GetMassForType(particle_i.type);
+    float inverseMassFactor_j = 1.0 / GetMassForType(particle_j.type);
     float deltaT = timestep;
     float alphaSquiggly = constraint.alpha / (deltaT*deltaT);
     //float deltaLambda =(-forceConstant*violation*violation - alphaSquiggly * lambdas[gid]) / (dot(grad_C_k, grad_C_k) * inverseMassFactor + alphaSquiggly);
-    float beta = 1.0;
+    float beta = 0.01;
     float gamma = alphaSquiggly * deltaT * beta;
-    float deltaLambda =(-forceConstant*violation*violation - alphaSquiggly * lambdas[gid] - gamma * dot(grad_C_k, v)) / ((1 + gamma) * dot(grad_C_k, grad_C_k) * inverseMassFactor + alphaSquiggly);
+    float deltaLambda =(-forceConstant*violation*violation - alphaSquiggly * lambdas[gid] - gamma * dot(grad_C_k, v_i) - gamma * dot(-grad_C_k, v_j)) / ((1 + gamma) * dot(grad_C_k, grad_C_k) * (inverseMassFactor_i + inverseMassFactor_j) + alphaSquiggly);
     lambdas[gid] += deltaLambda;
     particles[constraint.index_i].aux = floatBitsToUint(min(abs(lambdas[gid]) * 10000000.0, 1.0));
+    particles[constraint.index_j].aux = floatBitsToUint(min(abs(lambdas[gid]) * 10000000.0, 1.0));
 
-    vec3 deltax = inverseMassFactor * grad_C_k * deltaLambda;
+    vec3 deltax = grad_C_k * deltaLambda;
     // TODO: atomic
-    particles[constraint.index_i].position += deltax;
+    atomicAdd(particles[constraint.index_j].position.x, -inverseMassFactor_i * deltax.x);
+    atomicAdd(particles[constraint.index_j].position.y, -inverseMassFactor_i * deltax.y);
+    atomicAdd(particles[constraint.index_j].position.z, -inverseMassFactor_i * deltax.z);
+    atomicAdd(particles[constraint.index_i].position.x, inverseMassFactor_j * deltax.x);
+    atomicAdd(particles[constraint.index_i].position.y, inverseMassFactor_j * deltax.y);
+    atomicAdd(particles[constraint.index_i].position.z, inverseMassFactor_j * deltax.z);
 }

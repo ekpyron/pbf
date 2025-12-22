@@ -115,8 +115,12 @@ VulkanContext::VulkanContext() {
 #endif
 
     _surface = _window->createSurface(*_instance);
+	std::array extensions = {
+		VK_KHR_SWAPCHAIN_EXTENSION_NAME,
+		VK_EXT_SHADER_ATOMIC_FLOAT_EXTENSION_NAME
+	};
 
-    std::tie(_physicalDevice, _families.graphics, _families.present) = getPhysicalDevice();
+    std::tie(_physicalDevice, _families.graphics, _families.present) = getPhysicalDevice(extensions);
 
     {
         std::vector<vk::DeviceQueueCreateInfo> queueCreateInfos;
@@ -139,7 +143,11 @@ VulkanContext::VulkanContext() {
 				.pQueuePriorities = &queuePriority
 			}};
         }
+    	vk::PhysicalDeviceShaderAtomicFloatFeaturesEXT shaderAtomicFeatures{
+    		.shaderBufferFloat32AtomicAdd = true
+    	};
     	vk::PhysicalDeviceShaderDemoteToHelperInvocationFeatures shaderDemoteToHelperInvocationFeatures{
+    		.pNext = &shaderAtomicFeatures,
     		.shaderDemoteToHelperInvocation = true
     	};
         vk::PhysicalDeviceFeatures2 features{
@@ -150,15 +158,14 @@ VulkanContext::VulkanContext() {
         	.pNext = &features,
             .maintenance4 = vk::True
         };
-        auto extensionName = VK_KHR_SWAPCHAIN_EXTENSION_NAME;
         _device = _physicalDevice.createDeviceUnique(vk::DeviceCreateInfo{
             .pNext = &maintenance4Features,
 			.queueCreateInfoCount = static_cast<uint32_t>(queueCreateInfos.size()),
 			.pQueueCreateInfos = queueCreateInfos.data(),
 			.enabledLayerCount = 0,
 			.ppEnabledLayerNames = nullptr,
-			.enabledExtensionCount = 1,
-			.ppEnabledExtensionNames = &extensionName,
+			.enabledExtensionCount = extensions.size(),
+			.ppEnabledExtensionNames = extensions.data(),
 			//.pEnabledFeatures = &features
 		});
 

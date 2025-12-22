@@ -9,6 +9,7 @@ layout(location = 2) in vec3 fGrid;
 layout(location = 3) in vec3 fPosition;
 layout(location = 4) in vec3 fVelocity;
 layout(location = 5) flat in uint fType;
+layout(location = 6) flat in uint fParticleID;
 
 
 layout(binding = 0, std140) uniform GlobalUniformBuffer {
@@ -59,8 +60,8 @@ void main() {
         outColor = vec4(1.0, 0.0, 0.0, 1.0);
     else if (fAux != 0)
         outColor = vec4(1.0, 1.0, 0.0, 1.0);
-
-    outColor = uintBitsToFloat(fAux)*vec4(1.0, 0.0, 0.0, 1.0);
+    float blue = (fParticleID < 1000) ? 1.0f : 0.0f;
+    outColor = uintBitsToFloat(fAux)*vec4(1.0, 0.0, 0.0, 1.0) + blue * vec4(0.0, 0.0, 1.0, 0.0);
 
 #if 0
     outColor = vec4(fGrid, 1.0);

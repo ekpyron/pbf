@@ -62,7 +62,7 @@ protected:
 		return rating;
     }
 private:
-    auto getPhysicalDevice() {
+    auto getPhysicalDevice(auto const& desiredExtensions) {
         auto devices = _instance->enumeratePhysicalDevices();
         std::map<int, const vk::PhysicalDevice*> ratedDevices;
         for(const auto &physicalDevice : devices) {
@@ -72,13 +72,20 @@ private:
             const auto &physicalDevice = *it->second;
             {
                 const auto &properties = physicalDevice.enumerateDeviceExtensionProperties();
-                auto propertyIt = std::find_if(properties.begin(), properties.end(), [](const auto &prop) {
-					return std::string(prop.extensionName.data()) == VK_KHR_SWAPCHAIN_EXTENSION_NAME;
-                });
-                if (propertyIt == properties.end()) {
-					spdlog::get("console")->debug("Rejecting device due to missing {}", VK_KHR_SWAPCHAIN_EXTENSION_NAME);
-					continue;
-				}
+            	bool allDesiredPresent = true;
+            	for (auto const& ext: desiredExtensions)
+            	{
+            		auto propertyIt = std::find_if(properties.begin(), properties.end(), [&](const auto &prop) {
+						return std::string(prop.extensionName.data()) == ext;
+					});
+            		if (propertyIt == properties.end()) {
+            			spdlog::get("console")->debug("Rejecting device due to missing {}", ext);
+            			allDesiredPresent = false;
+            			break;
+            		}
+            	}
+            	if (!allDesiredPresent)
+            		continue;
             }
             int graphicsFamily = -1;
             int presentFamily = -1;

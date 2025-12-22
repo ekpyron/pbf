@@ -20,7 +20,6 @@ void initializeSystem(ParticleData* data, size_t numParticles, std::vector<Dista
 
 	auto isBorder = [&](int32_t x, int32_t y, int32_t z)
 	{
-		return true;
 		return ((x < 3) || (x >= edgeLength - 3)) ||
 								((y < 3) || (y >= edgeLength - 3)) ||
 								((z < 3) || (z >= edgeLength - 3));
@@ -64,7 +63,8 @@ void initializeSystem(ParticleData* data, size_t numParticles, std::vector<Dista
                 					if (isBorder(x + dx, y + dy, z + dz) && isInSystem(x + dx, y + dy, z + dz))
                 					{
                 						int32_t id_j = calcId(x + dx, y + dy, z + dz);
-                						borderParticlePairs.insert(std::make_pair(id, id_j));
+                						if (id < id_j)
+	                						borderParticlePairs.insert(std::make_pair(id, id_j));
                 					}
                 				}
                 	}
@@ -74,12 +74,28 @@ void initializeSystem(ParticleData* data, size_t numParticles, std::vector<Dista
     }();
 	if (distanceConstraints)
 	{
+		/*const float restDist = 1.0f;
+		for (size_t i = 1; i < 1000; ++i)
+		{
+			distanceConstraints->push_back(DistanceConstraintSolver::Constraint(
+				i, i+1, restDist, 0.001f,
+				glm::vec4()
+			));
+			distanceConstraints->push_back(DistanceConstraintSolver::Constraint(
+				i-1, i+1, restDist * 2.0f, 0.0001f,
+				glm::vec4()
+			));
+			distanceConstraints->push_back(DistanceConstraintSolver::Constraint(
+				i, i+2, restDist * 2.0f, 0.0001f,
+				glm::vec4()
+			));
+		}*/
 		for (auto [i, j]: borderParticlePairs)
 		{
 			assert(glm::distance(data[i].position / 0.8f, data[j].position / 0.8f) < 3.0f);
 			distanceConstraints->push_back(DistanceConstraintSolver::Constraint(
-				i, j, glm::distance(data[i].position, data[j].position), 0.001f,
-				glm::vec4(data[i].position, 0.0f)
+				i, j, glm::distance(data[i].position, data[j].position), 0.0001f,
+				glm::vec4()
 			));
 		}
 	}
@@ -332,8 +348,9 @@ void Simulation::run(vk::CommandBuffer buf, float timestep)
 		.timestep = timestep
 	};
 	_lastTimestep = timestep;
-	pushConstants.externalAccell += glm::vec3(_context.window().getKey(GLFW_KEY_LEFT) ? 0.5f * Gabs : 0.0f, 0, _context.window().getKey(GLFW_KEY_UP) ? 0.5f * Gabs : 0.0f);
-	pushConstants.externalAccell += glm::vec3(_context.window().getKey(GLFW_KEY_RIGHT) ? -0.5f * Gabs : 0.0f, 0, _context.window().getKey(GLFW_KEY_DOWN) ? -0.5f * Gabs : 0.0f);
+	float keyPower = 20.0f * Gabs;
+	pushConstants.externalAccell += keyPower * glm::vec3(_context.window().getKey(GLFW_KEY_LEFT) ? 1.0f : 0.0f, 0, _context.window().getKey(GLFW_KEY_UP) ? 1.0f : 0.0f);
+	pushConstants.externalAccell += keyPower * glm::vec3(_context.window().getKey(GLFW_KEY_RIGHT) ? -1.0f : 0.0f, 0, _context.window().getKey(GLFW_KEY_DOWN) ? -1.0f : 0.0f);
 
 	buf.pushConstants(*(_unconstrainedSystemUpdatePipeline->pipelineLayout), vk::ShaderStageFlagBits::eAll, 0, sizeof(pushConstants), &pushConstants);
 

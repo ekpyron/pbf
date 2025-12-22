@@ -73,7 +73,7 @@ void DistanceConstraintSolver::run(vk::CommandBuffer buf, float _timestep, vk::D
     }
 }, {}, {});
 
-    constexpr size_t numSteps = 3;
+    constexpr size_t numSteps = 1;
 
     struct PushConstants
     {

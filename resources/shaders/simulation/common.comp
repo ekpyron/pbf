@@ -67,6 +67,14 @@ float Wpoly6(float r)
     return 1.56668147106 * tmp * tmp * tmp / (h*h*h*h*h*h*h*h*h);
 }
 
+float Wpoly6h(float r, float h)
+{
+    if (r > h)
+    return 0;
+    float tmp = h * h - r * r;
+    return 1.56668147106 * tmp * tmp * tmp / (h*h*h*h*h*h*h*h*h);
+}
+
 float Wspiky(float r)
 {
     if (r > h)
