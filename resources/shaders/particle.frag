@@ -56,13 +56,14 @@ void main() {
     intensity += 0.25;
 
     outColor = vec4(/* (1.0 - 0.25*length(fCoords)) * */ intensity * vec3(0.1,0.25,fType), 1);
+#if 0
     if (fAux == -1u)
         outColor = vec4(1.0, 0.0, 0.0, 1.0);
     else if (fAux != 0)
         outColor = vec4(1.0, 1.0, 0.0, 1.0);
     float blue = (fParticleID < 1000) ? 1.0f : 0.0f;
     outColor = uintBitsToFloat(fAux)*vec4(1.0, 0.0, 0.0, 1.0) + blue * vec4(0.0, 0.0, 1.0, 0.0);
-
+#endif
 #if 0
     outColor = vec4(fGrid, 1.0);
 /*
@@ -98,6 +99,9 @@ void main() {
         vec4(1,0,0,1),
         vec4(0,1,0,1),
     };
+    #endif
+    #if 0
     outColor = colors[fType];
-#endif
+    #endif
+
 }

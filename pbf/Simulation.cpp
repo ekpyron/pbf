@@ -20,6 +20,7 @@ namespace {
 	size_t bladeHeight = 15;
 	size_t numBlades = 5;
 	size_t numParticlesRotator = bladeHeight * (4 + numBlades * bladeLength * 2);
+	float y_shift = -50.0f;
 
 	assert(numParticlesRotator < numParticles);
 	size_t numParticlesFluid = numParticles - numParticlesRotator;
@@ -55,7 +56,7 @@ namespace {
                 		int32_t id = calcId(x, y, z);
 	                    if (id >= numParticlesFluid)
 	                        return;
-	                    data[id].position = glm::vec3(x - 32, -63 + y, z - 32);
+	                    data[id].position = glm::vec3(x - 32, 20-63 + y, z - 32);
 	                    //data[id].position += glm::vec3(dist(gen), dist(gen), dist(gen));
 	                    data[id].position *= 0.8f;
                 		data[id].aux = (id % 256 == 0) ? -1u : 0;
@@ -117,7 +118,7 @@ namespace {
 	size_t bladeHeight = 4;
 	size_t numParticlesRotator = bladeHeight * (4 + 4 * bladeLength * 2);
 */
-	glm::mat4 transform = glm::rotate(glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, - 55.0f, 0.0f)), glm::radians(90.0f), glm::vec3(1, 0, 0));
+	glm::mat4 transform = glm::rotate(glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, y_shift, 0.0f)), glm::radians(81.0f), glm::vec3(1, 0, 0));
 
 	auto set = [data, transform](size_t id, glm::vec3 pos) {
 		data[id].type = 1;
@@ -131,7 +132,7 @@ namespace {
 
     	for (size_t heightBase = 0; heightBase < bladeHeight; ++heightBase)
     	{
-    		float height = float(heightBase);
+    		float height = float(heightBase) - float(bladeHeight) / 2.0f;
     		size_t const startId = id;
     		auto centerQuadPositions = std::array{glm::vec3(-0.5, height, -0.5),
 			glm::vec3(0.5, height, -0.5),

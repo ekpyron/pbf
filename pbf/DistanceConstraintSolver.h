@@ -5,9 +5,6 @@
 
 #include <pbf/descriptors/ComputePipeline.h>
 #include "VulkanContext.h"
-#include "contrib/Catch2/src/catch2/internal/catch_clara.hpp"
-
-#include "contrib/Catch2/src/catch2/internal/catch_context.hpp"
 
 namespace pbf
 {
