@@ -16,8 +16,8 @@ namespace {
     std::mt19937 gen(rd());
     std::uniform_real_distribution<float> dist(-0.25f, 0.25f);
 
-	size_t bladeLength = 8;
-	size_t bladeHeight = 8;
+	size_t bladeLength = 6;
+	size_t bladeHeight = 15;
 	size_t numBlades = 5;
 	size_t numParticlesRotator = bladeHeight * (4 + numBlades * bladeLength * 2);
 
@@ -60,7 +60,7 @@ namespace {
 	                    data[id].position *= 0.8f;
                 		data[id].aux = (id % 256 == 0) ? -1u : 0;
 	                    data[id].velocity = glm::vec3(0,0,0);
-	                    data[id].type = id > (numParticlesFluid / 2);
+	                    data[id].type = 0;
                 		if (isBorder(x, y, z) && distanceConstraints)
                 		{
                 			/*distanceConstraints->push_back(DistanceConstraintSolver::Constraint(
@@ -117,42 +117,55 @@ namespace {
 	size_t bladeHeight = 4;
 	size_t numParticlesRotator = bladeHeight * (4 + 4 * bladeLength * 2);
 */
+	glm::mat4 transform = glm::rotate(glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, - 55.0f, 0.0f)), glm::radians(90.0f), glm::vec3(1, 0, 0));
+
+	auto set = [data, transform](size_t id, glm::vec3 pos) {
+		data[id].type = 1;
+		auto p = transform * glm::vec4(pos, 1.0f);
+		data[id].position = glm::vec3(p) / p.w;
+	};
     std::move_only_function<void(std::vector<PositionConstraintSolver::Constraint>& _contraints, float _angle)const> positionConstraintFiller = [](...){};
     {
     	auto id = numParticlesFluid;
 
 
-    	for (size_t height = 0; height < bladeHeight; ++height)
+    	for (size_t heightBase = 0; heightBase < bladeHeight; ++heightBase)
     	{
+    		float height = float(heightBase);
     		size_t const startId = id;
     		auto centerQuadPositions = std::array{glm::vec3(-0.5, height, -0.5),
 			glm::vec3(0.5, height, -0.5),
 			glm::vec3(-0.5, height, 0.5),
 			glm::vec3(0.5, height, 0.5)};
     		for (auto p: centerQuadPositions)
-    			data[id++].position = p;
-    		positionConstraintFiller = [startId = startId, centerQuadPositions = std::move(centerQuadPositions), previousFiller = std::move(positionConstraintFiller)](std::vector<PositionConstraintSolver::Constraint>& _constraints, float _angle)
+    			set(id++, p);
+    		positionConstraintFiller = [transform, startId = startId, centerQuadPositions = std::move(centerQuadPositions), previousFiller = std::move(positionConstraintFiller)](std::vector<PositionConstraintSolver::Constraint>& _constraints, float _angle)
     		{
     			previousFiller(_constraints, _angle);
     			auto rot = glm::rotate(glm::mat4(1), _angle, glm::vec3(0, 1, 0));
     			for (size_t i = 0; i < centerQuadPositions.size(); ++i)
+    			{
+    				glm::vec4 p = transform * glm::vec4(glm::vec3(rot * glm::vec4(centerQuadPositions[i], 1.0)), 1.0);
     				_constraints.push_back(PositionConstraintSolver::Constraint(
-    					glm::vec3(rot * glm::vec4(centerQuadPositions[i], 1.0)),
-    					startId + i, 0.0, 0.01f, 400.0f, 0.01f
-    				));
+						glm::vec3(p) / p.w,
+						startId + i, 0.0, 0.01f, 400.0f, 0.01f
+					));
+
+    			}
     		};
 
     		std::vector<glm::vec3> dirs;
+    		float angleShift = (float(height) / float(bladeHeight)) * glm::two_pi<float>() / float(5);
     		for (size_t i = 0; i < numBlades; ++i)
-	    		dirs.emplace_back(glm::rotate(glm::mat4(1), float(i) / float(numBlades) * glm::two_pi<float>(), glm::vec3(0, 1, 0)) * glm::vec4(1.0f, 0.0f, 0.0f, 1.0f));
+	    		dirs.emplace_back(glm::rotate(glm::mat4(1), angleShift + float(i) / float(numBlades) * glm::two_pi<float>(), glm::vec3(0, 1, 0)) * glm::vec4(1.0f, 0.0f, 0.0f, 1.0f));
     		for (auto dir:dirs)
     		{
-    			glm::vec3 normal(0,1,0);
+    			glm::vec3 normal= glm::vec3(0, 1, 0);
     			glm::vec3 tangent = glm::cross(dir, normal);
     			for (size_t i = 0; i < bladeLength; ++i)
     			{
-    				data[id++].position = glm::vec3(0, height, 0) + float(1 + i) * dir + 0.5f*tangent;
-    				data[id++].position = glm::vec3(0, height, 0) + float(1 + i) * dir - 0.5f*tangent;
+    				set(id++, glm::vec3(0, height, 0) + float(1 + i) * dir + 0.5f*tangent);
+    				set(id++, glm::vec3(0, height, 0) + float(1 + i) * dir - 0.5f*tangent);
     			}
     		}
     	}
@@ -354,7 +367,7 @@ void Simulation::ui()
 {
 	ImGui::Checkbox("Run Distance Constraint Solver", &_runDistanceConstraintSolver);
 	ImGui::SliderFloat("key power", &keyPower, 0.1f, 20.0f, "%.3f");
-	ImGui::SliderFloat("rotator speed", &rotatorSpeed, 0.1f, 20.0f, "%.3f");
+	ImGui::SliderFloat("rotator speed", &rotatorSpeed, -20.0f, 20.0f, "%.3f");
 	bool rebuildPipelines = false;
 	rebuildPipelines |= ImGui::SliderFloat("h", &h, 0.25f, 4.0f, "%.3f");
 	rebuildPipelines |= ImGui::SliderFloat("rho_0_type_0", &rho_0_type_0, 0.1f, 10.0f, "%.1f");
@@ -431,7 +444,7 @@ void Simulation::run(vk::CommandBuffer buf, float timestep)
 		for (auto&& [id, c]: constraints | std::ranges::views::enumerate)
 			data[id] = c;
 		_positionConstraintSolver->setConstraintsFromBuffer(buf, copyBuffer.buffer());
-		currentRotatorAngle += timestep * rotatorSpeed;
+		currentRotatorAngle -= timestep * rotatorSpeed;
 	}
 
 	_context.bindPipeline(buf, _unconstrainedSystemUpdatePipeline, {
@@ -440,7 +453,7 @@ void Simulation::run(vk::CommandBuffer buf, float timestep)
 	});
 	static constexpr float Gabs = 9.81f;
 	UnconstrainedPositionUpdatePushConstants pushConstants{
-		.externalAccell = glm::vec3(0.0f, -0.0f*Gabs, 0.0f),
+		.externalAccell = glm::vec3(0.0f, -2.0f*Gabs, 0.0f),
 		.lastTimestep = _lastTimestep,
 		.timestep = timestep
 	};
