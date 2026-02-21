@@ -14,9 +14,9 @@ namespace pbf {
 class Image
 {
 public:
-	Image(VulkanContext& context, vk::ImageCreateFlags createFlags, vk::Format format, vk::ImageUsageFlags usageFlags, vk::Extent3D const& extents);
+	Image(VulkanContext& context, vk::ImageType type, vk::ImageCreateFlags createFlags, vk::Format format, vk::ImageUsageFlags usageFlags, vk::Extent3D const& extents);
 	Image(VulkanContext& context, vk::Format format, vk::ImageUsageFlags usageFlags, vk::Extent3D const& extents):
-	Image(context, {}, format, usageFlags, extents) {}
+	Image(context, vk::ImageType::e2D, {}, format, usageFlags, extents) {}
 	Image(Image&& _image) = default;
 	~Image() = default;
 	vk::Image image() const {

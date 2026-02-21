@@ -41,6 +41,7 @@ private:
 	float xsph_viscosity_c = 0.01f;
 	float tensile_instability_k = 0.1f;
 	float vorticity_epsilon = 5.0f;
+	float maxTimestep = 1.0f/400.0f;
 	bool _runDistanceConstraintSolver = true;
 
 	float _lastTimestep = 1.0 / 60.0;

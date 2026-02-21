@@ -6,12 +6,12 @@
 
 namespace pbf {
 
-Image::Image(VulkanContext& context, vk::ImageCreateFlags flags, vk::Format format, vk::ImageUsageFlags usageFlags, vk::Extent3D const& _extents): _context(context)
+Image::Image(VulkanContext& context, vk::ImageType _type, vk::ImageCreateFlags flags, vk::Format format, vk::ImageUsageFlags usageFlags, vk::Extent3D const& _extents): _context(context)
 {
 	uint32_t queueFamily = context.graphicsQueueFamily();
 	_image = context.device().createImageUnique(vk::ImageCreateInfo{
 		.flags = flags,
-		.imageType = vk::ImageType::e2D,
+		.imageType = _type,
 		.format = format,
 		.extent = _extents,
 		.mipLevels = 1,

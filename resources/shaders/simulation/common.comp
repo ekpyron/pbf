@@ -46,7 +46,7 @@ uint GetGridIndex(vec3 position) {
 }
 
 float GetMassForType(uint type) {
-    float masses[2] = { 1.0f, 1.0f };
+    float masses[2] = { 1.0f, 10.0f };
     return masses[type];
 }
 

@@ -335,7 +335,7 @@ void Simulation::reset(vk::CommandBuffer &buf) {
     );
     ParticleData* data = initBuffer.data();
 
-    initializeSystem(data, _particleData.size());
+    positionConstraintFiller = initializeSystem(data, _particleData.size());
     initBuffer.flush();
 
     for (size_t i = 0; i < _particleData.segments(); ++i)
@@ -367,6 +367,7 @@ std::string Simulation::uiCategory() const
 void Simulation::ui()
 {
 	ImGui::Checkbox("Run Distance Constraint Solver", &_runDistanceConstraintSolver);
+	ImGui::SliderFloat("maximum timestep", &maxTimestep, 0.0001f, 0.01f, "%.5f");
 	ImGui::SliderFloat("key power", &keyPower, 0.1f, 20.0f, "%.3f");
 	ImGui::SliderFloat("rotator speed", &rotatorSpeed, -20.0f, 20.0f, "%.3f");
 	bool rebuildPipelines = false;
@@ -429,6 +430,10 @@ void Simulation::initKeys(VulkanContext& context, vk::CommandBuffer buf)
 // currentFrameSync (readonly) -> nextFrameSync (writeonly)
 void Simulation::run(vk::CommandBuffer buf, float timestep)
 {
+	if (timestep > maxTimestep)
+	{
+		timestep = std::min(timestep, maxTimestep);
+	}
 	if (_resetKeys)
 	{
 		initKeys(_context, buf);

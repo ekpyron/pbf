@@ -42,6 +42,8 @@ void main(void)
 
     float one_over_rho_0_i = (type == 0) ? one_over_rho_0_type_0 : one_over_rho_0_type_1;
 
+    const float cutoff_dist_green_blue = 1.0;
+
     FOR_EACH_NEIGHBOUR(gid, j)
     {
         ParticleKey key_j = particleKeys[j];
@@ -51,22 +53,35 @@ void main(void)
         vec3 p_ij = position - position_j;
         float len = length (p_ij);
         vec3 grad = gradWspiky(p_ij);
+        if (type == 1 && type_j == 1)
+        {
+            // do nothing; blue <-> blue
+        }
+        else if (type != type_j)
+        {
+            // blue <-> green
+            deltap += (len < cutoff_dist_green_blue ? 1 : 0) * ((type == type_j) ? 0.0 : -1.0) * ((0.10 * (len - cutoff_dist_green_blue)) / len * p_ij);
+        }
+        else
+        {
+            // green <-> green
+            float scorr = tensile_instability_scale * Wpoly6 (len);
+            scorr *= scorr;
+            scorr *= scorr;
+            scorr = -tensile_instability_k * scorr;
 
-        float scorr = tensile_instability_scale * Wpoly6 (len);
-        scorr *= scorr;
-        scorr *= scorr;
-        scorr = -tensile_instability_k * scorr;
+            // accumulate position corrections (part of equation 12)
+            deltap += (lambda + lambdas[index_j] + scorr) * grad;
 
-        // accumulate position corrections (part of equation 12)
-        deltap += (lambda + lambdas[index_j] + scorr) * grad;
-
-        //deltap += (len < 1.2 ? 1 : 0) * ((type == type_j) ? 0.0 : -1.0) * ((0.10 * (len - 1.2)) / len * p_ij);
+            //deltap += (len < 1.2 ? 1 : 0) * ((type == type_j) ? 0.0 : -1.0) * ((0.10 * (len - 1.2)) / len * p_ij);
+        }
     }
     END_FOR_EACH_NEIGHBOUR()
 
     // TODO: think about whether rho_0_i is correct here.
     // Consider instead to scale lambda and lambda[j] with their respecting rho_0_k above.
     position += one_over_rho_0_i * deltap;
+
 
     // Cylinder Z
     /* position.z = clamp(position.z, 1, 63);

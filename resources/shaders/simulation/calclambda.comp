@@ -36,10 +36,17 @@ void main(void)
 
     // Different particles can have different rest densities.
     float one_over_rho_0_i = particles[key.index].type == 0 ? one_over_rho_0_type_0 : one_over_rho_0_type_1;
+    if (particles[key.index].type == 1) {
+        lambdas[key.index] = 0.0f;
+        return;
+    }
 
     FOR_EACH_NEIGHBOUR(gid, j)
     {
         ParticleKey key_j = particleKeys[j];
+        if (particles[key_j.index].type == 1)
+            continue;
+
         vec3 position_j = key_j.position;
 
         vec3 p_ij = position - position_j;
