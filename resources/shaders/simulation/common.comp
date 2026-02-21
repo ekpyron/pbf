@@ -49,6 +49,21 @@ float GetMassForType(uint type) {
     float masses[2] = { 1.0f, 10.0f };
     return masses[type];
 }
+const uint numParticleTypes = 2;
+const bool affectDensity[] = { true, false };
+struct RepulsionParams {
+    float cutoff;
+    float forceConstant;
+};
+RepulsionParams getRepulsion(uint type_i, uint type_j) {
+    const RepulsionParams respulsionMatrix[] = {
+                                     /* blue repells green */
+        RepulsionParams(0.0f, 0.0f), RepulsionParams(1.0f, 1.0f),
+        /* green repells blue */
+        RepulsionParams(0.0f, 0.0f), RepulsionParams(0.0f, 0.0f)
+    };
+    return respulsionMatrix[type_i * numParticleTypes + type_j];
+}
 
 layout (constant_id = 1) const float h = 2.5; // TODO
 layout (constant_id = 2) const float one_over_rho_0_type_0 = 1.0;

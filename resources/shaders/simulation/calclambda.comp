@@ -27,6 +27,11 @@ void main(void)
 {
     uint gid = gl_GlobalInvocationID.x;
     ParticleKey key = particleKeys[gid];
+    if (!affectDensity[particles[key.index].type]) {
+        lambdas[key.index] = 0.0f;
+        return;
+    }
+
     vec3 position = key.position;
 
     float sum_k_grad_Ci = 0;
@@ -36,15 +41,11 @@ void main(void)
 
     // Different particles can have different rest densities.
     float one_over_rho_0_i = particles[key.index].type == 0 ? one_over_rho_0_type_0 : one_over_rho_0_type_1;
-    if (particles[key.index].type == 1) {
-        lambdas[key.index] = 0.0f;
-        return;
-    }
 
     FOR_EACH_NEIGHBOUR(gid, j)
     {
         ParticleKey key_j = particleKeys[j];
-        if (particles[key_j.index].type == 1)
+        if (!affectDensity[particles[key_j.index].type])
             continue;
 
         vec3 position_j = key_j.position;

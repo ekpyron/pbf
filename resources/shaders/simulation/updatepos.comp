@@ -42,8 +42,6 @@ void main(void)
 
     float one_over_rho_0_i = (type == 0) ? one_over_rho_0_type_0 : one_over_rho_0_type_1;
 
-    const float cutoff_dist_green_blue = 1.0;
-
     FOR_EACH_NEIGHBOUR(gid, j)
     {
         ParticleKey key_j = particleKeys[j];
@@ -53,18 +51,14 @@ void main(void)
         vec3 p_ij = position - position_j;
         float len = length (p_ij);
         vec3 grad = gradWspiky(p_ij);
-        if (type == 1 && type_j == 1)
-        {
-            // do nothing; blue <-> blue
-        }
-        else if (type != type_j)
+        RepulsionParams repulsion = getRepulsion(type, type_j);
+        if (repulsion.forceConstant > 0.0f)
         {
             // blue <-> green
-            deltap += (len < cutoff_dist_green_blue ? 1 : 0) * ((type == type_j) ? 0.0 : -1.0) * ((0.10 * (len - cutoff_dist_green_blue)) / len * p_ij);
+            deltap += (len < repulsion.cutoff ? 1 : 0) * ((type == type_j) ? 0.0 : -1.0) * ((repulsion.forceConstant * (len - repulsion.cutoff)) / len * p_ij);
         }
-        else
+        if (affectDensity[type] && affectDensity[type_j])
         {
-            // green <-> green
             float scorr = tensile_instability_scale * Wpoly6 (len);
             scorr *= scorr;
             scorr *= scorr;
