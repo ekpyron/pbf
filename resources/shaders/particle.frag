@@ -55,7 +55,9 @@ void main() {
 
     intensity += 0.25;
 
+#if 0
     outColor = vec4(/* (1.0 - 0.25*length(fCoords)) * */ intensity * vec3(0.1,0.25,fType), 1);
+#endif
 #if 0
     if (fAux == -1u)
         outColor = vec4(1.0, 0.0, 0.0, 1.0);
@@ -94,14 +96,12 @@ void main() {
 #endif
 #if 0
     outColor = vec4(abs(fVelocity) / 64.0, 1.0);
-
-    const vec4[2] colors = {
-        vec4(1,0,0,1),
+#endif
+    const vec4[3] colors = {
+        vec4(0,0,1,1),
         vec4(0,1,0,1),
+        vec4(1,0,0,1),
     };
-    #endif
-    #if 0
-    outColor = colors[fType];
-    #endif
+    outColor = intensity * colors[fType];
 
 }

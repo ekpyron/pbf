@@ -21,10 +21,10 @@ namespace pbf {
 
 Scene::Scene(InitContext &initContext, GUI& gui, Renderer& renderer, GlobalAppData& globalData)
 : _context(initContext.context), globalData(globalData),
-_particleData(initContext.context, _numParticles, renderer.framePrerenderCount(), vk::BufferUsageFlagBits::eTransferDst | vk::BufferUsageFlagBits::eVertexBuffer, pbf::MemoryType::STATIC),
 quad(initContext, *this, renderer, globalData),
-_simulation(initContext, renderer, gui, _numParticles)
+_simulation(initContext, renderer, gui)
 {
+	_particleData = RingBuffer<ParticleData>(initContext.context, _simulation.getNumParticles(), renderer.framePrerenderCount(), vk::BufferUsageFlagBits::eTransferDst | vk::BufferUsageFlagBits::eVertexBuffer, pbf::MemoryType::STATIC);
 }
 
 void Scene::resetParticles()
@@ -42,7 +42,7 @@ void Scene::frame(vk::CommandBuffer &buf) {
 
 	for(auto* ptr: indirectCommandBuffers) ptr->clear();
 
-    quad.frame(_numParticles);
+    quad.frame(simulation().getNumParticles());
 }
 
 void Scene::enqueueCommands(vk::CommandBuffer &buf) {

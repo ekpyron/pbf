@@ -125,6 +125,11 @@ struct BufferRef {
 
 template<typename T>
 struct RingBuffer: Buffer<T> {
+	RingBuffer() = default;
+	RingBuffer(RingBuffer &&rhs) noexcept = default;
+	RingBuffer(RingBuffer const&rhs) = delete;
+	RingBuffer &operator=(RingBuffer &&rhs) noexcept = default;
+	RingBuffer &operator=(const RingBuffer &rhs) = delete;
 	RingBuffer(ContextInterface& context, std::size_t segmentSize, std::size_t segmentCount, vk::BufferUsageFlags usageFlags, MemoryType memoryType,
 	const std::vector<std::uint32_t> &queueFamilyIndices = {}): Buffer<T>(context, segmentSize * segmentCount, usageFlags, memoryType) {
 		for (size_t i = 0; i < segmentCount; ++i) {

@@ -32,7 +32,8 @@ void main (void)
 
 
     float mass = GetMassForType(type);
-    velocity += mass * externalAccel * timestep;
+    if (affectedByExternalForces[data.type])
+        velocity += mass * externalAccel * timestep;
     float r = length(particleKeys[gid].position);
     //vec3 gravityDir = -particleKeys[gid].position / r;
     //velocity += mass * 8 * (timestep * gravityDir);

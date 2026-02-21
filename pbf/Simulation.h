@@ -16,10 +16,19 @@ class InitContext;
 class ParticleData;
 class ParticleKey;
 
+struct SystemInitializer
+{
+	SystemInitializer();
+	std::move_only_function<void(std::vector<PositionConstraintSolver::Constraint>& _contraints, float _angle)const> positionConstraintFiller;
+	size_t getNumParticles() const;
+	std::vector<ParticleData> data;
+	std::vector<DistanceConstraintSolver::Constraint> distanceConstraints;
+};
+
 class Simulation: public UIControlled
 {
 public:
-	Simulation(InitContext& context, Renderer& renderer, GUI& gui, size_t numParticles);
+	Simulation(InitContext& context, Renderer& renderer, GUI& gui, SystemInitializer = {});
 	uint32_t getNumParticles() const {
 		return _particleData.size();
 	}

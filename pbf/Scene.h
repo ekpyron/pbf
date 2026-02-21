@@ -61,22 +61,19 @@ public:
 
 	[[nodiscard]] auto& simulation() { return _simulation; }
 	[[nodiscard]] const auto& simulation() const { return _simulation; }
-	[[nodiscard]] uint32_t getNumParticles() const {
-		return _numParticles;
-	}
 
 	RingBuffer<ParticleData>& particleData() { return _particleData; }
 	[[nodiscard]] const RingBuffer<ParticleData>& particleData() const { return _particleData; }
-
+	auto getNumParticles() const {
+    	return simulation().getNumParticles();
+    }
 private:
 	bool _resetParticles = false;
 
     VulkanContext& _context;
 	GlobalAppData& globalData;
 
-	uint32_t const _numParticles = 64*32*32;//64*32*32;//64 * 64 * 32;
-
-	RingBuffer<ParticleData> _particleData;
+	// uint32_t const _numParticles = 64*32*32;//64*32*32;//64 * 64 * 32;
 
 	crampl::MultiKeyMap<std::map,
                         CacheReference<descriptors::GraphicsPipeline>,
@@ -88,6 +85,8 @@ private:
 
     Quad quad;
 	Simulation _simulation;
+
+	RingBuffer<ParticleData> _particleData;
 };
 
 

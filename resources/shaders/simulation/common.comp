@@ -46,11 +46,11 @@ uint GetGridIndex(vec3 position) {
 }
 
 float GetMassForType(uint type) {
-    float masses[2] = { 1.0f, 10.0f };
+    float masses[] = { 1.0f, 10.0f, 0.5f };
     return masses[type];
 }
-const uint numParticleTypes = 2;
-const bool affectDensity[] = { true, false };
+const uint numParticleTypes = 3;
+const bool affectDensity[] = { true, false, false };
 struct RepulsionParams {
     float cutoff;
     float forceConstant;
@@ -58,12 +58,15 @@ struct RepulsionParams {
 RepulsionParams getRepulsion(uint type_i, uint type_j) {
     const RepulsionParams respulsionMatrix[] = {
                                      /* blue repells green */
-        RepulsionParams(0.0f, 0.0f), RepulsionParams(1.0f, 1.0f),
+        RepulsionParams(0.0f, 0.0f), RepulsionParams(1.5f, 1.0f), RepulsionParams(1.5f, 1.0f),
         /* green repells blue */
-        RepulsionParams(0.0f, 0.0f), RepulsionParams(0.0f, 0.0f)
+        RepulsionParams(0.0f, 0.0f), RepulsionParams(0.0f, 0.0f), RepulsionParams(1.5f, 1.0f),
+        RepulsionParams(1.5f, 1.0f), RepulsionParams(1.5f, 1.0f), RepulsionParams(0.0f, 0.0f),
     };
     return respulsionMatrix[type_i * numParticleTypes + type_j];
 }
+
+const bool affectedByExternalForces[] = { true, false, true };
 
 layout (constant_id = 1) const float h = 2.5; // TODO
 layout (constant_id = 2) const float one_over_rho_0_type_0 = 1.0;
@@ -85,7 +88,7 @@ float Wpoly6(float r)
 float Wpoly6h(float r, float h)
 {
     if (r > h)
-    return 0;
+        return 0;
     float tmp = h * h - r * r;
     return 1.56668147106 * tmp * tmp * tmp / (h*h*h*h*h*h*h*h*h);
 }
@@ -102,7 +105,7 @@ vec3 gradWspiky(vec3 r)
 {
     float l = length (r);
     if (l > h)
-    return vec3 (0, 0, 0);
+        return vec3 (0, 0, 0);
     // TODO: carefully re-evaluate.
     if (l < 0.01)
         l = 0.01;
