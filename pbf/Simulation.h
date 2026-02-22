@@ -32,16 +32,19 @@ public:
 	uint32_t getNumParticles() const {
 		return _particleData.size();
 	}
-    void reset(vk::CommandBuffer& buf);
-	void resetKeys() { _resetKeys = true; }
+	void requestReset() { resetRequested = true; }
 	void run(vk::CommandBuffer buf, float timestep);
     void copy(vk::CommandBuffer buf, vk::Buffer dst, size_t dstOffset);
 protected:
 	void ui() override;
 	std::string uiCategory() const override;
 private:
+	void reset(vk::CommandBuffer& buf);
 
 	void buildPipelines();
+
+	bool _runSPH = false;
+	bool resetRequested = false;
 
 	float h = glm::length(glm::vec3(1.0f, 1.0f, 1.0f));
 	float rho_0_type_0 = 1.0f;
@@ -55,7 +58,6 @@ private:
 
 	float _lastTimestep = 1.0 / 60.0;
 	void initKeys(VulkanContext& context, vk::CommandBuffer buf);
-	bool _resetKeys = false;
 	VulkanContext& _context;
 	Renderer& renderer;
     size_t ringBufferIndex = 0;

@@ -15,12 +15,14 @@ namespace pbf {
 
 class SurfaceReconstruction;
 struct GlobalAppData;
+class Simulation;
+class GUIRenderer;
 
 class Renderer {
 public:
-    explicit Renderer(InitContext& context, GlobalAppData& globalAppData);
+    explicit Renderer(InitContext& context, GUI& _gui, GlobalAppData& globalAppData);
 
-    void render(Scene& scene, GUI& gui, float timestep);
+    void render(Simulation& simulation, Scene& scene, float timestep);
 
     [[nodiscard]] CacheReference<descriptors::RenderPass> renderPass() const {
         return _renderPass;
@@ -51,6 +53,7 @@ private:
     void reset();
 
     VulkanContext &_context;
+	std::unique_ptr<GUIRenderer> _guiRenderer;
     std::unique_ptr<Swapchain> _swapchain;
 	vk::UniqueCommandBuffer initCommandBuffer;
 

@@ -7,6 +7,8 @@
 
 namespace pbf
 {
+class Simulation;
+class GUIRenderer;
 
 struct GlobalAppData
 {
@@ -50,9 +52,11 @@ private:
     std::unique_ptr<Buffer<GlobalUniformData>> _globalUniformBuffer;
     GlobalUniformData *globalUniformData = nullptr;
 
+    std::unique_ptr<GUI> _gui;
+
     std::unique_ptr<Renderer> _renderer;
 
-    std::unique_ptr<GUI> _gui;
+    std::unique_ptr<Simulation> _simulation;
 
     std::unique_ptr<Scene> _scene;
 

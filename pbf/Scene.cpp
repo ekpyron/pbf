@@ -19,30 +19,31 @@
 namespace pbf {
 
 
-Scene::Scene(InitContext &initContext, GUI& gui, Renderer& renderer, GlobalAppData& globalData)
+Scene::Scene(InitContext &initContext, GUI& gui, Renderer& renderer, GlobalAppData& globalData, size_t _numParticles)
 : _context(initContext.context), globalData(globalData),
-quad(initContext, *this, renderer, globalData),
-_simulation(initContext, renderer, gui)
+quad(initContext, *this, renderer, globalData)
 {
-	_particleData = RingBuffer<ParticleData>(initContext.context, _simulation.getNumParticles(), renderer.framePrerenderCount(), vk::BufferUsageFlagBits::eTransferDst | vk::BufferUsageFlagBits::eVertexBuffer, pbf::MemoryType::STATIC);
+	_particleData = RingBuffer<ParticleData>(initContext.context, _numParticles, renderer.framePrerenderCount(), vk::BufferUsageFlagBits::eTransferDst | vk::BufferUsageFlagBits::eVertexBuffer, pbf::MemoryType::STATIC);
 }
 
-void Scene::resetParticles()
-{
-	_resetParticles = true;
-	_simulation.resetKeys();
+void Scene::selectParticle(vk::CommandBuffer buf, size_t _index) {
+	for (size_t i = 0; i <= _particleData.segments(); ++i)
+	{
+		auto segment = _particleData.segment(i);
+		buf.fillBuffer(
+			segment.buffer,
+			segment.offset + sizeof(ParticleData) * _index + offsetof(ParticleData, aux),
+			sizeof(ParticleData::aux),
+			-1u
+		);
+	}
+
 }
 
 void Scene::frame(vk::CommandBuffer &buf) {
-	if (_resetParticles)
-	{
-        simulation().reset(buf);
-		_resetParticles = false;
-	}
-
 	for(auto* ptr: indirectCommandBuffers) ptr->clear();
 
-    quad.frame(simulation().getNumParticles());
+    quad.frame(_particleData.size());
 }
 
 void Scene::enqueueCommands(vk::CommandBuffer &buf) {

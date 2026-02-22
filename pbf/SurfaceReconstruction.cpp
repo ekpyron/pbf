@@ -9,6 +9,7 @@
 #include <list>
 
 #include "App.h"
+#include "imgui.h"
 
 namespace pbf
 {
@@ -377,8 +378,9 @@ SurfaceReconstruction::FrameData::FrameData(InitContext& _initContext, Renderer&
     }
 }
 
-SurfaceReconstruction::SurfaceReconstruction(InitContext& _initContext, Renderer& _renderer,
+SurfaceReconstruction::SurfaceReconstruction(InitContext& _initContext, Renderer& _renderer, GUI& _gui,
                                              GlobalAppData& globalAppData):
+    UIControlled(_gui),
     context(_initContext.context),
     frameSyncData(_renderer)
 {
@@ -490,8 +492,15 @@ SurfaceReconstruction::SurfaceReconstruction(InitContext& _initContext, Renderer
     frameSyncData.create(_initContext, _renderer, globalAppData, *this);
 }
 
+void SurfaceReconstruction::ui() {
+    ImGui::Checkbox("Run Surface Reconstruction", &enabled);
+}
+
 void SurfaceReconstruction::run(vk::CommandBuffer& _buf)
 {
+    if (!enabled)
+        return;
+
     for (auto& cacheRef : descriptorSetCacheReferences)
         cacheRef.keepAlive();
 

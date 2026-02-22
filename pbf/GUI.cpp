@@ -8,11 +8,24 @@
 
 namespace pbf {
 
-GUI::GUI(pbf::InitContext &initContext, Renderer& renderer, GlobalAppData& globalAppData): _context(initContext.context), renderer(renderer), _selection(initContext, renderer, globalAppData)
+template<typename T>
+struct ExecuteOnDestruction {
+	ExecuteOnDestruction(T&& f): f(std::move(f)) {}
+	ExecuteOnDestruction(const ExecuteOnDestruction&) = delete;
+	ExecuteOnDestruction& operator=(const ExecuteOnDestruction&) = delete;
+	~ExecuteOnDestruction() {
+		f();
+	}
+	T f;
+};
+
+
+GUIRenderer::GUIRenderer(pbf::InitContext &initContext, GUI& gui, Renderer& renderer, GlobalAppData& globalAppData): _context(initContext.context), _gui(gui), _selection(initContext, renderer, globalAppData)
 {
 	// TODO: error handling
 	_imguiContext = ImGui::CreateContext();
 	ImGui_ImplGlfw_InitForVulkan(_context.window().window(), true);
+
 	ImGui_ImplVulkan_InitInfo init_info = {};
 	init_info.Instance = _context.instance();
 	init_info.PhysicalDevice = _context.physicalDevice();
@@ -31,9 +44,16 @@ GUI::GUI(pbf::InitContext &initContext, Renderer& renderer, GlobalAppData& globa
 	};
 	init_info.RenderPass = *renderer.renderPass();
 	ImGui_ImplVulkan_Init(&init_info);
+
+	auto postInitCleanup = [=]() {
+		std::lock_guard guard(_imguiMutex);
+		ImGui::SetCurrentContext(_imguiContext);
+	};
+
+	initContext.createInitData<ExecuteOnDestruction<decltype(postInitCleanup)>>(std::move(postInitCleanup));
 }
 
-GUI::~GUI()
+GUIRenderer::~GUIRenderer()
 {
 	ImGui::SetCurrentContext(_imguiContext);
 	ImGui_ImplVulkan_Shutdown();
@@ -41,13 +61,7 @@ GUI::~GUI()
 	ImGui::DestroyContext(_imguiContext);
 }
 
-void GUI::postInitCleanup()
-{
-	std::lock_guard guard(_imguiMutex);
-	ImGui::SetCurrentContext(_imguiContext);
-}
-
-void GUI::render(Scene& scene, vk::CommandBuffer buf)
+void GUIRenderer::render(Scene& scene, vk::CommandBuffer buf)
 {
 	std::lock_guard guard(_imguiMutex);
 
@@ -72,16 +86,7 @@ void GUI::render(Scene& scene, vk::CommandBuffer buf)
 			}).front());
 
 			cmdBuffer->begin(vk::CommandBufferBeginInfo{});
-			for (size_t i = 0; i <= renderer.framePrerenderCount(); ++i)
-			{
-				auto segment = scene.particleData().segment(i);
-				cmdBuffer->fillBuffer(
-					segment.buffer,
-					segment.offset + sizeof(ParticleData) * *index + offsetof(ParticleData, aux),
-					sizeof(ParticleData::aux),
-					-1u
-				);
-			}
+			scene.selectParticle(*cmdBuffer, *index);
 			cmdBuffer->end();
 
 			_context.graphicsQueue().waitIdle();
@@ -103,19 +108,6 @@ void GUI::render(Scene& scene, vk::CommandBuffer buf)
 
 	{
 		ImGui::Begin("PBF", nullptr, ImGuiWindowFlags_AlwaysAutoResize|ImGuiWindowFlags_NoNavInputs);
-		if (ImGui::Button(_runSPH ? "Stop" : "Run"))
-			_runSPH = !_runSPH;
-		ImGui::SameLine();
-		ImGui::Text(_runSPH ? "SPH is running" : "SPH is not running");
-
-		if (ImGui::Button("Reset"))
-		{
-			_runSPH = false;
-			scene.resetParticles();
-		}
-
-		ImGui::Checkbox("Run Surface Reconstruction", &_runSurfaceReconstruction);
-
 
 		static auto lastTime = std::chrono::steady_clock::now();
 		static size_t frameCount = 0;
@@ -129,7 +121,7 @@ void GUI::render(Scene& scene, vk::CommandBuffer buf)
 		ImGui::Text("FPS %d", FPS);
 
 
-		for (auto* uiControlled: _uiControlled)
+		for (auto* uiControlled: _gui._uiControlled)
 		{
 			std::string category = uiControlled->uiCategory();
 			if (category.empty() || ImGui::CollapsingHeader(category.c_str(), ImGuiTreeNodeFlags_DefaultOpen))

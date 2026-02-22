@@ -53,9 +53,10 @@ App::App(): globalAppData(vulkanContext)
         .pInheritanceInfo = nullptr
     });
 
-    _renderer = std::make_unique<Renderer>(initContext, globalAppData);
-    _gui = std::make_unique<GUI>(initContext, *_renderer, globalAppData);
-    _scene = std::make_unique<Scene>(initContext, *_gui, *_renderer, globalAppData);
+    _gui = std::make_unique<GUI>();
+    _renderer = std::make_unique<Renderer>(initContext, *_gui, globalAppData);
+    _simulation = std::make_unique<Simulation>(initContext, *_renderer, *_gui);
+    _scene = std::make_unique<Scene>(initContext, *_gui, *_renderer, globalAppData, _simulation->getNumParticles());
     _camera = std::make_unique<Camera>(vulkanContext, *_gui);
 
     initContext.initCommandBuffer->end();
@@ -91,8 +92,6 @@ App::App(): globalAppData(vulkanContext)
                               }
     });
     vulkanContext.graphicsQueue().waitIdle();
-
-    _gui->postInitCleanup();
 }
 
 App::~App()
@@ -126,7 +125,7 @@ void App::run()
         globalUniformData->invprojmat = glm::inverse(clip * projmat);
         globalUniformData->projmat = clip * projmat;
         globalAppData.globalDescriptorSetLayout().keepAlive();
-        _renderer->render(*_scene, *_gui, glm::clamp(timePassed, 1.0 / 1000.0, 1.0 / 20.0));
+        _renderer->render(*_simulation, *_scene, glm::clamp(timePassed, 1.0 / 1000.0, 1.0 / 20.0));
         vulkanContext.cache().frame();
     }
     spdlog::get("console")->debug("Exiting main loop. Waiting for idle device.");

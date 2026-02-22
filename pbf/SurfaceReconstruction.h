@@ -16,11 +16,13 @@ namespace pbf
 {
 struct GlobalAppData;
 
-class SurfaceReconstruction
+class SurfaceReconstruction: public UIControlled
 {
 public:
-    SurfaceReconstruction(InitContext& _context, Renderer& renderer, GlobalAppData& globalAppData);
+    SurfaceReconstruction(InitContext& _context, Renderer& renderer, GUI& gui, GlobalAppData& globalAppData);
     ~SurfaceReconstruction() = default;
+
+    void ui() override;
 
     void run(vk::CommandBuffer& _cmdBuffer);
 
@@ -79,6 +81,7 @@ public:
     FrameData& frameData() { return frameSyncData.getCurrent(); }
 
 private:
+    bool enabled = false;
 
     struct BlurDir
     {
