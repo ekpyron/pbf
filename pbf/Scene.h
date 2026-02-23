@@ -65,8 +65,6 @@ public:
     	return _particleData.size();
     }
 private:
-	bool _resetParticles = false;
-
     VulkanContext& _context;
 	GlobalAppData& globalData;
 
