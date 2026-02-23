@@ -36,13 +36,13 @@ struct ParticleKey {
 class Scene {
 public:
 
-    Scene(InitContext& context, GUI& gui, Renderer& renderer, GlobalAppData& globalData);
+    Scene(InitContext& context, GUI& gui, Renderer& renderer, GlobalAppData& globalData, size_t _numParticles);
 
     void frame(vk::CommandBuffer &buf);
 
     void enqueueCommands(vk::CommandBuffer &buf);
 
-	void resetParticles();
+	void selectParticle(vk::CommandBuffer buf, size_t _index);
 
     VulkanContext& context() {
         return _context;
@@ -59,17 +59,12 @@ public:
         return result;
     }
 
-	[[nodiscard]] auto& simulation() { return _simulation; }
-	[[nodiscard]] const auto& simulation() const { return _simulation; }
-
 	RingBuffer<ParticleData>& particleData() { return _particleData; }
 	[[nodiscard]] const RingBuffer<ParticleData>& particleData() const { return _particleData; }
 	auto getNumParticles() const {
-    	return simulation().getNumParticles();
+    	return _particleData.size();
     }
 private:
-	bool _resetParticles = false;
-
     VulkanContext& _context;
 	GlobalAppData& globalData;
 
@@ -84,7 +79,6 @@ private:
     std::set<IndirectCommandsBuffer*> indirectCommandBuffers;
 
     Quad quad;
-	Simulation _simulation;
 
 	RingBuffer<ParticleData> _particleData;
 };

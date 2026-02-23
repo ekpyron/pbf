@@ -341,6 +341,17 @@ std::string Simulation::uiCategory() const
 
 void Simulation::ui()
 {
+	if (ImGui::Button(_runSPH ? "Stop" : "Run"))
+		_runSPH = !_runSPH;
+	ImGui::SameLine();
+	ImGui::Text(_runSPH ? "SPH is running" : "SPH is not running");
+
+	if (ImGui::Button("Reset"))
+	{
+		_runSPH = false;
+		resetRequested = true;
+	}
+
 	ImGui::Checkbox("Run Distance Constraint Solver", &_runDistanceConstraintSolver);
 	ImGui::SliderFloat("maximum timestep", &maxTimestep, 0.0001f, 0.01f, "%.5f");
 	ImGui::SliderFloat("key power", &keyPower, 0.1f, 20.0f, "%.3f");
@@ -405,15 +416,15 @@ void Simulation::initKeys(VulkanContext& context, vk::CommandBuffer buf)
 // currentFrameSync (readonly) -> nextFrameSync (writeonly)
 void Simulation::run(vk::CommandBuffer buf, float timestep)
 {
-	if (timestep > maxTimestep)
-	{
-		timestep = std::min(timestep, maxTimestep);
-	}
-	if (_resetKeys)
-	{
+	if (resetRequested) {
+		reset(buf);
 		initKeys(_context, buf);
-		_resetKeys = false;
+		resetRequested = false;
 	}
+	if (!_runSPH)
+		return;
+
+	timestep = std::min(timestep, maxTimestep);
 
 	{
 		auto& copyBuffer = renderer.createFrameData<Buffer<PositionConstraintSolver::Constraint>>(

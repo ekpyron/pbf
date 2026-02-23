@@ -30,6 +30,7 @@ private:
 	void removeMyself();
 	GUI* _gui = nullptr;
 	friend class GUI;
+	friend class GUIRenderer;
 };
 
 }

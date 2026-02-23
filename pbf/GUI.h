@@ -14,30 +14,38 @@ class UIControlled;
 class GUI
 {
 public:
-	GUI(InitContext& _initContext, Renderer& renderer, GlobalAppData& globalAppData);
+	GUI() = default;
 	GUI(const GUI&) = delete;
 	GUI& operator=(const GUI&) = delete;
-	~GUI();
-	void postInitCleanup();
-	void render(Scene& scene, vk::CommandBuffer buf);
-	bool runSPH() const { return _runSPH; }
-	bool runSurfaceReconstruction() const { return _runSurfaceReconstruction; }
+	~GUI() = default;
 
 private:
 	friend class UIControlled;
-	void add(UIControlled* uiControlled) {
-		_uiControlled.emplace_back(uiControlled);
+	friend class GUIRenderer;
+	void add(UIControlled* uiControlled, bool _front = false) {
+		if (_front)
+			_uiControlled.emplace(_uiControlled.begin(), uiControlled);
+		else
+			_uiControlled.emplace_back(uiControlled);
 	}
 	void remove(UIControlled* uiControlled) {
 		std::erase(_uiControlled, uiControlled);
 	}
 
 	std::vector<UIControlled*> _uiControlled;
+};
+
+class GUIRenderer {
+public:
+	GUIRenderer(InitContext& _initContext, GUI& gui, Renderer& renderer, GlobalAppData& globalAppData);
+	GUIRenderer(const GUIRenderer&) = delete;
+	GUIRenderer& operator=(const GUIRenderer&) = delete;
+	~GUIRenderer();
+	void render(Scene& scene, vk::CommandBuffer buf);
+
 	VulkanContext& _context;
-	Renderer& renderer;
+	GUI& _gui;
 	Selection _selection;
-	bool _runSPH = false;
-	bool _runSurfaceReconstruction = true;
 	std::mutex _imguiMutex;
 	ImGuiContext* _imguiContext = nullptr;
 };

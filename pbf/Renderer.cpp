@@ -16,7 +16,8 @@ static constexpr std::uint64_t TIMEOUT = std::numeric_limits<std::uint64_t>::max
 
 namespace pbf {
 
-Renderer::Renderer(InitContext &initContext, GlobalAppData &globalAppData) : _context(initContext.context) {
+Renderer::Renderer(InitContext &initContext, GUI& gui, GlobalAppData &globalAppData) : _context(initContext.context) {
+
     {
         _offscreenRenderPass = _context.cache().fetch(descriptors::RenderPass{
                 .attachments = {
@@ -135,10 +136,11 @@ Renderer::Renderer(InitContext &initContext, GlobalAppData &globalAppData) : _co
     }
 
 	reset();
-	_surfaceReconstruction = std::make_unique<SurfaceReconstruction>(initContext, *this, globalAppData);
+	_guiRenderer = std::make_unique<GUIRenderer>(initContext, gui, *this, globalAppData);
+	_surfaceReconstruction = std::make_unique<SurfaceReconstruction>(initContext, *this, gui, globalAppData);
 }
 
-void Renderer::render(Scene& scene, GUI& gui, float timestep) {
+void Renderer::render(Simulation& simulation, Scene& scene, float timestep) {
     const auto &device = _context.device();
 
     auto &currentFrameSync = _frameSync[_currentFrameSync];
@@ -196,13 +198,9 @@ void Renderer::render(Scene& scene, GUI& gui, float timestep) {
 
         scene.frame(*buffer);
 
-		if (gui.runSPH())
-		{
-            static size_t numSimulationSteps = 1;
-            for(size_t i = 0; i < numSimulationSteps; ++i)
-			    scene.simulation().run(*buffer, timestep / float(numSimulationSteps));
-		}
-        scene.simulation().copy(
+		simulation.run(*buffer, timestep);
+
+        simulation.copy(
                 *buffer,
                 scene.particleData().buffer(),
                 scene.particleData().segmentDeviceSize() * _currentFrameSync
@@ -232,8 +230,7 @@ void Renderer::render(Scene& scene, GUI& gui, float timestep) {
 
     	buffer->endRenderPass();
 
-    	if (gui.runSurfaceReconstruction())
-	    	_surfaceReconstruction->run(*buffer);
+	    _surfaceReconstruction->run(*buffer);
 
     	vk::ImageBlit blit{
     		.srcSubresource = {
@@ -307,7 +304,7 @@ void Renderer::render(Scene& scene, GUI& gui, float timestep) {
 			.clearValueCount = clearValues.size(),
 			.pClearValues = clearValues.data()
         }, vk::SubpassContents::eInline);
-    	gui.render(scene, *buffer);
+    	_guiRenderer->render(scene, *buffer);
         buffer->endRenderPass();
 
     	buffer->end();
